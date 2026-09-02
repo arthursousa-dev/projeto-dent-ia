@@ -67,7 +67,7 @@ function autenticarUsuario(string $email, string $senha, string $perfilEsperado)
     foreach ($usuarios as $u) {
         if (
             strtolower($u['email']) === $email
-            && $u['senha']         === $senha
+            && password_verify($senha, $u['senha'])
             && $u['tipo']          === $perfilEsperado
             && ($u['status'] ?? 'ativo') === 'ativo'
         ) {

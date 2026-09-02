@@ -1,0 +1,131 @@
+[
+  {
+    "id": 1,
+    "id_paciente": 1,
+    "paciente": "Maria Oliveira",
+    "odontograma": {
+      "11": { "status": "tratado",            "notas": "Clareamento realizado",               "procedimentos": ["Clareamento - Jan/2026"] },
+      "15": { "status": "tratado",            "notas": "Restauração composta classe I",        "procedimentos": ["Restauração - Mai/2025"] },
+      "16": { "status": "precisaTratamento",  "notas": "Cárie Classe II face mesial",          "procedimentos": ["Restauração indicada"] },
+      "22": { "status": "precisaTratamento",  "notas": "Trinca de esmalte visível",            "procedimentos": ["Avaliação necessária"] },
+      "26": { "status": "tratado",            "notas": "Selante preventivo aplicado",          "procedimentos": ["Selante - Ago/2024"] },
+      "33": { "status": "precisaTratamento",  "notas": "Cárie inicial face vestibular",        "procedimentos": ["Restauração preventiva"] },
+      "36": { "status": "tratado",            "notas": "Canal e coroa concluídos com sucesso", "procedimentos": ["Canal Radicular - Dez/2025", "Coroa de Porcelana - Jan/2026"] },
+      "41": { "status": "tratado",            "notas": "Restauração realizada",                "procedimentos": ["Restauração - Mar/2026"] },
+      "46": { "status": "precisaTratamento",  "notas": "Cárie profunda, possível necessidade de canal", "procedimentos": ["Avaliação urgente", "Possível Canal Radicular"] }
+    },
+    "historico": [
+      {
+        "id": 1,
+        "data": "2026-03-15",
+        "id_dentista": 1,
+        "dentista": "Dr. Carlos Mendes",
+        "procedimento": "Restauração",
+        "dentes": "41",
+        "observacoes": "Restauração composta fotopolimerizável classe I realizada com sucesso. Sem intercorrências. Orientado escovação e uso de fio dental.",
+        "valor": 220.00
+      },
+      {
+        "id": 2,
+        "data": "2026-01-10",
+        "id_dentista": 1,
+        "dentista": "Dr. Carlos Mendes",
+        "procedimento": "Clareamento Dental",
+        "dentes": "11, 12, 13, 21, 22, 23",
+        "observacoes": "Clareamento com moldeiras caseiras. Peróxido de carbamida 16%. 3 semanas de uso. Resultado satisfatório. Instruído evitar alimentos pigmentantes por 48h.",
+        "valor": 450.00
+      },
+      {
+        "id": 3,
+        "data": "2025-12-20",
+        "id_dentista": 4,
+        "dentista": "Dra. Luciana Torres",
+        "procedimento": "Canal Radicular",
+        "dentes": "36",
+        "observacoes": "Canal radicular dente 36 — 3 canais tratados. Lima rotatória ProTaper Gold. Obturação com guta-percha e cimento AH Plus. Encaminhado para coroa protética.",
+        "valor": 1200.00
+      },
+      {
+        "id": 4,
+        "data": "2025-05-20",
+        "id_dentista": 1,
+        "dentista": "Dr. Carlos Mendes",
+        "procedimento": "Restauração",
+        "dentes": "15",
+        "observacoes": "Restauração de resina composta classe I. Sem intercorrências. Ajuste oclusal realizado.",
+        "valor": 180.00
+      },
+      {
+        "id": 5,
+        "data": "2024-08-12",
+        "id_dentista": 1,
+        "dentista": "Dr. Carlos Mendes",
+        "procedimento": "Selante Preventivo",
+        "dentes": "16, 26",
+        "observacoes": "Aplicação de selante nos primeiros molares superiores. Orientações de higiene bucal reforçadas. Flúor tópico aplicado.",
+        "valor": 160.00
+      }
+    ],
+    "alergias": "Nenhuma conhecida",
+    "ultima_atualizacao": "2026-03-15"
+  },
+  {
+    "id": 2,
+    "id_paciente": 2,
+    "paciente": "João Santos",
+    "odontograma": {
+      "18": { "status": "precisaTratamento", "notas": "Siso incluso — avaliação cirúrgica indicada", "procedimentos": ["Avaliação cirúrgica"] },
+      "28": { "status": "precisaTratamento", "notas": "Siso incluso — avaliação cirúrgica indicada", "procedimentos": ["Avaliação cirúrgica"] },
+      "38": { "status": "tratado",           "notas": "Extração realizada",                          "procedimentos": ["Extração - Jun/2024"] },
+      "48": { "status": "tratado",           "notas": "Extração realizada",                          "procedimentos": ["Extração - Jun/2024"] }
+    },
+    "historico": [
+      {
+        "id": 1,
+        "data": "2026-02-08",
+        "id_dentista": 1,
+        "dentista": "Dr. Carlos Mendes",
+        "procedimento": "Limpeza Dental",
+        "dentes": "Todos",
+        "observacoes": "Limpeza e polimento. Cálculo leve presente. Orientação de higiene bucal. Retorno em 6 meses.",
+        "valor": 120.00
+      },
+      {
+        "id": 2,
+        "data": "2024-06-15",
+        "id_dentista": 3,
+        "dentista": "Dr. Paulo Ramos",
+        "procedimento": "Extração de Siso",
+        "dentes": "38, 48",
+        "observacoes": "Extração sisos inferiores 38 e 48. Anestesia com mepivacaína (alergia à lidocaína). Sem intercorrências. Sutura com fio reabsorvível. Retorno em 7 dias.",
+        "valor": 700.00
+      }
+    ],
+    "alergias": "Lidocaína",
+    "ultima_atualizacao": "2026-02-08"
+  },
+  {
+    "id": 3,
+    "id_paciente": 6,
+    "paciente": "Ricardo Souza",
+    "odontograma": {
+      "46": { "status": "precisaTratamento", "notas": "Cárie profunda com comprometimento pulpar — canal indicado", "procedimentos": ["Canal Radicular indicado"] },
+      "16": { "status": "tratado",           "notas": "Restauração ampla",                                          "procedimentos": ["Restauração - 2023"] },
+      "36": { "status": "tratado",           "notas": "Restauração de resina",                                       "procedimentos": ["Restauração - 2024"] }
+    },
+    "historico": [
+      {
+        "id": 1,
+        "data": "2026-01-20",
+        "id_dentista": 1,
+        "dentista": "Dr. Carlos Mendes",
+        "procedimento": "Consulta de Rotina",
+        "dentes": "Todos",
+        "observacoes": "Queixa principal: dor espontânea em dente 46. Diagnóstico: pulpite irreversível. Encaminhado para endodontia. Placa miorrelaxante discutida para bruxismo.",
+        "valor": 90.00
+      }
+    ],
+    "alergias": "Nenhuma conhecida",
+    "ultima_atualizacao": "2026-01-20"
+  }
+]

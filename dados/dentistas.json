@@ -1,0 +1,112 @@
+[
+  {
+    "id": 1,
+    "id_usuario": 2,
+    "nome": "Dr. Carlos Mendes",
+    "email": "carlos@dentai.com",
+    "telefone": "(67) 99111-0001",
+    "cpf": "333.444.555-66",
+    "nascimento": "1978-03-20",
+    "cro": "CRO-MS 12345",
+    "especialidade": "Clínico Geral",
+    "titulacao": "Especialista em Dentística",
+    "faculdade": "UFMS",
+    "ano_formatura": 2002,
+    "admissao": "2020-03-01",
+    "cor": "#00c9a7",
+    "sala": "Sala 1",
+    "atendimentos_mes": 52,
+    "status": "Ativo",
+    "horarios": [
+      "08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30",
+      "14:00","14:30","15:00","15:30","16:00","16:30","17:00"
+    ],
+    "dias_atendimento": ["Segunda","Terça","Quarta","Quinta","Sexta"],
+    "procedimentos": [
+      "Limpeza Dental","Restauração","Clareamento Dental","Consulta de Rotina","Selante","Periodontia"
+    ]
+  },
+  {
+    "id": 2,
+    "id_usuario": 5,
+    "nome": "Dra. Ana Silva",
+    "email": "ana@dentai.com",
+    "telefone": "(67) 99111-0002",
+    "cpf": "555.111.222-33",
+    "nascimento": "1982-09-14",
+    "cro": "CRO-MS 23456",
+    "especialidade": "Ortodontia",
+    "titulacao": "Mestre em Ortodontia - USP",
+    "faculdade": "USP",
+    "ano_formatura": 2006,
+    "admissao": "2021-06-15",
+    "cor": "#3182ce",
+    "sala": "Sala 2",
+    "atendimentos_mes": 40,
+    "status": "Ativo",
+    "horarios": [
+      "09:00","09:30","10:00","10:30","11:00",
+      "14:00","14:30","15:00","15:30","16:00","16:30"
+    ],
+    "dias_atendimento": ["Segunda","Terça","Quarta","Quinta","Sexta"],
+    "procedimentos": [
+      "Ortodontia (Aparelho Metálico)","Ortodontia (Aparelho Estético)","Contenção Ortodôntica",
+      "Alinhadores Transparentes","Consulta Ortodôntica"
+    ]
+  },
+  {
+    "id": 3,
+    "id_usuario": 6,
+    "nome": "Dr. Paulo Ramos",
+    "email": "paulo@dentai.com",
+    "telefone": "(67) 99111-0003",
+    "cpf": "666.222.333-44",
+    "nascimento": "1974-11-08",
+    "cro": "CRO-MS 34567",
+    "especialidade": "Cirurgia Oral",
+    "titulacao": "Doutor em Cirurgia Oral - UNICAMP",
+    "faculdade": "UNICAMP",
+    "ano_formatura": 1998,
+    "admissao": "2022-01-10",
+    "cor": "#d97706",
+    "sala": "Sala 3",
+    "atendimentos_mes": 16,
+    "status": "Ativo",
+    "horarios": [
+      "08:00","09:00","10:00","11:00",
+      "14:00","15:00","16:00"
+    ],
+    "dias_atendimento": ["Terça","Quinta"],
+    "procedimentos": [
+      "Extração Simples","Extração de Siso","Implante Dentário","Cirurgia de Gengiva",
+      "Biopsia Oral","Enxerto Ósseo"
+    ]
+  },
+  {
+    "id": 4,
+    "id_usuario": 7,
+    "nome": "Dra. Luciana Torres",
+    "email": "luciana@dentai.com",
+    "telefone": "(67) 99111-0004",
+    "cpf": "777.333.444-55",
+    "nascimento": "1980-06-25",
+    "cro": "CRO-MS 45678",
+    "especialidade": "Endodontia",
+    "titulacao": "Especialista em Endodontia",
+    "faculdade": "PUC-SP",
+    "ano_formatura": 2004,
+    "admissao": "2019-09-20",
+    "cor": "#805ad5",
+    "sala": "Sala 4",
+    "atendimentos_mes": 32,
+    "status": "Ativo",
+    "horarios": [
+      "08:00","08:30","09:00","09:30","10:00","10:30","11:00",
+      "14:00","14:30","15:00","15:30","16:00"
+    ],
+    "dias_atendimento": ["Segunda","Quarta","Sexta"],
+    "procedimentos": [
+      "Canal Radicular","Retratamento Endodôntico","Cirurgia Endodôntica","Pulpotomia"
+    ]
+  }
+]

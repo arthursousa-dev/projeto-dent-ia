@@ -1,0 +1,54 @@
+{
+  "historico_mensal": [
+    { "mes": "Nov/2025", "ano": 2025, "mes_num": 11, "receita": 22100.00, "despesas": 8400.00, "procedimentos": 112 },
+    { "mes": "Dez/2025", "ano": 2025, "mes_num": 12, "receita": 19800.00, "despesas": 7600.00, "procedimentos": 98  },
+    { "mes": "Jan/2026", "ano": 2026, "mes_num":  1, "receita": 24300.00, "despesas": 9200.00, "procedimentos": 128 },
+    { "mes": "Fev/2026", "ano": 2026, "mes_num":  2, "receita": 26100.00, "despesas": 9800.00, "procedimentos": 138 },
+    { "mes": "Mar/2026", "ano": 2026, "mes_num":  3, "receita": 27900.00, "despesas": 10200.00,"procedimentos": 148 },
+    { "mes": "Abr/2026", "ano": 2026, "mes_num":  4, "receita": 28750.00, "despesas": 10600.00,"procedimentos": 156 }
+  ],
+  "mes_atual": {
+    "mes": "Abril 2026",
+    "mes_num": 4,
+    "ano": 2026,
+    "receita_total": 28750.00,
+    "despesas_total": 10600.00,
+    "lucro": 18150.00,
+    "procedimentos_realizados": 156,
+    "ticket_medio": 184.29,
+    "crescimento_percentual": 3.05,
+    "por_plano": {
+      "Particular":       14200.00,
+      "Unimed Odonto":     6300.00,
+      "SulAmérica Odonto": 4150.00,
+      "Odontoprev":        3800.00,
+      "Bradesco Dental":    300.00
+    },
+    "por_categoria": {
+      "Preventivo":    4200.00,
+      "Restaurador":   5800.00,
+      "Endodontia":    6800.00,
+      "Ortodontia":    4400.00,
+      "Cirurgia":      3200.00,
+      "Estético":      2850.00,
+      "Implantodontia":1700.00,
+      "Prótese":        800.00
+    },
+    "por_dentista": [
+      { "id_dentista": 1, "nome": "Dr. Carlos Mendes",   "receita": 10400.00, "procedimentos": 52 },
+      { "id_dentista": 2, "nome": "Dra. Ana Silva",      "receita":  7200.00, "procedimentos": 40 },
+      { "id_dentista": 4, "nome": "Dra. Luciana Torres", "receita":  7950.00, "procedimentos": 32 },
+      { "id_dentista": 3, "nome": "Dr. Paulo Ramos",     "receita":  3200.00, "procedimentos": 16 }
+    ]
+  },
+  "transacoes": [
+    { "id": 1, "data": "2026-04-10", "tipo": "Receita",  "descricao": "Limpeza — Maria Oliveira",       "valor": 120.00,  "id_agendamento": 1 },
+    { "id": 2, "data": "2026-04-10", "tipo": "Receita",  "descricao": "Ortodontia — João Santos",       "valor": 280.00,  "id_agendamento": 2 },
+    { "id": 3, "data": "2026-03-15", "tipo": "Receita",  "descricao": "Restauração — Maria Oliveira",   "valor": 220.00,  "id_agendamento": 9 },
+    { "id": 4, "data": "2026-03-10", "tipo": "Receita",  "descricao": "Limpeza — João Santos",          "valor": 120.00,  "id_agendamento": 10 },
+    { "id": 5, "data": "2026-04-05", "tipo": "Despesa",  "descricao": "Material odontológico",          "valor": 1800.00, "id_agendamento": null },
+    { "id": 6, "data": "2026-04-01", "tipo": "Despesa",  "descricao": "Aluguel — Sala 1",               "valor": 2500.00, "id_agendamento": null },
+    { "id": 7, "data": "2026-04-01", "tipo": "Despesa",  "descricao": "Salários equipe recepção",       "valor": 3200.00, "id_agendamento": null },
+    { "id": 8, "data": "2026-04-08", "tipo": "Despesa",  "descricao": "Esterilização e descartáveis",   "valor": 680.00,  "id_agendamento": null }
+  ]
+}

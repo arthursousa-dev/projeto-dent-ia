@@ -1,0 +1,19 @@
+{
+  "nome": "DENT IA",
+  "razao_social": "Clínica Odontológica DENT IA Ltda.",
+  "cnpj": "12.345.678/0001-99",
+  "telefone": "(67) 99292-8122",
+  "email": "contato@dentai.com.br",
+  "endereco": "Rua das Flores, 142",
+  "bairro": "Centro",
+  "cidade": "Campo Grande",
+  "estado": "MS",
+  "cep": "79002-000",
+  "horario": "Segunda a Sexta: 08h às 18h | Sábado: 08h às 13h",
+  "logo_texto": "DENT IA",
+  "cor_primaria": "#0b2845",
+  "cor_destaque": "#00c9a7",
+  "limite_agendamentos_dia": 20,
+  "antecedencia_min_dias": 1,
+  "atualizado_em": "2026-04-10"
+}

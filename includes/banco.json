@@ -1,0 +1,377 @@
+{
+  "sistema": {
+    "nome": "DENT IA",
+    "versao": "2.0.0",
+    "clinica": "Clínica Odontológica DENT IA",
+    "cnpj": "12.345.678/0001-99",
+    "telefone": "(67) 99292-8122",
+    "email": "contato@dentai.com.br",
+    "endereco": "Rua das Flores, 142 — Centro, Campo Grande, MS",
+    "horario": "Segunda a Sexta: 08h às 18h | Sábado: 08h às 13h"
+  },
+  "usuarios": [
+    {
+      "id": 1,
+      "perfil": "paciente",
+      "nome": "Maria Oliveira",
+      "email": "cliente@gmail.com",
+      "senha": "123456",
+      "redirecionar": "cliente_dashboard.php",
+      "cpf": "111.222.333-44",
+      "telefone": "(67) 99211-1111",
+      "nascimento": "1985-04-12",
+      "plano": "Particular",
+      "status": "Ativo",
+      "criado_em": "2024-01-15"
+    },
+    {
+      "id": 2,
+      "perfil": "recepcionista",
+      "nome": "João Recepção",
+      "email": "recepcao@dentai.com",
+      "senha": "123456",
+      "redirecionar": "recepcionista_dashboard.php",
+      "cpf": "222.333.444-55",
+      "telefone": "(67) 99211-2222",
+      "nascimento": "1990-07-23",
+      "cargo": "Recepcionista",
+      "status": "Ativo",
+      "criado_em": "2023-06-01"
+    },
+    {
+      "id": 3,
+      "perfil": "dentista",
+      "nome": "Dr. Carlos Mendes",
+      "email": "dentista@dentai.com",
+      "senha": "123456",
+      "redirecionar": "dentista_dashboard.php",
+      "cpf": "333.444.555-66",
+      "telefone": "(67) 99111-0001",
+      "nascimento": "1978-03-20",
+      "cro": "CRO-MS 12345",
+      "especialidade": "Clínico Geral",
+      "admissao": "2020-03-01",
+      "status": "Ativo",
+      "criado_em": "2020-03-01"
+    },
+    {
+      "id": 4,
+      "perfil": "dono",
+      "nome": "Arthur Sousa",
+      "email": "dono@dentai.com",
+      "senha": "123456",
+      "redirecionar": "dono_dashboard.php",
+      "cpf": "444.555.666-77",
+      "telefone": "(67) 99292-8122",
+      "nascimento": "1995-05-10",
+      "cargo": "Proprietário",
+      "status": "Ativo",
+      "criado_em": "2019-01-01"
+    }
+  ],
+  "dentistas": [
+    {
+      "id": 1,
+      "nome": "Dr. Carlos Mendes",
+      "especialidade": "Clínico Geral",
+      "cro": "CRO-MS 12345",
+      "email": "carlos@dentai.com",
+      "telefone": "(67) 99111-0001",
+      "admissao": "2020-03-01",
+      "atendimentos_mes": 52,
+      "status": "Ativo",
+      "horarios": ["08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00"]
+    },
+    {
+      "id": 2,
+      "nome": "Dra. Ana Silva",
+      "especialidade": "Ortodontia",
+      "cro": "CRO-MS 23456",
+      "email": "ana@dentai.com",
+      "telefone": "(67) 99111-0002",
+      "admissao": "2021-06-15",
+      "atendimentos_mes": 40,
+      "status": "Ativo",
+      "horarios": ["09:00","09:30","10:00","10:30","11:00","14:00","14:30","15:00","15:30","16:00"]
+    },
+    {
+      "id": 3,
+      "nome": "Dr. Paulo Ramos",
+      "especialidade": "Cirurgia Oral",
+      "cro": "CRO-MS 34567",
+      "email": "paulo@dentai.com",
+      "telefone": "(67) 99111-0003",
+      "admissao": "2022-01-10",
+      "atendimentos_mes": 16,
+      "status": "Ativo",
+      "horarios": ["08:00","09:00","10:00","14:00","15:00","16:00"]
+    },
+    {
+      "id": 4,
+      "nome": "Dra. Luciana Torres",
+      "especialidade": "Endodontia",
+      "cro": "CRO-MS 45678",
+      "email": "luciana@dentai.com",
+      "telefone": "(67) 99111-0004",
+      "admissao": "2019-09-20",
+      "atendimentos_mes": 32,
+      "status": "Ativo",
+      "horarios": ["08:00","08:30","09:00","09:30","10:00","10:30","11:00","14:00","14:30","15:00","15:30"]
+    }
+  ],
+  "pacientes": [
+    {
+      "id": 1,
+      "nome": "Maria Oliveira",
+      "cpf": "111.222.333-44",
+      "telefone": "(67) 99211-1111",
+      "email": "maria@email.com",
+      "nascimento": "1985-04-12",
+      "plano": "Particular",
+      "ultima_consulta": "2026-02-10",
+      "status": "Ativo",
+      "alergias": "Nenhuma conhecida",
+      "observacoes": "Paciente colaborativa, sem complicações anteriores."
+    },
+    {
+      "id": 2,
+      "nome": "João Santos",
+      "cpf": "222.333.444-55",
+      "telefone": "(67) 99211-2222",
+      "email": "joao@email.com",
+      "nascimento": "1990-07-23",
+      "plano": "Unimed Odonto",
+      "ultima_consulta": "2026-02-08",
+      "status": "Ativo",
+      "alergias": "Lidocaína",
+      "observacoes": "Alergia a anestésico convencional — usar Mepivacaína."
+    },
+    {
+      "id": 3,
+      "nome": "Carla Pereira",
+      "cpf": "333.444.555-66",
+      "telefone": "(67) 99211-3333",
+      "email": "carla@email.com",
+      "nascimento": "1978-11-05",
+      "plano": "SulAmérica Odonto",
+      "ultima_consulta": "2026-02-05",
+      "status": "Ativo",
+      "alergias": "Nenhuma conhecida",
+      "observacoes": "Em tratamento ortodôntico há 18 meses."
+    },
+    {
+      "id": 4,
+      "nome": "Pedro Alves",
+      "cpf": "444.555.666-77",
+      "telefone": "(67) 99211-4444",
+      "email": "pedro@email.com",
+      "nascimento": "1995-01-30",
+      "plano": "Particular",
+      "ultima_consulta": "2026-02-01",
+      "status": "Ativo",
+      "alergias": "Nenhuma conhecida",
+      "observacoes": "Candidato a implante dentário no quadrante inferior esquerdo."
+    },
+    {
+      "id": 5,
+      "nome": "Fernanda Costa",
+      "cpf": "555.666.777-88",
+      "telefone": "(67) 99211-5555",
+      "email": "fernanda@email.com",
+      "nascimento": "1988-09-17",
+      "plano": "Odontoprev",
+      "ultima_consulta": "2026-01-28",
+      "status": "Inativo",
+      "alergias": "Nenhuma conhecida",
+      "observacoes": "Paciente inativa — contatar para retorno."
+    },
+    {
+      "id": 6,
+      "nome": "Ricardo Souza",
+      "cpf": "666.777.888-99",
+      "telefone": "(67) 99211-6666",
+      "email": "ricardo@email.com",
+      "nascimento": "2000-03-08",
+      "plano": "Particular",
+      "ultima_consulta": "2026-01-20",
+      "status": "Ativo",
+      "alergias": "Nenhuma conhecida",
+      "observacoes": "Bruxismo — uso de placa miorrelaxante indicado."
+    }
+  ],
+  "agendamentos": [
+    {
+      "id": 1,
+      "paciente_id": 1,
+      "paciente": "Maria Oliveira",
+      "procedimento": "Limpeza Dental",
+      "dentista_id": 1,
+      "dentista": "Dr. Carlos Mendes",
+      "data": "2026-04-10",
+      "hora": "08:00",
+      "sala": "Sala 1",
+      "status": "Confirmado",
+      "valor": 120.00,
+      "observacoes": ""
+    },
+    {
+      "id": 2,
+      "paciente_id": 2,
+      "paciente": "João Santos",
+      "procedimento": "Clareamento Dental",
+      "dentista_id": 2,
+      "dentista": "Dra. Ana Silva",
+      "data": "2026-04-10",
+      "hora": "09:00",
+      "sala": "Sala 2",
+      "status": "Em atendimento",
+      "valor": 450.00,
+      "observacoes": "Sessão 2 de 3"
+    },
+    {
+      "id": 3,
+      "paciente_id": 3,
+      "paciente": "Carla Pereira",
+      "procedimento": "Ortodontia",
+      "dentista_id": 2,
+      "dentista": "Dra. Ana Silva",
+      "data": "2026-04-10",
+      "hora": "10:00",
+      "sala": "Sala 2",
+      "status": "Aguardando",
+      "valor": 180.00,
+      "observacoes": "Ajuste mensal de aparelho"
+    },
+    {
+      "id": 4,
+      "paciente_id": 4,
+      "paciente": "Pedro Alves",
+      "procedimento": "Extração",
+      "dentista_id": 3,
+      "dentista": "Dr. Paulo Ramos",
+      "data": "2026-04-10",
+      "hora": "11:00",
+      "sala": "Sala 3",
+      "status": "Aguardando",
+      "valor": 280.00,
+      "observacoes": "Extração do siso inferior esquerdo"
+    },
+    {
+      "id": 5,
+      "paciente_id": 5,
+      "paciente": "Fernanda Costa",
+      "procedimento": "Consulta de Rotina",
+      "dentista_id": 1,
+      "dentista": "Dr. Carlos Mendes",
+      "data": "2026-04-10",
+      "hora": "14:00",
+      "sala": "Sala 1",
+      "status": "Agendado",
+      "valor": 90.00,
+      "observacoes": ""
+    },
+    {
+      "id": 6,
+      "paciente_id": 6,
+      "paciente": "Ricardo Souza",
+      "procedimento": "Tratamento de Canal",
+      "dentista_id": 4,
+      "dentista": "Dra. Luciana Torres",
+      "data": "2026-04-11",
+      "hora": "09:00",
+      "sala": "Sala 4",
+      "status": "Agendado",
+      "valor": 1200.00,
+      "observacoes": "Dente 46 — sessão inicial"
+    }
+  ],
+  "prontuarios": [
+    {
+      "paciente_id": 1,
+      "paciente": "Maria Oliveira",
+      "odontograma": {
+        "11": { "status": "tratado", "procedimentos": ["Clareamento - Jan/2026"], "notas": "Clareamento realizado com sucesso" },
+        "15": { "status": "tratado", "procedimentos": ["Restauração - Mai/2025"], "notas": "Restauração composta" },
+        "16": { "status": "precisaTratamento", "procedimentos": ["Restauração indicada"], "notas": "Cárie Classe II face mesial" },
+        "22": { "status": "precisaTratamento", "procedimentos": ["Avaliação necessária"], "notas": "Trinca de esmalte visível" },
+        "26": { "status": "tratado", "procedimentos": ["Selante - Ago/2024"], "notas": "Selante preventivo aplicado" },
+        "33": { "status": "precisaTratamento", "procedimentos": ["Restauração preventiva"], "notas": "Cárie inicial" },
+        "36": { "status": "tratado", "procedimentos": ["Canal Radicular - Dez/2025", "Coroa de Porcelana - Jan/2026"], "notas": "Canal e coroa concluídos com sucesso" },
+        "41": { "status": "tratado", "procedimentos": ["Restauração - Mar/2026"], "notas": "Restauração realizada" },
+        "46": { "status": "precisaTratamento", "procedimentos": ["Avaliação urgente", "Possível Canal Radicular"], "notas": "Cárie profunda, possível necessidade de canal" }
+      },
+      "historico": [
+        {
+          "data": "2026-03-15",
+          "dentista": "Dr. Carlos Mendes",
+          "procedimento": "Restauração",
+          "dentes": "41",
+          "observacoes": "Restauração composta fotopolimerizável realizada com sucesso. Paciente sem intercorrências.",
+          "valor": 220.00
+        },
+        {
+          "data": "2026-01-10",
+          "dentista": "Dr. Carlos Mendes",
+          "procedimento": "Clareamento Dental",
+          "dentes": "11, 12, 21, 22",
+          "observacoes": "Clareamento com moldeiras. 3 sessões concluídas. Resultado satisfatório. Instruído para evitar alimentos pigmentantes por 48h.",
+          "valor": 450.00
+        },
+        {
+          "data": "2025-05-20",
+          "dentista": "Dr. Carlos Mendes",
+          "procedimento": "Restauração",
+          "dentes": "15",
+          "observacoes": "Restauração de resina composta classe I. Sem intercorrências.",
+          "valor": 180.00
+        },
+        {
+          "data": "2024-08-12",
+          "dentista": "Dr. Carlos Mendes",
+          "procedimento": "Selante",
+          "dentes": "16, 26, 36, 46",
+          "observacoes": "Aplicação de selante preventivo nos primeiros molares.",
+          "valor": 160.00
+        }
+      ]
+    }
+  ],
+  "procedimentos": [
+    { "nome": "Limpeza Dental", "duracao_min": 60, "valor_base": 120.00, "categoria": "Preventivo" },
+    { "nome": "Clareamento Dental", "duracao_min": 90, "valor_base": 450.00, "categoria": "Estético" },
+    { "nome": "Restauração", "duracao_min": 60, "valor_base": 180.00, "categoria": "Restaurador" },
+    { "nome": "Canal Radicular", "duracao_min": 120, "valor_base": 1200.00, "categoria": "Endodontia" },
+    { "nome": "Extração Simples", "duracao_min": 45, "valor_base": 180.00, "categoria": "Cirurgia" },
+    { "nome": "Extração de Siso", "duracao_min": 90, "valor_base": 350.00, "categoria": "Cirurgia" },
+    { "nome": "Implante Dentário", "duracao_min": 120, "valor_base": 2800.00, "categoria": "Implantodontia" },
+    { "nome": "Ortodontia (Aparelho)", "duracao_min": 60, "valor_base": 280.00, "categoria": "Ortodontia" },
+    { "nome": "Coroa de Porcelana", "duracao_min": 90, "valor_base": 1800.00, "categoria": "Prótese" },
+    { "nome": "Selante", "duracao_min": 30, "valor_base": 80.00, "categoria": "Preventivo" },
+    { "nome": "Consulta de Rotina", "duracao_min": 30, "valor_base": 90.00, "categoria": "Preventivo" },
+    { "nome": "Periodontia", "duracao_min": 60, "valor_base": 250.00, "categoria": "Periodontia" },
+    { "nome": "Prótese Total", "duracao_min": 60, "valor_base": 2200.00, "categoria": "Prótese" },
+    { "nome": "Placa Miorrelaxante", "duracao_min": 30, "valor_base": 600.00, "categoria": "Preventivo" }
+  ],
+  "faturamento": {
+    "mes_atual": {
+      "mes": "Abril 2026",
+      "receita_total": 28450.00,
+      "procedimentos_realizados": 156,
+      "ticket_medio": 182.37,
+      "planos": {
+        "Particular": 14200.00,
+        "Unimed Odonto": 6300.00,
+        "SulAmérica": 4150.00,
+        "Odontoprev": 3800.00
+      }
+    },
+    "historico_mensal": [
+      { "mes": "Nov/2025", "receita": 22100.00 },
+      { "mes": "Dez/2025", "receita": 19800.00 },
+      { "mes": "Jan/2026", "receita": 24300.00 },
+      { "mes": "Fev/2026", "receita": 26100.00 },
+      { "mes": "Mar/2026", "receita": 27900.00 },
+      { "mes": "Abr/2026", "receita": 28450.00 }
+    ]
+  }
+}

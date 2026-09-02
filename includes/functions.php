@@ -3,6 +3,7 @@
 // (arquivos JSON em /dados/*.json).
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/seguranca.php';
 
 function data_pt(string $formato, ?int $timestamp = null): string {
     if ($timestamp === null) $timestamp = time();

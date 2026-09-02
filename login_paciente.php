@@ -8,16 +8,20 @@ if (isset($_SESSION['perfil']) && $_SESSION['perfil'] === 'cliente') {
 
 $erro = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $senha = $_POST['senha'] ?? '';
-    $usuario = autenticarUsuario($email, $senha, 'cliente');
-    if ($usuario) {
-        $_SESSION['usuario'] = $usuario['nome'];
-        $_SESSION['perfil']  = 'cliente';
-        $_SESSION['email']   = $email;
-        header('Location: ' . $usuario['redirecionar']); exit;
+    if (!csrfValido($_POST['csrf_token'] ?? null)) {
+        $erro = 'Sessão expirada. Recarregue a página e tente novamente.';
+    } else {
+        $email = trim($_POST['email'] ?? '');
+        $senha = $_POST['senha'] ?? '';
+        $usuario = autenticarUsuario($email, $senha, 'cliente');
+        if ($usuario) {
+            $_SESSION['usuario'] = $usuario['nome'];
+            $_SESSION['perfil']  = 'cliente';
+            $_SESSION['email']   = $email;
+            header('Location: ' . $usuario['redirecionar']); exit;
+        }
+        $erro = 'E-mail ou senha incorretos. Verifique e tente novamente.';
     }
-    $erro = 'E-mail ou senha incorretos. Verifique e tente novamente.';
 }
 ?><!DOCTYPE html>
 <html lang="pt-br">
@@ -120,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
 
       <form method="POST" novalidate id="frm">
+        <?= csrfCampo() ?>
         <div class="grupo">
           <label for="email">E-mail</label>
           <input type="email" id="email" name="email" placeholder="seu@email.com" required autocomplete="email" value="<?= limpar($_POST['email'] ?? '') ?>">

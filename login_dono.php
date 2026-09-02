@@ -6,6 +6,9 @@ if (isset($_SESSION['perfil']) && $_SESSION['perfil'] === 'dono') {
 }
 $erro = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!csrfValido($_POST['csrf_token'] ?? null)) {
+        $erro = 'Sessão expirada. Recarregue a página e tente novamente.';
+    } else {
     $usuario = autenticarUsuario(trim($_POST['email']??''), $_POST['senha']??'', 'dono');
     if ($usuario) {
         $_SESSION['usuario'] = $usuario['nome'];
@@ -14,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: '.$usuario['redirecionar']); exit;
     }
     $erro = 'E-mail ou senha incorretos.';
+    }
 }
 ?><!DOCTYPE html>
 <html lang="pt-br">
@@ -73,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <p>Acesso restrito ao gestor e proprietário</p>
       <?php if($erro):?><div class="erro" role="alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?=limpar($erro)?></div><?php endif;?>
       <form method="POST" novalidate>
+        <?= csrfCampo() ?>
         <div class="grupo"><label for="email">E-mail do gestor</label><input type="email" id="email" name="email" placeholder="dono@dentai.com" required autocomplete="email" value="<?=limpar($_POST['email']??'')?>"></div>
         <div class="grupo"><label for="senha">Senha</label>
           <div class="campo-senha">

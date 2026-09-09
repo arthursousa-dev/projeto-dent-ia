@@ -1,21 +1,9 @@
 <?php
-// includes/db.php
-//
-// Camada de acesso a dados. Historicamente este arquivo lia e
-// escrevia arquivos JSON em disco. A aplicação inteira foi escrita
-// contra essa interface (lerJson/salvarJson), então, em vez de
-// reescrever todas as páginas de uma vez — o que aumentaria muito
-// o risco de quebrar alguma coisa — este arquivo agora é um
-// adaptador: por baixo, todo dado vem e vai para o PostgreSQL via
-// PDO com prepared statements; por cima, o resto do código continua
-// enxergando exatamente os mesmos arrays associativos de antes.
-//
-// Isso é uma ponte, não o destino final: a médio prazo, o ideal é
-// que cada página passe a montar sua própria query específica (é
-// mais eficiente que carregar a tabela inteira pra memória a cada
-// leitura). Mas pra uma base pequena como esta, o ganho de migrar
-// pra um banco relacional de verdade — com integridade referencial,
-// tipos, e sem risco de corrupção de arquivo — já vale a pena hoje.
+// Adaptador de persistência: lerJson/salvarJson preservam a
+// interface original (arquivo JSON), mas operam sobre PostgreSQL
+// via PDO com prepared statements. TODO: migrar leituras quentes
+// (ex. listagem de pacientes) para queries diretas em vez de
+// carregar a tabela inteira.
 
 use App\Config\Database;
 

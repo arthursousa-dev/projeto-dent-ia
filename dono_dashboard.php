@@ -1,16 +1,39 @@
 <?php
 // painel principal do dono — visão geral da clínica
-session_start();
+require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 verificarSessao('dono'); // redireciona pro login se não for o dono
 
 $tituloPagina = 'Painel do Gestor';
 include 'includes/head.php';
 
-// dados financeiros do mês atual e anterior pra calcular a variação
-$faturamentoMes      = 28750;
-$faturamentoAnterior = 24300;
-$variacaoPercentual  = (($faturamentoMes - $faturamentoAnterior) / $faturamentoAnterior) * 100;
+// dados financeiros do mês atual e anterior, vindos de faturamento_mensal
+$pdoDash = \App\Config\Database::getConnection();
+$hoje = new DateTime();
+$mesAtual = (int) $hoje->format('n');
+$anoAtual = (int) $hoje->format('Y');
+$mesAnteriorDt = (clone $hoje)->modify('first day of last month');
+
+function _buscarFaturamentoMes(PDO $pdo, int $ano, int $mes): float {
+    $stmt = $pdo->prepare('SELECT receita FROM faturamento_mensal WHERE ano = :ano AND mes_num = :mes');
+    $stmt->execute([':ano' => $ano, ':mes' => $mes]);
+    return (float) ($stmt->fetchColumn() ?: 0);
+}
+
+$faturamentoMes      = _buscarFaturamentoMes($pdoDash, $anoAtual, $mesAtual);
+$faturamentoAnterior = _buscarFaturamentoMes($pdoDash, (int) $mesAnteriorDt->format('Y'), (int) $mesAnteriorDt->format('n'));
+$variacaoPercentual  = $faturamentoAnterior > 0
+    ? (($faturamentoMes - $faturamentoAnterior) / $faturamentoAnterior) * 100
+    : 0;
+
+// contadores reais dos cards de estatística
+$totalPacientesAtivos = (int) $pdoDash->query("SELECT COUNT(*) FROM pacientes WHERE status = 'ativo'")->fetchColumn();
+$totalDentistasAtivos = (int) $pdoDash->query("SELECT COUNT(*) FROM dentistas WHERE status = 'ativo'")->fetchColumn();
+$stmtAtendMes = $pdoDash->prepare(
+    "SELECT COUNT(*) FROM agendamentos WHERE date_trunc('month', data) = date_trunc('month', make_date(:ano, :mes, 1))"
+);
+$stmtAtendMes->execute([':ano' => $anoAtual, ':mes' => $mesAtual]);
+$totalAtendimentosMes = (int) $stmtAtendMes->fetchColumn();
 ?>
 
 <div class="painel">
@@ -46,19 +69,19 @@ $variacaoPercentual  = (($faturamentoMes - $faturamentoAnterior) / $faturamentoA
         </div>
       </a>
 
-      <a href="dono_pacientes.php" class="cartao-estatistica" aria-label="284 pacientes ativos">
+      <a href="dono_pacientes.php" class="cartao-estatistica" aria-label="<?= $totalPacientesAtivos ?> pacientes ativos">
         <div class="icone-estatistica azul" aria-hidden="true"><i class="bi bi-people-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>284</strong><span>Pacientes ativos</span></div>
+        <div class="info-estatistica"><strong><?= $totalPacientesAtivos ?></strong><span>Pacientes ativos</span></div>
       </a>
 
-      <a href="dono_relatorios.php" class="cartao-estatistica" aria-label="156 atendimentos no mês">
+      <a href="dono_relatorios.php" class="cartao-estatistica" aria-label="<?= $totalAtendimentosMes ?> atendimentos no mês">
         <div class="icone-estatistica amarelo" aria-hidden="true"><i class="bi bi-calendar-event-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>156</strong><span>Atendimentos no mês</span></div>
+        <div class="info-estatistica"><strong><?= $totalAtendimentosMes ?></strong><span>Atendimentos no mês</span></div>
       </a>
 
-      <a href="dono_dentistas.php" class="cartao-estatistica" aria-label="4 dentistas ativos">
+      <a href="dono_dentistas.php" class="cartao-estatistica" aria-label="<?= $totalDentistasAtivos ?> dentistas ativos">
         <div class="icone-estatistica verde-agua" aria-hidden="true"><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>4</strong><span>Dentistas ativos</span></div>
+        <div class="info-estatistica"><strong><?= $totalDentistasAtivos ?></strong><span>Dentistas ativos</span></div>
       </a>
     </div>
 

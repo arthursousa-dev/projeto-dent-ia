@@ -1,6 +1,6 @@
 <?php
 // gerenciamento de pacientes pela recepcionista
-session_start();
+require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 verificarSessao('recepcionista');
 

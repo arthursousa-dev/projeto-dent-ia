@@ -1,6 +1,6 @@
 <?php
 // Portal DENT IA — escolha o tipo de acesso
-session_start();
+require_once __DIR__ . '/includes/bootstrap_sessao.php';
 // se já logado, redireciona para o dashboard correto
 if (isset($_SESSION['perfil'])) {
     $destinos = [

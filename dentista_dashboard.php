@@ -1,6 +1,6 @@
 <?php
 // painel principal do dentista — visão do dia de trabalho
-session_start();
+require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 verificarSessao('dentista');
 

@@ -1,6 +1,6 @@
 <?php
 // painel do paciente — área pessoal com resumo das consultas
-session_start();
+require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 verificarSessao('cliente');
 

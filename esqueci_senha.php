@@ -1,6 +1,6 @@
 <?php
 // Tela 1 de recuperação de senha — o usuário informa o Gmail cadastrado
-session_start();
+require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 
 $erro    = '';

@@ -1,6 +1,6 @@
 <?php
 // agenda pessoal do dentista — filtra por data
-session_start();
+require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 verificarSessao('dentista');
 

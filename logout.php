@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/includes/bootstrap_sessao.php';
 $perfil = $_SESSION['perfil'] ?? 'cliente';
 $logins = [
     'cliente'       => 'login_paciente.php',

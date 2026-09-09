@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 if (isset($_SESSION['perfil']) && $_SESSION['perfil'] === 'recepcionista') {
     header('Location: recepcionista_dashboard.php'); exit;

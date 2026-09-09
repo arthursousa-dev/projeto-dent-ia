@@ -1,6 +1,6 @@
 <?php
 // Tela 2 de recuperação de senha — o usuário define a nova senha
-session_start();
+require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 
 // Se não passou pela tela 1, redireciona

@@ -1,6 +1,7 @@
 <?php
 // Funções auxiliares — formatação, autenticação e carregamento dos dados
-// (arquivos JSON em /dados/*.json).
+// (agora vindos do PostgreSQL via includes/db.php, que expõe a mesma
+// interface lerJson()/salvarJson() usada historicamente pelas páginas).
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/seguranca.php';
@@ -55,8 +56,8 @@ function emblema(string $status): string {
  * Retorna array com nome/perfil/redirecionar ou false se inválido.
  */
 function autenticarUsuario(string $email, string $senha, string $perfilEsperado): array|false {
-    $usuarios = lerJson('usuarios.json');
-    $email    = strtolower(trim($email));
+    $email = strtolower(trim($email));
+    $pdo   = \App\Config\Database::getConnection();
 
     $destinos = [
         'cliente'       => 'cliente_dashboard.php',
@@ -65,22 +66,45 @@ function autenticarUsuario(string $email, string $senha, string $perfilEsperado)
         'dono'          => 'dono_dashboard.php',
     ];
 
-    foreach ($usuarios as $u) {
-        if (
-            strtolower($u['email']) === $email
-            && password_verify($senha, $u['senha'])
-            && $u['tipo']          === $perfilEsperado
-            && ($u['status'] ?? 'ativo') === 'ativo'
-        ) {
-            return [
-                'nome'         => $u['nome'],
-                'perfil'       => $u['tipo'],
-                'id'           => $u['id'],
-                'redirecionar' => $destinos[$u['tipo']] ?? 'index.php',
-            ];
-        }
+    $stmt = $pdo->prepare(
+        'SELECT id, nome, tipo, status, senha_hash, tentativas_login, bloqueado_ate
+         FROM usuarios WHERE email = :email AND tipo = :tipo'
+    );
+    $stmt->execute([':email' => $email, ':tipo' => $perfilEsperado]);
+    $u = $stmt->fetch();
+
+    if (!$u) {
+        return false; // não revela se o e-mail existe ou não
     }
-    return false;
+
+    // Conta bloqueada por excesso de tentativas incorretas.
+    if ($u['bloqueado_ate'] !== null && strtotime($u['bloqueado_ate']) > time()) {
+        return false;
+    }
+
+    if (($u['status'] ?? 'ativo') !== 'ativo' || !password_verify($senha, $u['senha_hash'])) {
+        // Cada tentativa errada soma 1; na 5ª, bloqueia por 15 minutos.
+        $tentativas = (int) $u['tentativas_login'] + 1;
+        $bloqueio = $tentativas >= 5
+            ? "now() + interval '15 minutes'"
+            : 'NULL';
+        $upd = $pdo->prepare(
+            "UPDATE usuarios SET tentativas_login = :tentativas, bloqueado_ate = {$bloqueio} WHERE id = :id"
+        );
+        $upd->execute([':tentativas' => $tentativas, ':id' => $u['id']]);
+        return false;
+    }
+
+    // Login certo: zera o contador de tentativas.
+    $pdo->prepare('UPDATE usuarios SET tentativas_login = 0, bloqueado_ate = NULL WHERE id = :id')
+        ->execute([':id' => $u['id']]);
+
+    return [
+        'nome'         => $u['nome'],
+        'perfil'       => $u['tipo'],
+        'id'           => $u['id'],
+        'redirecionar' => $destinos[$u['tipo']] ?? 'index.php',
+    ];
 }
 
 /**

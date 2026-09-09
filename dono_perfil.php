@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 verificarSessao('dono');
 $tituloPagina = 'Meu Perfil';
@@ -33,11 +33,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['alterar_senha'])) {
     $senhaNova  = $_POST['senha_nova']  ?? '';
     $senhaConf  = $_POST['confirmar_senha_nova'] ?? '';
     $uSenha = buscarPorCampo($usuarios, 'email', $emailSessao);
-    if (!$uSenha || $uSenha['senha'] !== $senhaAtual) $erro = 'Senha atual incorreta.';
+    if (!$uSenha || !password_verify($senhaAtual, $uSenha['senha'])) $erro = 'Senha atual incorreta.';
     elseif (strlen($senhaNova) < 6) $erro = 'Nova senha deve ter pelo menos 6 caracteres.';
     elseif ($senhaNova !== $senhaConf) $erro = 'As senhas não coincidem.';
     else {
-        foreach ($usuarios as &$u) { if (strtolower($u['email'])===$emailSessao) { $u['senha']=$senhaNova; break; } }
+        foreach ($usuarios as &$u) { if (strtolower($u['email'])===$emailSessao) { $u['senha']=password_hash($senhaNova, PASSWORD_DEFAULT); break; } }
         salvarJson('usuarios.json', $usuarios);
         $sucesso = 'Senha alterada com sucesso!';
     }

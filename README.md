@@ -85,9 +85,20 @@ dentia/
 
 ## Roadmap
 
-- [ ] Migrar as páginas mais acessadas pra fazerem sua própria query direta, em vez de carregar a tabela inteira via `lerJson()`
-- [ ] Testes automatizados para autenticação e para o adaptador de persistência
-- [ ] Substituir o odontograma renderizado em SVG puro por um componente reutilizável
+- [x] Migrar as páginas mais acessadas pra query direta (`dono_pacientes.php`)
+- [x] Testes automatizados para autenticação e para o adaptador de persistência
+- [x] Odontograma extraído para um componente reutilizável (`includes/odontograma_svg.php`)
+- [ ] Migrar as demais páginas de listagem (dentistas, agendamentos) pro mesmo padrão de query direta
+- [ ] Paginação nas listagens grandes
+
+## Testes
+
+```bash
+composer install
+createdb dentia_test
+psql dentia_test < database/schema.sql
+DB_NAME=dentia_test vendor/bin/phpunit
+```
 
 ---
 

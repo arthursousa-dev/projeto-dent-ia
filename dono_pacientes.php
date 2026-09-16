@@ -5,19 +5,37 @@ require_once 'includes/functions.php';
 verificarSessao('dono');
 
 $tituloPagina = 'Pacientes';
+$pdo = \App\Config\Database::getConnection();
 
 // pega o termo de busca da URL (se existir)
 $termoBusca = trim($_GET['busca'] ?? '');
 
-// filtra a lista de pacientes conforme a busca
+// consulta direta (em vez de carregar todos os pacientes via lerJson()
+// a cada visita), com a data da última consulta concluída via subquery
+$sqlBase = "
+    SELECT p.*,
+           (SELECT MAX(a.data) FROM agendamentos a
+             WHERE a.id_paciente = p.id AND a.status = 'Concluída') AS ultima_consulta_data
+    FROM pacientes p
+";
+
 if ($termoBusca) {
-    $listaBuscada = array_filter($listaPacientes, function ($paciente) use ($termoBusca) {
-        return stripos($paciente['nome'], $termoBusca) !== false
-            || stripos($paciente['cpf'], $termoBusca) !== false;
-    });
+    $stmt = $pdo->prepare($sqlBase . " WHERE p.nome ILIKE :termo OR p.cpf ILIKE :termo ORDER BY p.nome");
+    $stmt->execute([':termo' => '%' . $termoBusca . '%']);
 } else {
-    $listaBuscada = $listaPacientes;
+    $stmt = $pdo->query($sqlBase . " ORDER BY p.nome");
 }
+
+$listaBuscada = array_map(function ($p) {
+    $p['ultimaConsulta'] = $p['ultima_consulta_data'] ? date('d/m/Y', strtotime($p['ultima_consulta_data'])) : '—';
+    $p['status'] = ucfirst($p['status']);
+    return $p;
+}, $stmt->fetchAll());
+
+// indicadores do resumo, calculados de verdade a partir do banco
+$totalPacientes = (int) $pdo->query("SELECT COUNT(*) FROM pacientes")->fetchColumn();
+$totalAtivos    = (int) $pdo->query("SELECT COUNT(*) FROM pacientes WHERE status = 'ativo'")->fetchColumn();
+$novosNoMes     = (int) $pdo->query("SELECT COUNT(*) FROM pacientes WHERE date_trunc('month', criado_em) = date_trunc('month', CURRENT_DATE)")->fetchColumn();
 
 include 'includes/head.php';
 ?>
@@ -38,15 +56,15 @@ include 'includes/head.php';
     <div class="grade-estatisticas" style="grid-template-columns:repeat(3,1fr);">
       <div class="cartao-estatistica">
         <div class="icone-estatistica azul" aria-hidden="true"><i class="bi bi-people-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>284</strong><span>Total de pacientes</span></div>
+        <div class="info-estatistica"><strong><?= $totalPacientes ?></strong><span>Total de pacientes</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica verde" aria-hidden="true"><i class="bi bi-check-circle-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>261</strong><span>Ativos</span></div>
+        <div class="info-estatistica"><strong><?= $totalAtivos ?></strong><span>Ativos</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica amarelo" aria-hidden="true">🆕</div>
-        <div class="info-estatistica"><strong>12</strong><span>Novos este mês</span></div>
+        <div class="info-estatistica"><strong><?= $novosNoMes ?></strong><span>Novos este mês</span></div>
       </div>
     </div>
 

@@ -172,12 +172,19 @@ function registrarLancamento(array $dados): int {
     if ((float)$valor<=0 || !trim($dados['descricao'] ?? '')) throw new InvalidArgumentException('Informe descrição e valor positivo.');
     $pdo=\App\Config\Database::getConnection();
     $categoria=(int)($dados['id_categoria'] ?? 0);$tipo=$dados['tipo'] ?? '';
+    if (!in_array($tipo,['Receita','Despesa'],true)) throw new InvalidArgumentException('Tipo de lançamento inválido.');
     if (!$categoria) {
         $stmt=$pdo->prepare('SELECT id FROM categoria_lancamento WHERE tipo=:tipo ORDER BY id LIMIT 1');$stmt->execute(['tipo'=>$tipo]);$categoria=(int)$stmt->fetchColumn();
     }
+    $stmt=$pdo->prepare('SELECT 1 FROM categoria_lancamento WHERE id=:id AND tipo=:tipo');
+    $stmt->execute(['id'=>$categoria,'tipo'=>$tipo]);
+    if (!$stmt->fetchColumn()) throw new InvalidArgumentException('A categoria deve corresponder ao tipo de lançamento.');
+    $data=$dados['data'] ?? date('Y-m-d');
+    $dt=DateTimeImmutable::createFromFormat('!Y-m-d',$data);
+    if (!$dt || $dt->format('Y-m-d')!==$data || $data>date('Y-m-d')) throw new InvalidArgumentException('Informe uma data válida até hoje.');
     $stmt=$pdo->prepare('INSERT INTO lancamento_financeiro (data,tipo,descricao,valor,id_categoria,id_usuario)
-        VALUES (CURRENT_DATE,:tipo,:descricao,:valor,:categoria,:usuario) RETURNING id');
-    $stmt->execute(['tipo'=>$tipo,'descricao'=>trim($dados['descricao']),'valor'=>$valor,'categoria'=>$categoria,'usuario'=>$u['id']]);
+        VALUES (:data,:tipo,:descricao,:valor,:categoria,:usuario) RETURNING id');
+    $stmt->execute(['data'=>$data,'tipo'=>$tipo,'descricao'=>trim($dados['descricao']),'valor'=>$valor,'categoria'=>$categoria,'usuario'=>$u['id']]);
     return (int)$stmt->fetchColumn();
 }
 

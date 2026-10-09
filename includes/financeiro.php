@@ -6,7 +6,8 @@ function rotuloMesFinanceiro(DateTimeImmutable $data): string {
 
 function resumoFinanceiro(PDO $pdo, ?string $data = null): array {
     $data = $data ?? date('Y-m-d');
-    $dt = new DateTimeImmutable($data);
+    $dt = DateTimeImmutable::createFromFormat('!Y-m-d',$data);
+    if (!$dt || $dt->format('Y-m-d')!==$data) throw new InvalidArgumentException('Período financeiro inválido.');
     $inicio = $dt->modify('first day of this month')->format('Y-m-d');
     $fim = $dt->modify('first day of next month')->format('Y-m-d');
     $anterior = $dt->modify('first day of last month');
@@ -25,12 +26,24 @@ function resumoFinanceiro(PDO $pdo, ?string $data = null): array {
     $stmt = $pdo->prepare("SELECT COALESCE(sum(a.valor),0) FROM agendamentos a LEFT JOIN pagamento pg ON pg.id_agendamento=a.id
         WHERE a.status<>'Cancelado' AND a.data>=:inicio AND a.data<:fim AND pg.pago_em IS NULL");
     $stmt->execute(['inicio'=>$inicio,'fim'=>$fim]);
+    $aReceber=(float)$stmt->fetchColumn();
+    $stmt=$pdo->prepare("SELECT pl.nome, SUM(pg.valor) AS receita FROM pagamento pg
+        JOIN agendamentos a ON a.id=pg.id_agendamento JOIN pacientes pac ON pac.id=a.id_paciente
+        JOIN plano_saude pl ON pl.id=pac.id_plano
+        WHERE pg.pago_em>=:inicio::date AND pg.pago_em<:fim::date GROUP BY pl.nome ORDER BY receita DESC,pl.nome");
+    $stmt->execute(['inicio'=>$inicio,'fim'=>$fim]);
+    $porPlano=[];
+    foreach ($stmt->fetchAll() as $plano) $porPlano[$plano['nome']]=(float)$plano['receita'];
+    $stmt=$pdo->prepare("SELECT COALESCE(SUM(valor),0) FROM lancamento_financeiro
+        WHERE tipo='Receita' AND data>=:inicio AND data<:fim");
+    $stmt->execute(['inicio'=>$inicio,'fim'=>$fim]);
+    $avulsas=(float)$stmt->fetchColumn();
     $mesAtual = [
         'mes'=>rotuloMesFinanceiro($dt), 'receita_total'=>$receita, 'despesas_total'=>$despesas,
         'lucro'=>$receita-$despesas, 'procedimentos_realizados'=>(int)$m['procedimentos'],
         'ticket_medio'=>$m['procedimentos'] ? (float)$m['valor_producao']/(int)$m['procedimentos'] : 0,
         'crescimento_percentual'=>$receitaAnterior>0 ? ($receita-$receitaAnterior)/$receitaAnterior*100 : 0,
-        'a_receber'=>(float)$stmt->fetchColumn(), 'por_dentista'=>$porDentista->fetchAll(),
+        'a_receber'=>$aReceber, 'por_dentista'=>$porDentista->fetchAll(), 'por_plano'=>$porPlano, 'receitas_avulsas'=>$avulsas,
     ];
     $historico=[];
     for ($i=5; $i>=0; $i--) {

@@ -9,23 +9,19 @@ use PDO;
 final class AdaptadorPersistenciaTest extends TestCase
 {
     private PDO $pdo;
-    private string $cpfTeste = '000.000.000-00';
+    private string $cpfTeste = '529.982.247-25';
 
     protected function setUp(): void
     {
         $this->pdo = Database::getConnection();
         $this->limparPacienteTeste();
 
-        $this->pdo->prepare(
-            "INSERT INTO pacientes (nome, cpf, email, telefone, nascimento, status)
-             VALUES (:nome, :cpf, :email, :telefone, :nascimento, 'ativo')"
-        )->execute([
-            ':nome' => 'Paciente de Teste',
-            ':cpf' => $this->cpfTeste,
-            ':email' => 'paciente.teste@dentia.local',
-            ':telefone' => '(67) 90000-0000',
-            ':nascimento' => '1990-01-01',
-        ]);
+        $stmt = $this->pdo->prepare("INSERT INTO pessoa (nome, cpf, email, nascimento)
+            VALUES ('Paciente de Teste', :cpf, 'paciente.teste@dentia.local', '1990-01-01') RETURNING id");
+        $stmt->execute(['cpf' => soDigitos($this->cpfTeste)]);
+        $id = $stmt->fetchColumn();
+        $this->pdo->prepare('INSERT INTO pacientes (id_pessoa) VALUES (:id)')->execute(['id' => $id]);
+        upsertTelefone($this->pdo, (int) $id, null, '(67) 90000-0000');
     }
 
     protected function tearDown(): void
@@ -35,7 +31,14 @@ final class AdaptadorPersistenciaTest extends TestCase
 
     private function limparPacienteTeste(): void
     {
-        $this->pdo->prepare('DELETE FROM pacientes WHERE cpf = :cpf')->execute([':cpf' => $this->cpfTeste]);
+        $stmt = $this->pdo->prepare('SELECT id FROM pessoa WHERE cpf=:cpf');
+        $stmt->execute(['cpf' => soDigitos($this->cpfTeste)]);
+        $id = $stmt->fetchColumn();
+        if (!$id) return;
+        $this->pdo->prepare('DELETE FROM historico_clinico WHERE id_paciente IN (SELECT id FROM pacientes WHERE id_pessoa=:id)')->execute(['id' => $id]);
+        $this->pdo->prepare('DELETE FROM pacientes WHERE id_pessoa=:id')->execute(['id' => $id]);
+        $this->pdo->prepare('DELETE FROM telefone WHERE id_pessoa=:id')->execute(['id' => $id]);
+        $this->pdo->prepare('DELETE FROM pessoa WHERE id=:id')->execute(['id' => $id]);
     }
 
     private function buscarPacienteTeste(array $pacientes): ?array
@@ -71,7 +74,7 @@ final class AdaptadorPersistenciaTest extends TestCase
         $resultado = salvarJson('pacientes.json', $pacientes);
         $this->assertTrue($resultado);
 
-        $linha = $this->pdo->prepare('SELECT telefone FROM pacientes WHERE cpf = :cpf');
+        $linha = $this->pdo->prepare('SELECT telefone FROM vw_pacientes WHERE cpf = :cpf');
         $linha->execute([':cpf' => $this->cpfTeste]);
 
         $this->assertSame('(67) 99999-8888', $linha->fetchColumn());

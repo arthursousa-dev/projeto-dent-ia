@@ -4,25 +4,28 @@ require_once 'includes/functions.php';
 verificarSessao('dono');
 $tituloPagina = 'Faturamento';
 
-$fat        = lerJsonObjeto('faturamento.json');
-$mesAtual   = $fat['mes_atual']       ?? [];
-$historico  = $fat['historico_mensal']?? [];
-$transacoes = $fat['transacoes']      ?? [];
-
-$sucesso=''; $erro='';
+$periodo=$_GET['mes'] ?? date('Y-m');
+$dt=DateTimeImmutable::createFromFormat('!Y-m',$periodo);
+$erro='';
+if (!$dt || $dt->format('Y-m')!==$periodo) { $periodo=date('Y-m');$erro='Escolha um mês válido.'; }
+$sucesso=$_SESSION['financeiro_sucesso'] ?? '';unset($_SESSION['financeiro_sucesso']);
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     try {
         if (isset($_POST['salvar'])) registrarLancamento($_POST);
         elseif (isset($_POST['receber'])) confirmarPagamento((int)$_POST['id'],(int)$_POST['forma']);
-        $sucesso='Registro financeiro salvo.';
+        else throw new InvalidArgumentException('Ação financeira inválida.');
+        $_SESSION['financeiro_sucesso']='Registro financeiro salvo.';
+        $destino=isset($_POST['salvar']) ? substr($_POST['data'] ?? date('Y-m-d'),0,7) : date('Y-m');
+        header('Location: dono_faturamento.php?mes='.urlencode($destino),true,303);exit;
     } catch (Throwable $e) { $erro=mensagemOperacao($e); }
-    $fat=lerJsonObjeto('faturamento.json');
-    $mesAtual=$fat['mes_atual']; $historico=$fat['historico_mensal']; $transacoes=$fat['transacoes'];
 }
+$fat=resumoFinanceiro(\App\Config\Database::getConnection(),$periodo.'-01');
+$mesAtual=$fat['mes_atual'];$historico=$fat['historico_mensal'];$transacoes=$fat['transacoes'];
+$inicio=$periodo.'-01';$fim=date('Y-m-d',strtotime($inicio.' +1 month'));
 $pdo=\App\Config\Database::getConnection();
 $categorias=$pdo->query('SELECT * FROM categoria_lancamento ORDER BY tipo,nome')->fetchAll();
 $formas=$pdo->query('SELECT * FROM forma_pagamento ORDER BY nome')->fetchAll();
-$pendentes=array_values(array_filter(lerJson('agendamentos.json'),fn($a)=>!$a['pago'] && $a['status']!=='Cancelado'));
+$pendentes=array_values(array_filter(lerJson('agendamentos.json'),fn($a)=>!$a['pago'] && $a['status']!=='Cancelado' && $a['data']>=$inicio && $a['data']<$fim));
 // Valores calculados
 $receita   = $mesAtual['receita_total']    ?? 0;
 $despesas  = $mesAtual['despesas_total']   ?? 0;
@@ -42,36 +45,41 @@ include 'includes/head.php';
   <main class="conteudo-principal" id="conteudo-principal">
 
     <div class="cabecalho-pagina">
-      <div><h1><i class="bi bi-cash-coin" aria-hidden="true"></i> Faturamento</h1><p>Controle financeiro — <?= data_pt('F \d\e Y') ?></p></div>
+      <div><h1><i class="bi bi-cash-coin" aria-hidden="true"></i> Faturamento</h1><p>Controle financeiro — <?= limpar($mesAtual['mes']) ?></p></div>
       <a href="dono_relatorios.php" class="btn btn-primario"><i class="bi bi-file-earmark-text-fill" aria-hidden="true"></i> Relatórios</a>
     </div>
 
     <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
     <?php if ($sucesso): ?><div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div><?php endif; ?>
 
+    <form method="GET" class="linha-campos" style="margin-bottom:20px;align-items:end;">
+      <div class="grupo-campo"><label for="fat-mes">Mês de referência</label><input id="fat-mes" type="month" name="mes" value="<?= limpar($periodo) ?>" required></div>
+      <button class="btn btn-primario">Consultar</button>
+    </form>
+    <?php if (!$transacoes): ?><div class="alerta" role="status">Nenhum recebimento ou despesa neste mês. Consulte outro período ou registre um lançamento. Consultas pendentes entram na receita após confirmar o pagamento.</div><?php endif; ?>
     <!-- KPIs -->
     <div class="grade-estatisticas" style="margin-bottom:20px;">
       <div class="cartao-estatistica">
         <div class="icone-estatistica"><i class="bi bi-cash-coin" aria-hidden="true"></i></div>
         <div class="info-estatistica">
-          <strong>R$ <?= number_format($receita,0,',','.') ?></strong>
+          <strong>R$ <?= number_format($receita,2,',','.') ?></strong>
           <span>Receita do mês</span>
           <?php if ($crescimento): ?>
-            <span style="color:var(--sucesso);font-size:12px;font-weight:600;">▲ <?= number_format($crescimento,1,',','.') ?>% vs mês anterior</span>
+            <span style="color:<?= $crescimento>0 ? 'var(--sucesso)' : 'var(--perigo)' ?>;font-size:12px;font-weight:600;"><?= $crescimento>0 ? '▲' : '▼' ?> <?= number_format($crescimento,1,',','.') ?>% vs mês anterior</span>
           <?php endif; ?>
         </div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica"><i class="bi bi-graph-down-arrow" aria-hidden="true"></i></div>
         <div class="info-estatistica">
-          <strong>R$ <?= number_format($despesas,0,',','.') ?></strong>
+          <strong>R$ <?= number_format($despesas,2,',','.') ?></strong>
           <span>Despesas do mês</span>
         </div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></div>
         <div class="info-estatistica">
-          <strong>R$ <?= number_format($lucro,0,',','.') ?></strong>
+          <strong>R$ <?= number_format($lucro,2,',','.') ?></strong>
           <span>Lucro líquido</span>
         </div>
       </div>
@@ -96,16 +104,16 @@ include 'includes/head.php';
           <div class="grafico-barras" role="img" aria-label="Gráfico de receita mensal">
             <?php foreach ($historico as $mes): ?>
             <?php $pct = round(($mes['receita'] / $maxHistorico) * 100); ?>
-            <div class="coluna-grafico">
-              <span class="valor-barra" aria-hidden="true">
-                R$<?= number_format($mes['receita']/1000,0,',','.') ?>k
+            <div class="barra-item">
+              <span class="barra-valor" aria-hidden="true">
+                R$<?= number_format($mes['receita']/1000,1,',','.') ?>k
               </span>
-              <div class="barra-grafico <?= $mes === end($historico) ? 'atual' : '' ?>"
-                   style="height:<?= max(8,$pct) ?>%"
+              <div class="barra <?= $mes === end($historico) ? 'atual' : '' ?>"
+                   style="height:<?= max(0,$pct) ?>%"
                    role="presentation"
                    title="<?= limpar($mes['mes']) ?>: R$ <?= number_format($mes['receita'],2,',','.') ?>">
               </div>
-              <span class="rotulo-barra"><?= limpar(explode('/',$mes['mes'])[0]) ?></span>
+              <span class="barra-label"><?= limpar(explode('/',$mes['mes'])[0]) ?></span>
             </div>
             <?php endforeach; ?>
           </div>
@@ -115,21 +123,21 @@ include 'includes/head.php';
 
       <!-- Por plano -->
       <div class="cartao">
-        <div class="cartao-cabecalho"><h3><i class="bi bi-hospital-fill" aria-hidden="true"></i> Receita por Convênio</h3></div>
+        <div class="cartao-cabecalho"><h3><i class="bi bi-hospital-fill" aria-hidden="true"></i> Receita por plano do paciente</h3></div>
         <div class="cartao-corpo">
           <?php
-          $porPlano = $mesAtual['por_plano'] ?? [];
+          $porPlano = $mesAtual['por_plano'];
           $totalPlano = array_sum($porPlano) ?: 1;
           ?>
           <?php if (empty($porPlano)): ?>
-            <p style="color:var(--texto-fraco);text-align:center;padding:20px;">Sem dados de convênios.</p>
+            <p style="color:var(--texto-fraco);text-align:center;padding:20px;">Nenhum pagamento confirmado neste mês.</p>
           <?php else: ?>
           <?php foreach ($porPlano as $plano => $valor): ?>
           <?php $pct = round(($valor / $totalPlano) * 100); ?>
           <div style="margin-bottom:14px;">
             <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px;">
               <span style="font-weight:600;"><?= limpar($plano) ?></span>
-              <span style="color:var(--destaque);font-weight:700;">R$ <?= number_format($valor,0,',','.') ?> <small style="color:var(--texto-fraco);">(<?= $pct ?>%)</small></span>
+              <span style="color:var(--destaque);font-weight:700;">R$ <?= number_format($valor,2,',','.') ?> <small style="color:var(--texto-fraco);">(<?= $pct ?>%)</small></span>
             </div>
             <div style="height:8px;background:var(--borda);border-radius:4px;overflow:hidden;">
               <div style="width:<?= $pct ?>%;height:100%;background:var(--destaque);border-radius:4px;transition:width .6s ease;"></div>
@@ -137,6 +145,7 @@ include 'includes/head.php';
           </div>
           <?php endforeach; ?>
           <?php endif; ?>
+          <p style="font-size:12px;color:var(--texto-secundario);">Receitas avulsas: R$ <?= number_format($mesAtual['receitas_avulsas'],2,',','.') ?>. Não atribuídas a planos.</p>
         </div>
       </div>
 
@@ -146,7 +155,7 @@ include 'includes/head.php';
     <?php $porDentista = $mesAtual['por_dentista'] ?? []; ?>
     <?php if (!empty($porDentista)): ?>
     <div class="cartao" style="margin-bottom:20px;">
-      <div class="cartao-cabecalho"><h3><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i> Produção por Dentista</h3></div>
+      <div class="cartao-cabecalho"><h3><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i> Recebimentos e atendimentos por dentista</h3></div>
       <div class="cartao-corpo">
         <?php $maxDentista = max(array_column($porDentista,'receita')) ?: 1; ?>
         <?php foreach ($porDentista as $d): ?>
@@ -156,7 +165,7 @@ include 'includes/head.php';
           <div style="flex:1;">
             <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;">
               <span style="font-weight:600;"><?= limpar($d['nome']) ?></span>
-              <span style="color:var(--destaque);font-weight:700;">R$ <?= number_format($d['receita'],0,',','.') ?> <small style="color:var(--texto-fraco);">(<?= $d['procedimentos'] ?> proc.)</small></span>
+              <span style="color:var(--destaque);font-weight:700;">R$ <?= number_format($d['receita'],2,',','.') ?> <small style="color:var(--texto-fraco);">(<?= $d['procedimentos'] ?> proc.)</small></span>
             </div>
             <div style="height:7px;background:var(--borda);border-radius:4px;overflow:hidden;">
               <div style="width:<?= $pct ?>%;height:100%;background:var(--destaque);border-radius:4px;"></div>
@@ -171,7 +180,7 @@ include 'includes/head.php';
     <!-- Lançamentos -->
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-cabecalho">
-        <h3><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Últimos Lançamentos</h3>
+        <h3><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Lançamentos do mês</h3>
         <span style="font-size:13px;color:var(--texto-secundario);"><?= count($transacoes) ?> registros</span>
       </div>
       <div class="cartao-corpo" style="padding:0;">
@@ -215,7 +224,8 @@ include 'includes/head.php';
     <div class="cartao">
       <div class="cartao-cabecalho"><h3><i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Novo Lançamento</h3></div>
       <div class="cartao-corpo">
-        <form method="POST" novalidate>
+        <p style="margin-bottom:16px;color:var(--texto-secundario);">Registre receitas avulsas e despesas. Para receber uma consulta, confirme o pagamento na lista acima.</p>
+        <form method="POST">
           <?= csrfCampo() ?>
           <div class="linha-campos">
             <div class="grupo-campo">
@@ -227,14 +237,15 @@ include 'includes/head.php';
             </div>
             <div class="grupo-campo">
               <label for="fat-val">Valor (R$)</label>
-              <input type="number" id="fat-val" name="valor" min="0" step="0.01" placeholder="0,00">
+              <input type="number" id="fat-val" name="valor" min="0.01" step="0.01" placeholder="0,00" required>
             </div>
           </div>
+          <div class="grupo-campo"><label for="fat-data">Data do lançamento</label><input type="date" id="fat-data" name="data" value="<?= limpar($_POST['data'] ?? date('Y-m-d')) ?>" max="<?= date('Y-m-d') ?>" required></div>
           <div class="grupo-campo"><label for="fat-categoria">Categoria</label><select id="fat-categoria" name="id_categoria"><option value="">Categoria padrão do tipo</option>
-          <?php foreach ($categorias as $c): ?><option value="<?= $c['id'] ?>"><?= limpar($c['tipo'].' — '.$c['nome']) ?></option><?php endforeach; ?></select></div>
+          <?php foreach ($categorias as $c): ?><option value="<?= $c['id'] ?>" data-tipo="<?= limpar($c['tipo']) ?>"><?= limpar($c['tipo'].' — '.$c['nome']) ?></option><?php endforeach; ?></select></div>
           <div class="grupo-campo">
             <label for="fat-desc">Descrição</label>
-            <input type="text" id="fat-desc" name="descricao" placeholder="Ex: Limpeza — Maria Oliveira">
+            <input type="text" id="fat-desc" name="descricao" placeholder="Ex: Venda de kit de higiene" required>
           </div>
           <button type="submit" name="salvar" class="btn btn-primario"><i class="bi bi-save-fill" aria-hidden="true"></i> Registrar Lançamento</button>
         </form>
@@ -244,3 +255,16 @@ include 'includes/head.php';
   </main>
 </div>
 <?php include 'includes/a11y_bar.php'; ?>
+
+<script>
+const tipoLancamento=document.getElementById('fat-tipo');
+const categoriaLancamento=document.getElementById('fat-categoria');
+function atualizarCategorias() {
+    for (const opcao of categoriaLancamento.options) {
+        opcao.hidden=!!opcao.dataset.tipo && opcao.dataset.tipo!==tipoLancamento.value;
+        opcao.disabled=opcao.hidden;
+    }
+    if (categoriaLancamento.selectedOptions[0]?.disabled) categoriaLancamento.value='';
+}
+tipoLancamento.addEventListener('change',atualizarCategorias);atualizarCategorias();
+</script>

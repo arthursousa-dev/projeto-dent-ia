@@ -1,6 +1,6 @@
 # Modelo de dados
 
-PostgreSQL, 25 tabelas, 7 views. `pessoa` reúne a identidade civil; os perfis guardam apenas seus atributos próprios. O e-mail de `usuarios` é a credencial de login; o de `pessoa` é contato, podendo ser diferente.
+PostgreSQL, 31 tabelas, 9 views. `pessoa` reúne a identidade civil; os perfis guardam apenas seus atributos próprios. O e-mail de `usuarios` é a credencial de login; o de `pessoa` é contato, podendo ser diferente.
 
 ## Análise das formas normais
 
@@ -60,7 +60,7 @@ erDiagram
 
 - Telefone contém somente dígitos: DDD brasileiro válido, fixo com oito dígitos ou celular com nove começando por 9. O CHECK XOR exige pessoa ou clínica. Índices parciais limitam o principal; o número é único por titular, podendo repetir entre pessoas.
 - CPF tem onze dígitos, UNIQUE e verificação em PL/pgSQL. CRO é único por UF/número. Numeração FDI aceita dentes permanentes (11–48, finais 1–8) e decíduos (51–85, finais 1–5).
-- Agenda exige procedimento habilitado para o dentista e impede início simultâneo para dentista, paciente ou sala, exceto cancelamentos. Estes índices comparam início, não sobreposição pela duração do procedimento.
+- Agenda exige procedimento habilitado para o dentista e impede início simultâneo para dentista, paciente ou sala, exceto cancelamentos. Uma trigger também rejeita sobreposição pela duração do procedimento, com locks por dentista, paciente e sala.
 - Dados clínicos e financeiros usam `ON DELETE RESTRICT`. Substituir uma lista clínica pelo adapter é uma edição explícita; remover paciente não apaga seu histórico automaticamente.
 - Um registro de pagamento por agendamento representa a cobrança integral. `pago_em` nulo indica cobrança pendente; não nulo indica confirmação. Não há parcelamento neste modelo.
 - Todas as datas de auditoria usam TIMESTAMPTZ; views convertem timestamps antigos para o formato de leitura legado. Colunas `atualizado_em` são mantidas por triggers.
@@ -74,3 +74,27 @@ Os JSONs originais permanecem intactos. O gerador compartilha a pessoa quando h�
 O legado contém quatro dentistas, preservados para que a comparação não perca registros. O seed tem um dono, quatro dentistas, duas recepcionistas, dez pacientes e três logins de cliente (os outros pacientes não tinham usuário vinculado). Foram acrescentados dois pacientes e dez consultas preventivas concluídas e pagas; toda a carteira tem prontuário e odontograma. As sequências são alinhadas com `pg_get_serial_sequence`.
 
 `schema.sql` e `seed.sql` inicializam um banco vazio. Para um banco antigo em uso, faça backup e migre os dados antes de trocar o schema; o gerador deste projeto importa os JSONs de demonstração, não dados de produção.
+
+## Extensão operacional
+
+```mermaid
+erDiagram
+    categoria_lancamento ||--o{ lancamento_financeiro : classifica
+    usuarios ||--o{ lancamento_financeiro : registra
+    usuarios ||--o{ recuperacao_senha : solicita
+    prontuarios ||--o{ evolucao_clinica : documenta
+    agendamentos o|--o| evolucao_clinica : origina
+    dentista_procedimentos ||--o{ evolucao_clinica : autoriza
+    evolucao_clinica ||--o{ evolucao_dente : identifica
+    odontograma_dentes ||--o{ evolucao_dente : recebe
+    clinica ||--o{ funcionamento_clinica : abre
+    dia_semana ||--o{ funcionamento_clinica : organiza
+```
+
+| Forma | Antes → depois |
+|---|---|
+| 1FN | Dentes afetados em texto → ligação N:N `evolucao_dente`; horário da clínica em texto → uma linha por dia em `funcionamento_clinica` |
+| 2FN | Ligações evolução/dente e clínica/dia com PK composta; os horários dependem do dia daquela clínica |
+| 3FN | Categoria de lançamento como referência; evolução referencia prontuário e dentista/procedimento, sem duplicar identidade do paciente |
+
+Novas tabelas: `categoria_lancamento`, `lancamento_financeiro`, `evolucao_clinica`, `evolucao_dente`, `recuperacao_senha`, `funcionamento_clinica`. As views financeiras derivam indicadores da operação; `faturamento_mensal` mantém o papel de fechamento consolidado.

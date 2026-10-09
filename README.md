@@ -20,7 +20,7 @@ Projeto de portfólio construído em PHP puro, sem framework, com foco em fundam
 
 ## Arquitetura de dados
 
-O banco PostgreSQL usa 25 tabelas normalizadas e 7 views de compatibilidade. `pessoa` centraliza os dados civis; telefone, endereço, disponibilidade, histórico clínico e pagamento têm tabelas próprias. Especialidades, categorias, planos, salas e formas de pagamento são referências. `faturamento_mensal` representa um fechamento consolidado com chave `(ano, mes_num)`.
+O banco PostgreSQL usa 31 tabelas normalizadas e 9 views de compatibilidade. `pessoa` centraliza os dados civis; telefone, endereço, disponibilidade, histórico clínico e pagamento têm tabelas próprias. Especialidades, categorias, planos, salas e formas de pagamento são referências. `faturamento_mensal` representa um fechamento consolidado com chave `(ano, mes_num)`.
 
 `includes/db.php` preserva `lerJson()`, `lerJsonObjeto()` e `salvarJson()`: lê pelas views e grava nas tabelas base em transações. Cargo e pagamento confirmado são derivados. Os e-mails de login e de contato podem ser diferentes; os perfis usam o vínculo `id_usuario`.
 
@@ -68,7 +68,7 @@ Acesse `http://localhost:8000`.
 | Recepcionista | recepcao@dentai.com | 123456 |
 | Paciente | cliente@gmail.com | 123456 |
 
-> O seed tem 1 dono, 4 dentistas legados, 2 recepcionistas, 10 pacientes e 20 agendamentos. Os novos logins (`recepcao2@dentai.com`, `paciente9@dentia.local` e `paciente10@dentia.local`) também usam `123456`. Dados fictícios, gerados só para demonstração do sistema. Os agendamentos de exemplo têm datas fixas (mar/abr/set de 2026) herdadas dos dados originais — por isso os contadores de "atendimentos no mês" no dashboard podem aparecer zerados fora desse período; é o comportamento esperado pra dados de demonstração estáticos.
+> O seed tem 1 dono, 4 dentistas legados, 2 recepcionistas, 10 pacientes e 159 agendamentos. Todos os logins de demonstração usam `123456`. Inclui seis meses de receitas e despesas, histórico clínico, consultas atuais e futuras. A versão entregue usa 09/10/2026 como data base; `python3 scripts/gerar_seed_do_json_legado.py --data AAAA-MM-DD` permite regenerar outra data.
 
 ## Estrutura
 
@@ -110,3 +110,13 @@ DB_NAME=dentia_test vendor/bin/phpunit
 ---
 
 Feito por Arthur Sousa — [LinkedIn](https://www.linkedin.com/in/arthur-sousa-ads/) · [GitHub](https://github.com/arthursousa-dev)
+
+## Operação financeira e drawDB
+
+Receita é o total de pagamentos confirmados e receitas avulsas por data de recebimento. Despesas vêm de lançamentos categorizados. Lucro é receita menos despesas. Ticket médio é o valor dos atendimentos concluídos dividido pela quantidade, por data da consulta. Reservas e pagamentos pendentes não contam como receita.
+
+Agenda, check-in, cancelamento, pagamento, cadastros, evolução clínica e odontograma gravam no PostgreSQL. Relatórios exportam CSV. Recuperação de senha exige um link com token de uso único, válido por 30 minutos; o dono emite o link em Usuários. O projeto não envia esse link automaticamente por e-mail.
+
+No drawdb.app, use **File → Import from → JSON** e selecione `database/dentia-drawdb.json`. O arquivo contém as mesmas 31 tabelas do schema, exportadas do catálogo PostgreSQL. Para exportar novamente: `python3 scripts/exportar_drawdb.py` com as variáveis DB já configuradas. [Detalhes](docs/operacao.md).
+
+Quem já instalou a versão normalizada anterior pode aplicar, com backup prévio, `database/migrations/002_operacao_financeira.sql`, `003_funcionamento_clinica.sql` e `004_atendimentos_concluidos.sql`, nessa ordem. As migrações preservam os dados existentes. Schema e seed completos são para banco vazio.

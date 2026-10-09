@@ -13,9 +13,9 @@ Executada em 09/10/2026 com PostgreSQL 16.15, PHP 8.3.6 e PHPUnit 9.6.17 dispon�
 | Escrita pelo adaptador | Usuário/pessoa, paciente, dentista e clínica confirmados em SQL e nas views; rollback integral em erro |
 | Domínios | CPF inválido, DDD/número inválidos, XOR, principal único por pessoa e clínica, FDI e FK dentista/procedimento testados |
 | Agenda e pagamento | Conflitos isolados de dentista, paciente e sala rejeitados; cancelamento libera horário; `pago_em` deriva `pago` |
-| Testes automatizados | **24 testes, 86 assertions, todos aprovados** |
-| Sintaxe PHP | **44 arquivos aprovados por `php -l`** |
-| Páginas HTTP | **23 acessos autenticados** com resposta 200 e sem Warning/Fatal/Notice, incluindo busca de paciente e prontuário selecionado |
+| Testes automatizados | **32 testes, 108 assertions, todos aprovados** |
+| Sintaxe PHP | **49 arquivos aprovados por `php -l`** |
+| Páginas HTTP | **25 acessos autenticados** com resposta 200 e sem Warning/Fatal/Notice, incluindo busca de paciente e prontuário selecionado |
 | Formulários HTTP | **5 POSTs**: dono, recepcionista, dentista, paciente e clínica; SQL/adapter confirmam alterações sem duplicar pacientes ou dentistas |
 | Gerador | Compilação Python válida e geração determinística; consultas novas em dias úteis |
 | Git | Branch `feat/normalizacao-banco`; histórico original preservado; commits semânticos separados |
@@ -36,11 +36,14 @@ Os testes de rejeição emitem mensagens esperadas em `error_log` para telefone 
 | Telefones | 26 |
 | Endereços | 11 |
 | Histórico clínico | 31 |
-| Agendamentos | 20 |
-| Pagamentos confirmados | 13 |
+| Agendamentos | 159 |
+| Pagamentos confirmados | 97 |
 | Prontuários | 10 |
 | Dentes no odontograma | 240 |
 | Procedimentos no odontograma | 18 |
+| Evoluções clínicas | 118 |
+| Lançamentos financeiros | 30 |
+| Dias de funcionamento | 6 |
 
 Os quatro dentistas já existiam no anexo e foram preservados; reduzir para dois impediria a comparação integral dos registros antigos. Pacientes sem login no legado continuam sem credencial; os dois novos pacientes têm login próprio.
 
@@ -62,3 +65,15 @@ DB_NAME=dentia_test phpunit --no-configuration --bootstrap tests/bootstrap.php t
 ```
 
 A proteção no bootstrap exige nome de banco terminado em `_test`. O schema/seed destinam-se a um banco vazio; a aplicação não importa esses arquivos automaticamente.
+
+## Validação operacional adicional
+
+Schema e seed atualizados executados em banco vazio com `ON_ERROR_STOP=1`. As três migrações foram aplicadas sobre schema/seed do commit `91e16f5`; preservaram os 20 agendamentos existentes.
+
+Os testes novos exercitam reserva com paciente da sessão, conflito por duração, dia fechado, isolamento de cancelamento, recebimento sem duplicação, valor decimal brasileiro, despesa/lucro, evolução, odontograma e token de senha expirado ou já utilizado. Os cinco POSTs HTTP de perfil e clínica incluem token CSRF e tiveram os resultados conferidos pelo adapter.
+
+O JSON do drawDB foi validado com o pacote `jsonschema` contra `src/data/schemas.js` do repositório oficial: 31 tabelas, 168 colunas, 40 ligações de coluna e 7 ENUMs. FKs compostas usam mais de uma ligação visual.
+
+Com data base 09/10/2026: receita de outubro R$ 7.550,00, despesas R$ 6.375,00, lucro R$ 1.175,00, 16 consultas concluídas e ticket médio R$ 460,00. As receitas refletem recebimentos; o ticket reflete produção. Os gráficos têm seis meses preenchidos. A contagem de seed acima se refere à carga limpa, antes das mutações dos testes.
+
+A comparação integral do legado descrita acima foi feita na primeira etapa de normalização. Nesta extensão, o resumo financeiro e o histórico de prontuário ganham os dados operacionais novos, mantendo as chaves usadas pelas páginas.

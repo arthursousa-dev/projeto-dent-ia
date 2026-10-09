@@ -19,11 +19,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         $sucesso='Consulta atualizada.';
     } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
-$listaAgendamentos=array_map(function($a){$a['procedimento']=$a['servico'];return $a;},lerJson('agendamentos.json'));
-$dataFiltro=$dataFiltro ?? date('Y-m-d');
-if (!preg_match('/^\d{4}-\d{2}-\d{2}$/',$dataFiltro) || strtotime($dataFiltro)===false) $dataFiltro=date('Y-m-d');
-$listaAgendamentos=array_values(array_filter($listaAgendamentos,fn($a)=>$a['data']===$dataFiltro &&
-    (empty($dentistaFiltro) || $a['id_dentista']==$dentistaFiltro)));
+// Dashboard mostra somente consultas de hoje e consulta o banco a cada acesso.
+$pdo = \App\Config\Database::getConnection();
+$stmtHoje = $pdo->prepare("SELECT v.*, v.servico AS procedimento FROM vw_agendamentos v WHERE v.data=:data ORDER BY v.hora, v.id");
+$stmtHoje->execute(['data'=>date('Y-m-d')]);
+$listaAgendamentos = $stmtHoje->fetchAll(PDO::FETCH_ASSOC);
 $formas=\App\Config\Database::getConnection()->query('SELECT * FROM forma_pagamento ORDER BY nome')->fetchAll();
 include 'includes/head.php';
 ?>

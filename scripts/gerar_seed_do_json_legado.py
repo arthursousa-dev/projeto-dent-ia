@@ -1,6 +1,7 @@
 """Gera dados PostgreSQL normalizados, sem modificar os JSONs legados."""
 import json
 import re
+from datetime import date, timedelta
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -148,10 +149,14 @@ for d in dentistas:
             inserir('dentista_procedimentos', id_dentista=d['id'], id_procedimento=ids_procedimentos[nome])
 
 # Novos atendimentos preventivos; os agendamentos legados permanecem intactos.
+data_consulta = date(2026, 9, 14)
 for p in pacientes:
+    while data_consulta.weekday() >= 5:
+        data_consulta += timedelta(days=1)
     agendamentos.append(dict(id=10+p['id'], id_paciente=p['id'], id_dentista=1,
-        servico='Consulta de Rotina', data=f"2026-09-{14+p['id']:02d}", hora='08:00', sala='Sala 1',
+        servico='Consulta de Rotina', data=data_consulta.isoformat(), hora='08:00', sala='Sala 1',
         status='Concluída', valor=90, pago=True, forma_pagamento='Pix', observacoes='Avaliação preventiva concluída.'))
+    data_consulta += timedelta(days=1)
 for a in agendamentos:
     inserir_refs('agendamentos', {k:a[k] for k in ['id','id_paciente','id_dentista','data','hora','status','valor']}
         | dict(id_procedimento=ids_procedimentos[a['servico']], observacoes=a.get('observacoes') or None),

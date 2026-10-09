@@ -31,3 +31,17 @@ psql -v ON_ERROR_STOP=1 -f database/migrations/004_atendimentos_concluidos.sql
 ```
 
 Cada arquivo usa uma transação. Não aplique o schema completo nem o seed sobre uma base com dados. Para demonstração atualizada, crie outro banco vazio e importe schema/seed.
+
+## Conferir faturamento zerado
+
+Escolha o mês na tela. Os indicadores, os seis meses do gráfico, a lista de lançamentos e as consultas a receber usam o mesmo período. Receita por plano soma pagamentos confirmados de pacientes com aquele plano; receitas avulsas aparecem separadamente. A classificação usa o plano atual do cadastro.
+
+O gráfico usa as classes existentes no CSS. Lançamentos têm data explícita, categoria compatível com Receita/Despesa e confirmação seguida de redirecionamento, para que atualizar a página não repita a gravação.
+
+Para consultar a base usada pela aplicação:
+
+```bash
+php scripts/verificar_faturamento.php 2026-10
+```
+
+Um banco antigo pode ter pagamentos apenas em outros meses. A migração cria a estrutura, preservando os dados, mas não adiciona movimento fictício. Os valores de demonstração são fornecidos por `database/seed.sql`, para carga junto do schema em um banco vazio, conforme README. Não execute o seed em uma base com dados existentes.

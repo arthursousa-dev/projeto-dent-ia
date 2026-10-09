@@ -13,8 +13,8 @@ Executada em 09/10/2026 com PostgreSQL 16.15, PHP 8.3.6 e PHPUnit 9.6.17 dispon�
 | Escrita pelo adaptador | Usuário/pessoa, paciente, dentista e clínica confirmados em SQL e nas views; rollback integral em erro |
 | Domínios | CPF inválido, DDD/número inválidos, XOR, principal único por pessoa e clínica, FDI e FK dentista/procedimento testados |
 | Agenda e pagamento | Conflitos isolados de dentista, paciente e sala rejeitados; cancelamento libera horário; `pago_em` deriva `pago` |
-| Testes automatizados | **32 testes, 108 assertions, todos aprovados** |
-| Sintaxe PHP | **49 arquivos aprovados por `php -l`** |
+| Testes automatizados | **36 testes, 116 assertions, todos aprovados** |
+| Sintaxe PHP | **50 arquivos aprovados por `php -l`** |
 | Páginas HTTP | **25 acessos autenticados** com resposta 200 e sem Warning/Fatal/Notice, incluindo busca de paciente e prontuário selecionado |
 | Formulários HTTP | **5 POSTs**: dono, recepcionista, dentista, paciente e clínica; SQL/adapter confirmam alterações sem duplicar pacientes ou dentistas |
 | Gerador | Compilação Python válida e geração determinística; consultas novas em dias úteis |
@@ -77,3 +77,7 @@ O JSON do drawDB foi validado com o pacote `jsonschema` contra `src/data/schemas
 Com data base 09/10/2026: receita de outubro R$ 7.550,00, despesas R$ 6.375,00, lucro R$ 1.175,00, 16 consultas concluídas e ticket médio R$ 460,00. As receitas refletem recebimentos; o ticket reflete produção. Os gráficos têm seis meses preenchidos. A contagem de seed acima se refere à carga limpa, antes das mutações dos testes.
 
 A comparação integral do legado descrita acima foi feita na primeira etapa de normalização. Nesta extensão, o resumo financeiro e o histórico de prontuário ganham os dados operacionais novos, mantendo as chaves usadas pelas páginas.
+
+## Correção da tela de faturamento
+
+Em 09/10/2026, os testes adicionais confirmaram receita por plano conciliada com receita avulsa, filtro mensal, lançamento datado fora do mês atual, categoria incompatível e rejeição de período inválido. O teste HTTP conferiu os KPIs de outubro, classes do gráfico existentes no CSS, plano preenchido, seleção de mês e lançamento de R$ 85,10 em setembro sem afetar outubro. Atualizar a página após o redirecionamento não duplicou esse lançamento. A suíte terminou com 36 testes e 116 assertions aprovados.

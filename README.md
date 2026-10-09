@@ -120,3 +120,5 @@ Agenda, check-in, cancelamento, pagamento, cadastros, evolução clínica e odon
 No drawdb.app, use **File → Import from → JSON** e selecione `database/dentia-drawdb.json`. O arquivo contém as mesmas 31 tabelas do schema, exportadas do catálogo PostgreSQL. Para exportar novamente: `python3 scripts/exportar_drawdb.py` com as variáveis DB já configuradas. [Detalhes](docs/operacao.md).
 
 Quem já instalou a versão normalizada anterior pode aplicar, com backup prévio, `database/migrations/002_operacao_financeira.sql`, `003_funcionamento_clinica.sql` e `004_atendimentos_concluidos.sql`, nessa ordem. As migrações preservam os dados existentes. Schema e seed completos são para banco vazio.
+
+Para conferir faturamento e os meses com movimento na base configurada: `php scripts/verificar_faturamento.php 2026-10`. A tela permite selecionar o mês e registra receitas avulsas e despesas com data. Pagamentos de consultas são confirmados separadamente, sem duplicar receita.

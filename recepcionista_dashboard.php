@@ -21,10 +21,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 }
 // Dashboard mostra somente consultas de hoje e consulta o banco a cada acesso.
 $pdo = \App\Config\Database::getConnection();
-$stmtHoje = $pdo->prepare("SELECT v.*, v.servico AS procedimento FROM vw_agendamentos v WHERE v.data=:data ORDER BY v.hora, v.id");
+$stmtHoje = $pdo->prepare("SELECT a.*, to_char(a.hora,'HH24:MI') AS hora, p.nome AS paciente, d.nome AS dentista, pr.nome AS servico, pr.nome AS procedimento FROM agendamentos a JOIN pacientes p ON p.id=a.id_paciente JOIN dentistas d ON d.id=a.id_dentista LEFT JOIN procedimentos pr ON pr.id=a.id_procedimento WHERE a.data=:data ORDER BY a.hora, a.id");
 $stmtHoje->execute(['data'=>date('Y-m-d')]);
 $listaAgendamentos = $stmtHoje->fetchAll(PDO::FETCH_ASSOC);
-$formas=\App\Config\Database::getConnection()->query('SELECT * FROM forma_pagamento ORDER BY nome')->fetchAll();
+$formas=[['id'=>1,'nome'=>'Dinheiro'],['id'=>2,'nome'=>'Pix'],['id'=>3,'nome'=>'Cartão de crédito'],['id'=>4,'nome'=>'Cartão de débito'],['id'=>5,'nome'=>'Transferência']];
 include 'includes/head.php';
 ?>
 

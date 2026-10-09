@@ -130,6 +130,15 @@ function verificarSessao(string $perfilNecessario): void {
     }
 }
 
+if (($_SESSION['perfil'] ?? '') === 'recepcionista') {
+    $pdo=\App\Config\Database::getConnection();
+    $listaDentistas=$pdo->query("SELECT d.*, 0 AS atendimentos_mes, 0 AS atendimentos, initcap(d.status::text) AS status FROM dentistas d ORDER BY d.nome")->fetchAll();
+    $listaPacientes=$pdo->query("SELECT p.*, initcap(p.status::text) AS status FROM pacientes p ORDER BY p.nome")->fetchAll();
+    $listaProcedimentos=$pdo->query('SELECT nome FROM procedimentos ORDER BY nome')->fetchAll(PDO::FETCH_COLUMN);
+    $listaHorarios=[];
+    for ($h=8;$h<=18;$h++) for ($m=0;$m<60;$m+=30) if ($h<18 || !$m) $listaHorarios[]=sprintf('%02d:%02d',$h,$m);
+    $listaAgendamentos=[];
+} else {
 $listaDentistas = array_map(function($d) {
     $d['atendimentos']=$d['atendimentos_mes']; return $d;
 },lerJson('dentistas.json'));
@@ -161,3 +170,5 @@ foreach ($listaPacientes as &$p) {
 unset($p);
 $listaProcedimentos=array_column(lerJson('procedimentos.json'),'nome');
 $listaHorarios=\App\Config\Database::getConnection()->query("SELECT DISTINCT to_char(hora,'HH24:MI') FROM disponibilidade_dentista ORDER BY 1")->fetchAll(PDO::FETCH_COLUMN);
+
+}

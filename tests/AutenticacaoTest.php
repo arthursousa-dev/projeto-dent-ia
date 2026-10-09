@@ -17,15 +17,17 @@ final class AutenticacaoTest extends TestCase
         $this->pdo = Database::getConnection();
         $this->pdo->prepare('DELETE FROM usuarios WHERE email = :email')
             ->execute([':email' => $this->email]);
+        $this->pdo->exec("DELETE FROM pessoa WHERE cpf='11144477735'");
 
+        $idPessoa = $this->pdo->query("INSERT INTO pessoa (nome, cpf) VALUES ('Usuário de Teste', '11144477735') RETURNING id")->fetchColumn();
         $this->pdo->prepare(
-            'INSERT INTO usuarios (email, senha_hash, tipo, nome, status)
-             VALUES (:email, :senha, :tipo, :nome, :status)'
+            'INSERT INTO usuarios (email, senha_hash, tipo, id_pessoa, status)
+             VALUES (:email, :senha, :tipo, :pessoa, :status)'
         )->execute([
             ':email'  => $this->email,
             ':senha'  => password_hash($this->senha, PASSWORD_DEFAULT),
             ':tipo'   => 'dono',
-            ':nome'   => 'Usuário de Teste',
+            ':pessoa' => $idPessoa,
             ':status' => 'ativo',
         ]);
     }
@@ -34,6 +36,7 @@ final class AutenticacaoTest extends TestCase
     {
         $this->pdo->prepare('DELETE FROM usuarios WHERE email = :email')
             ->execute([':email' => $this->email]);
+        $this->pdo->exec("DELETE FROM pessoa WHERE cpf='11144477735'");
     }
 
     public function test_login_com_credenciais_corretas_retorna_dados_do_usuario(): void

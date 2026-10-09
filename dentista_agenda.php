@@ -5,7 +5,9 @@ require_once 'includes/functions.php';
 verificarSessao('dentista');
 
 $tituloPagina = 'Minha Agenda';
-$dataFiltro   = $_GET['data'] ?? date('Y-m-d');
+$dataFiltro = $_GET['data'] ?? date('Y-m-d');
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/',$dataFiltro) || strtotime($dataFiltro)===false) $dataFiltro=date('Y-m-d');
+$listaAgendamentos=array_values(array_filter($listaAgendamentos,fn($a)=>$a['data']===$dataFiltro));
 
 include 'includes/head.php';
 ?>

@@ -6,19 +6,15 @@ verificarSessao('recepcionista');
 
 $tituloPagina = 'Pacientes';
 
-// busca de pacientes
-$termoBusca = trim($_GET['busca'] ?? '');
-if ($termoBusca) {
-    $listaBuscada = array_filter($listaPacientes, function ($paciente) use ($termoBusca) {
-        return stripos($paciente['nome'], $termoBusca) !== false
-            || stripos($paciente['cpf'], $termoBusca) !== false;
-    });
-} else {
-    $listaBuscada = $listaPacientes;
+$erro='';$sucesso='';$cadastro=[];
+if (isset($_POST['salvar_paciente'])) {
+    try { salvarCadastroPaciente($_POST+['observacoes'=>$_POST['obs'] ?? '']);$sucesso='Paciente salvo.'; }
+    catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
-
-$sucesso = isset($_POST['salvar_paciente']) ? 'Paciente cadastrado com sucesso!' : '';
-
+$listaPacientes=array_map(function($p) use ($listaPacientes){$p['ultimaConsulta']=(buscarPorCampo($listaPacientes,'id',$p['id'])['ultimaConsulta'] ?? '—');return $p;},lerJson('pacientes.json'));
+if (isset($_GET['editar'])) $cadastro=buscarPorCampo($listaPacientes,'id',(int)$_GET['editar']) ?? [];
+$termoBusca=trim($_GET['busca'] ?? '');
+$listaBuscada=array_values(array_filter($listaPacientes,fn($p)=>$termoBusca==='' || stripos($p['nome'],$termoBusca)!==false || stripos($p['cpf'],$termoBusca)!==false));
 include 'includes/head.php';
 ?>
 
@@ -41,52 +37,54 @@ include 'includes/head.php';
       </button>
     </div>
 
+    <?php if ($erro): ?><div class="alerta alerta-erro"><?= limpar($erro) ?></div><?php endif; ?>
     <?php if ($sucesso): ?>
       <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
     <?php endif; ?>
 
     <!-- formulário de cadastro de novo paciente -->
-    <div class="cartao" id="form-paciente" style="display:none;margin-bottom:22px;">
+    <div class="cartao" id="form-paciente" style="display:<?= $cadastro || $erro ? 'block' : 'none' ?>;margin-bottom:22px;">
       <div class="cartao-cabecalho">
         <h3><i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Cadastrar Novo Paciente</h3>
         <button class="btn btn-fantasma btn-pequeno" onclick="alternarFormulario()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </div>
       <div class="cartao-corpo">
         <form method="POST" aria-label="Formulário de cadastro de paciente">
+          <?= csrfCampo() ?><input type="hidden" name="id" value="<?= (int)($cadastro['id'] ?? 0) ?>">
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="pac-nome">Nome completo</label>
-              <input type="text" id="pac-nome" name="nome" required autocomplete="name">
+              <input type="text" id="pac-nome" name="nome" value="<?= limpar($cadastro['nome'] ?? '') ?>" required autocomplete="name">
             </div>
             <div class="grupo-campo">
               <label for="pac-cpf">CPF</label>
-              <input type="text" id="pac-cpf" name="cpf" placeholder="000.000.000-00">
+              <input type="text" id="pac-cpf" name="cpf" value="<?= limpar($cadastro['cpf'] ?? '') ?>" placeholder="000.000.000-00">
             </div>
           </div>
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="pac-telefone">Telefone</label>
-              <input type="tel" id="pac-telefone" name="telefone" autocomplete="tel">
+              <input type="tel" id="pac-telefone" name="telefone" value="<?= limpar($cadastro['telefone'] ?? '') ?>" autocomplete="tel">
             </div>
             <div class="grupo-campo">
               <label for="pac-email">E-mail</label>
-              <input type="email" id="pac-email" name="email" autocomplete="email">
+              <input type="email" id="pac-email" name="email" value="<?= limpar($cadastro['email'] ?? '') ?>" autocomplete="email">
             </div>
           </div>
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="pac-nascimento">Data de Nascimento</label>
-              <input type="date" id="pac-nascimento" name="nascimento" autocomplete="bday">
+              <input type="date" id="pac-nascimento" name="nascimento" value="<?= limpar($cadastro['nascimento'] ?? '') ?>" autocomplete="bday">
             </div>
             <div class="grupo-campo">
               <label for="pac-plano">Plano de Saúde</label>
-              <input type="text" id="pac-plano" name="plano" placeholder="Nome do plano (opcional)">
+              <input type="text" id="pac-plano" name="plano" value="<?= limpar($cadastro['plano'] ?? '') ?>" placeholder="Nome do plano (opcional)">
             </div>
           </div>
           <div class="grupo-campo">
             <label for="pac-obs">Alergias / Observações médicas</label>
             <textarea id="pac-obs" name="obs" rows="2"
-                      placeholder="Alergias a medicamentos ou condições de saúde relevantes..."></textarea>
+                      placeholder="Alergias a medicamentos ou condições de saúde relevantes..."><?= limpar($cadastro['observacoes'] ?? '') ?></textarea>
           </div>
           <div style="display:flex;gap:10px;">
             <button type="submit" name="salvar_paciente" class="btn btn-primario">Salvar</button>
@@ -155,11 +153,7 @@ include 'includes/head.php';
                      aria-label="Agendar consulta para <?= limpar($paciente['nome']) ?>">
                     <i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Agendar
                   </a>
-                  <button class="btn btn-fantasma btn-pequeno"
-                          onclick="alert('Em produção abriria o formulário de edição.')"
-                          aria-label="Editar dados de <?= limpar($paciente['nome']) ?>">
-                    <i class="bi bi-pencil-fill" aria-hidden="true"></i>
-                  </button>
+                  <a class="btn btn-fantasma btn-pequeno" href="?editar=<?= $paciente['id'] ?>">Editar</a>
                 </div>
               </td>
             </tr>

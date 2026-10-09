@@ -5,17 +5,19 @@ require_once 'includes/functions.php';
 verificarSessao('dono');
 
 $tituloPagina = 'Dentistas';
-$sucesso = '';
-
-// processa as ações do formulário
-if (isset($_POST['salvar_dentista'])) {
-    $sucesso = 'Dentista cadastrado com sucesso!';
+$sucesso='';$erro='';
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+    try {
+        if (isset($_POST['salvar_dentista'])) { cadastrarDentista($_POST);$sucesso='Dentista cadastrado. Login inicial: e-mail informado, senha 123456.'; }
+        elseif (isset($_POST['excluir'])) {
+            $pdo=\App\Config\Database::getConnection();
+            $stmt=$pdo->prepare("UPDATE dentistas SET status='inativo' WHERE id=:id");$stmt->execute(['id'=>(int)$_POST['id']]);
+            $sucesso='Dentista inativado; os registros clínicos foram preservados.';
+        }
+    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
+    $listaDentistas=lerJson('dentistas.json');
+    foreach ($listaDentistas as &$d) $d['atendimentos']=$d['atendimentos_mes'];unset($d);
 }
-if (isset($_POST['excluir'])) {
-    // TODO: deletar do banco de dados pelo ID
-    $sucesso = 'Dentista removido do sistema.';
-}
-
 include 'includes/head.php';
 ?>
 
@@ -39,6 +41,7 @@ include 'includes/head.php';
       </button>
     </div>
 
+    <?php if ($erro): ?><div class="alerta alerta-erro"><?= limpar($erro) ?></div><?php endif; ?>
     <?php if ($sucesso): ?>
       <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
     <?php endif; ?>
@@ -53,6 +56,7 @@ include 'includes/head.php';
       </div>
       <div class="cartao-corpo">
         <form method="POST" aria-label="Formulário de cadastro de dentista">
+          <?= csrfCampo() ?>
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="dent-nome">Nome completo</label>
@@ -94,6 +98,8 @@ include 'includes/head.php';
                      value="<?= date('Y-m-d') ?>">
             </div>
           </div>
+          <div class="linha-campos"><div class="grupo-campo"><label>CPF</label><input name="cpf" required></div><div class="grupo-campo"><label>Nascimento</label><input type="date" name="nascimento" required></div><div class="grupo-campo"><label>Sala</label><input name="sala" value="Sala 1" required></div></div>
+          <div class="grupo-campo"><label>Procedimentos habilitados</label><?php foreach ($listaProcedimentos as $proc): ?><label><input type="checkbox" name="procedimentos[]" value="<?= limpar($proc) ?>"> <?= limpar($proc) ?></label><?php endforeach; ?></div>
           <button type="submit" name="salvar_dentista" class="btn btn-primario">
             Salvar dentista
           </button>
@@ -104,7 +110,7 @@ include 'includes/head.php';
     <!-- listagem dos dentistas cadastrados -->
     <div class="cartao">
       <div class="cartao-cabecalho">
-        <h3><i class="bi bi-person-badge-fill" aria-hidden="true"></i> Equipe Ativa (<?= count($listaDentistas) ?> dentistas)</h3>
+        <h3><i class="bi bi-person-badge-fill" aria-hidden="true"></i> Equipe cadastrada (<?= count($listaDentistas) ?> dentistas)</h3>
       </div>
       <div class="tabela-wrapper">
         <table aria-label="Lista de dentistas cadastrados">
@@ -142,18 +148,15 @@ include 'includes/head.php';
               <td><?= emblema($dentista['status']) ?></td>
               <td>
                 <div style="display:flex;gap:6px;">
-                  <!-- editar — TODO: abrir modal com dados do dentista -->
-                  <button class="btn btn-fantasma btn-pequeno"
-                          onclick="alert('Em produção abriria o formulário de edição com os dados do banco.')"
-                          aria-label="Editar <?= limpar($dentista['nome']) ?>">
-                    <i class="bi bi-pencil-fill" aria-hidden="true"></i>
-                  </button>
-                  <!-- remover com confirmação -->
+                  
+                  <a class="btn btn-fantasma btn-pequeno" href="dono_editar_dentista.php?id=<?= $dentista['id'] ?>">Editar</a>
+                  <!-- inativar com confirmação -->
                   <form method="POST" style="display:inline;"
-                        onsubmit="return confirm('Tem certeza que deseja remover <?= limpar($dentista['nome']) ?>?')">
+                        onsubmit="return confirm('Tem certeza que deseja inativar <?= limpar($dentista['nome']) ?>
+          <?= csrfCampo() ?>?')">
                     <input type="hidden" name="id" value="<?= $dentista['id'] ?>">
                     <button type="submit" name="excluir" class="btn btn-perigo btn-pequeno"
-                            aria-label="Remover <?= limpar($dentista['nome']) ?>">
+                            aria-label="Inativar <?= limpar($dentista['nome']) ?>">
                       <i class="bi bi-trash-fill" aria-hidden="true"></i>
                     </button>
                   </form>

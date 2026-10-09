@@ -6,11 +6,18 @@ verificarSessao('dentista');
 
 $tituloPagina = 'Painel do Dentista';
 
-// processa o salvamento rápido de prontuário
-$sucesso = isset($_POST['salvar_atendimento'])
-    ? 'Prontuário salvo em ' . data_pt('d/m/Y \à\s H:i') . '!'
-    : '';
-
+$d=dentistaSessao(); $erro='';$sucesso='';
+if (isset($_POST['salvar_atendimento'])) {
+    try { registrarEvolucao($_POST);$sucesso='Evolução clínica registrada.'; }
+    catch (Throwable $e) { $erro=mensagemOperacao($e); }
+}
+$agendaHoje=array_values(array_filter($listaAgendamentos,fn($a)=>$a['data']===date('Y-m-d')));
+$atendidos=count(array_filter($agendaHoje,fn($a)=>$a['status']==='Concluída'));
+$restantes=count(array_filter($agendaHoje,fn($a)=>!in_array($a['status'],['Concluída','Cancelado'],true)));
+$mes=count(array_filter($listaAgendamentos,fn($a)=>substr($a['data'],0,7)===date('Y-m') && $a['status']==='Concluída'));
+$proxima=null;
+foreach ($agendaHoje as $a) if (in_array($a['status'],['Aguardando','Confirmado','Agendado'],true)) { $proxima=$a;break; }
+$listaProcedimentos=$d['procedimentos'] ?? [];
 include 'includes/head.php';
 ?>
 
@@ -21,12 +28,13 @@ include 'includes/head.php';
 
     <div class="cabecalho-pagina">
       <div>
-        <h1>Olá, Dr. Carlos! <i class="bi bi-emoji-smile-fill" aria-hidden="true"></i></h1>
-        <p>Clínico Geral — CRO-SP 12345 — <?= data_pt('d \d\e F \d\e Y') ?></p>
+        <h1>Olá, <?= limpar($d['nome'] ?? $_SESSION['usuario']) ?>! <i class="bi bi-emoji-smile-fill" aria-hidden="true"></i></h1>
+        <p><?= limpar(($d['especialidade'] ?? '').' — '.($d['cro'] ?? '')) ?> — <?= data_pt('d \d\e F \d\e Y') ?></p>
       </div>
       <a href="dentista_agenda.php" class="btn btn-primario"><i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Ver Agenda Completa</a>
     </div>
 
+    <?php if ($erro): ?><div class="alerta alerta-erro"><?= limpar($erro) ?></div><?php endif; ?>
     <?php if ($sucesso): ?>
       <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
     <?php endif; ?>
@@ -35,19 +43,19 @@ include 'includes/head.php';
     <div class="grade-estatisticas">
       <div class="cartao-estatistica">
         <div class="icone-estatistica verde" aria-hidden="true"><i class="bi bi-check-circle-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>5</strong><span>Atendidos hoje</span></div>
+        <div class="info-estatistica"><strong><?= $atendidos ?></strong><span>Atendidos hoje</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica amarelo" aria-hidden="true">⏳</div>
-        <div class="info-estatistica"><strong>3</strong><span>Restantes hoje</span></div>
+        <div class="info-estatistica"><strong><?= $restantes ?></strong><span>Restantes hoje</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica azul" aria-hidden="true"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>48</strong><span>Atendimentos no mês</span></div>
+        <div class="info-estatistica"><strong><?= $mes ?></strong><span>Atendimentos no mês</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica verde-agua" aria-hidden="true"><i class="bi bi-people-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>127</strong><span>Total de pacientes</span></div>
+        <div class="info-estatistica"><strong><?= count($listaPacientes) ?></strong><span>Total de pacientes</span></div>
       </div>
     </div>
 
@@ -56,18 +64,18 @@ include 'includes/head.php';
          role="region" aria-label="Próximo paciente">
       <div style="color:#fff;">
         <p style="color:rgba(255,255,255,0.55);font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;">
-          <i class="bi bi-bell-fill" aria-hidden="true"></i> Próximo Paciente — 10:00
+          <i class="bi bi-bell-fill" aria-hidden="true"></i> Próximo paciente — <?= limpar($proxima['hora'] ?? 'Sem consulta pendente') ?>
         </p>
-        <h2 style="font-family:var(--fonte-titulo);font-size:1.5rem;margin-bottom:5px;">Carla Pereira</h2>
+        <h2 style="font-family:var(--fonte-titulo);font-size:1.5rem;margin-bottom:5px;"><?= limpar($proxima['paciente'] ?? 'Agenda atualizada') ?></h2>
         <p style="color:rgba(255,255,255,0.7);font-size:0.9rem;">
-          Procedimento: <strong style="color:var(--destaque);">Ortodontia</strong>
+          Procedimento: <strong style="color:var(--destaque);"><?= limpar($proxima['procedimento'] ?? '—') ?></strong>
         </p>
         <p style="color:rgba(255,255,255,0.55);font-size:0.82rem;margin-top:3px;">
-          Última visita: 15/01/2026 — Sala 2
+          Sala: <?= limpar($proxima['sala'] ?? '—') ?>
         </p>
       </div>
       <div style="display:flex;gap:10px;">
-        <a href="dentista_prontuario.php?paciente=Carla+Pereira"
+        <a href="dentista_prontuario.php?paciente=<?= (int)($proxima['id_paciente'] ?? 0) ?>"
            class="btn btn-primario"><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Prontuário</a>
         <a href="dentista_agenda.php" class="btn btn-contorno">Ver Agenda</a>
       </div>
@@ -92,7 +100,7 @@ include 'includes/head.php';
             </tr>
           </thead>
           <tbody>
-            <?php foreach (array_slice($listaAgendamentos, 0, 5) as $agendamento): ?>
+            <?php foreach (array_slice($agendaHoje, 0, 5) as $agendamento): ?>
             <tr>
               <td><strong><?= limpar($agendamento['hora']) ?></strong></td>
               <td><?= limpar($agendamento['paciente']) ?></td>
@@ -117,6 +125,7 @@ include 'includes/head.php';
       <div class="cartao-cabecalho"><h3><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Registrar Atendimento Rápido</h3></div>
       <div class="cartao-corpo">
         <form method="POST" aria-label="Formulário de registro rápido de atendimento">
+          <?= csrfCampo() ?>
 
           <div class="linha-campos">
             <div class="grupo-campo">

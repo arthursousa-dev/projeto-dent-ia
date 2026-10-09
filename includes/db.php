@@ -4,6 +4,7 @@
 use App\Config\Database;
 
 require_once __DIR__ . '/../app/Config/Database.php';
+require_once __DIR__ . '/financeiro.php';
 
 /**
  * Lê uma "fonte" de dados e devolve um array de registros, no
@@ -33,7 +34,7 @@ function lerJson(string $arquivo): array {
     }
     switch ($arquivo) {
         case 'prontuarios.json':
-            $prontuarios = $pdo->query('SELECT id, id_paciente FROM prontuarios ORDER BY id')->fetchAll();
+            $prontuarios = $pdo->query('SELECT pr.id, pr.id_paciente, p.nome AS paciente FROM prontuarios pr JOIN pacientes pac ON pac.id=pr.id_paciente JOIN pessoa p ON p.id=pac.id_pessoa ORDER BY pr.id')->fetchAll();
 
             $dentesStmt = $pdo->prepare(
                 'SELECT id, numero_dente, status::text AS status, notas FROM odontograma_dentes WHERE id_prontuario = :id'
@@ -54,6 +55,14 @@ function lerJson(string $arquivo): array {
                     ];
                 }
                 $p['odontograma'] = $odontograma;
+                $stmt=$pdo->prepare("SELECT to_char(e.registrado_em,'DD/MM/YYYY') AS data,p.nome AS dentista,
+                    proc.nome AS proc,e.observacoes AS obs,COALESCE(a.valor,proc.valor_base) AS valor,e.retorno,
+                    COALESCE((SELECT string_agg(d.numero_dente::text, ', ' ORDER BY d.numero_dente) FROM evolucao_dente ed
+                        JOIN odontograma_dentes d ON d.id=ed.id_dente WHERE ed.id_evolucao=e.id),'—') AS dentes
+                    FROM evolucao_clinica e JOIN dentistas dt ON dt.id=e.id_dentista JOIN pessoa p ON p.id=dt.id_pessoa
+                    JOIN procedimentos proc ON proc.id=e.id_procedimento LEFT JOIN agendamentos a ON a.id=e.id_agendamento
+                    WHERE e.id_prontuario=:id ORDER BY e.registrado_em DESC,e.id DESC");
+                $stmt->execute(['id'=>$p['id']]);$p['historico']=$stmt->fetchAll();
             }
             return $prontuarios;
 
@@ -75,11 +84,7 @@ function lerJsonObjeto(string $arquivo): array {
             return $stmt->fetch() ?: [];
 
         case 'faturamento.json':
-            $stmt = $pdo->query(
-                "SELECT ano, mes_num, receita, despesas, qtd_procedimentos AS procedimentos
-                 FROM faturamento_mensal ORDER BY ano, mes_num"
-            );
-            return ['historico_mensal' => $stmt->fetchAll()];
+            return resumoFinanceiro($pdo);
 
         default:
             return [];
@@ -191,8 +196,10 @@ function gravarEndereco(PDO $pdo, array $dados, ?int $id): ?int {
 
 function salvarJson(string $arquivo, array $dados): bool {
     $pdo = Database::getConnection();
+    $propria=!$pdo->inTransaction();
     try {
-        $pdo->beginTransaction();
+        if ($propria) $pdo->beginTransaction();
+        else $pdo->exec('SAVEPOINT adapter');
         switch ($arquivo) {
             case 'usuarios.json':
             case 'pacientes.json':
@@ -287,10 +294,14 @@ function salvarJson(string $arquivo, array $dados): bool {
             default:
                 throw new InvalidArgumentException('Fonte de escrita desconhecida');
         }
-        $pdo->commit();
+        if ($propria) $pdo->commit();
+        else $pdo->exec('RELEASE SAVEPOINT adapter');
         return true;
     } catch (Throwable $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            if ($propria) $pdo->rollBack();
+            else $pdo->exec('ROLLBACK TO SAVEPOINT adapter');
+        }
         error_log('salvarJson falhou (' . $arquivo . '): ' . $e->getMessage());
         return false;
     }

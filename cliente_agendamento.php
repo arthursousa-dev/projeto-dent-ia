@@ -5,10 +5,14 @@ require_once 'includes/functions.php';
 verificarSessao('cliente');
 
 $tituloPagina = 'Agendar Consulta';
-$sucesso = isset($_POST['solicitar_consulta'])
-    ? 'Agendamento solicitado com sucesso! A clínica confirmará em breve por e-mail.'
-    : '';
-
+$sucesso='';$erro='';
+if (isset($_POST['solicitar_consulta'])) {
+    try { $id=criarAgendamento($_POST); $sucesso='Agendamento registrado: #'.$id.'.'; }
+    catch (Throwable $e) { $erro=mensagemOperacao($e); }
+}
+$pdo=\App\Config\Database::getConnection();
+$salas=$pdo->query('SELECT * FROM sala ORDER BY nome')->fetchAll();
+$formas=$pdo->query('SELECT * FROM forma_pagamento ORDER BY nome')->fetchAll();
 include 'includes/head.php';
 ?>
 
@@ -24,6 +28,7 @@ include 'includes/head.php';
       </div>
     </div>
 
+    <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
     <?php if ($sucesso): ?>
       <div class="alerta alerta-sucesso" role="status" aria-live="polite">
         <i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?>
@@ -34,6 +39,7 @@ include 'includes/head.php';
       <div class="cartao-cabecalho"><h3><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Solicitar Nova Consulta</h3></div>
       <div class="cartao-corpo">
         <form method="POST" aria-label="Formulário de agendamento de consulta">
+          <?= csrfCampo() ?>
 
           <!-- tipo de procedimento -->
           <div class="grupo-campo">
@@ -52,7 +58,7 @@ include 'includes/head.php';
             <select id="sol-dentista" name="dentista">
               <option value="">Sem preferência (qualquer dentista disponível)</option>
               <?php foreach ($listaDentistas as $dentista): ?>
-                <option><?= limpar($dentista['nome']) ?> — <?= limpar($dentista['especialidade']) ?></option>
+                <option value="<?= $dentista['id'] ?>"><?= limpar($dentista['nome']) ?> — <?= limpar($dentista['especialidade']) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
@@ -77,19 +83,7 @@ include 'includes/head.php';
             </div>
           </div>
 
-          <!-- convênio ou plano de saúde -->
-          <div class="grupo-campo">
-            <label for="sol-convenio">Convênio / Plano de saúde</label>
-            <select id="sol-convenio" name="convenio">
-              <option>Particular</option>
-              <option>Unimed</option>
-              <option>Bradesco Saúde</option>
-              <option>Amil</option>
-              <option>SulAmérica</option>
-              <option>Outro</option>
-            </select>
-          </div>
-
+          <p>O plano cadastrado no seu perfil será mantido. O valor segue o catálogo da clínica.</p>
           <!-- campo aberto para o paciente descrever o problema -->
           <div class="grupo-campo">
             <label for="sol-obs">Descreva o motivo ou sintomas (opcional)</label>

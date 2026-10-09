@@ -11,10 +11,23 @@ $dataFiltro     = $_GET['data']     ?? date('Y-m-d');
 $dentistaFiltro = $_GET['dentista'] ?? '';
 
 // processa ações da tabela
-$sucesso = '';
-if (isset($_POST['fazer_checkin']))    $sucesso = 'Check-in realizado!';
-if (isset($_POST['cancelar_consulta'])) $sucesso = 'Consulta cancelada.';
-
+$sucesso='';$erro='';
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+    try {
+        if (isset($_POST['receber'])) confirmarPagamento((int)$_POST['id'],(int)$_POST['forma']);
+        else {
+            $status=isset($_POST['fazer_checkin']) ? 'Aguardando' : (isset($_POST['cancelar_consulta']) ? 'Cancelado' : ($_POST['status'] ?? ''));
+            alterarStatusAgenda((int)($_POST['id'] ?? 0),$status);
+        }
+        $sucesso='Consulta atualizada.';
+    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
+}
+$listaAgendamentos=array_map(function($a){$a['procedimento']=$a['servico'];return $a;},lerJson('agendamentos.json'));
+$dataFiltro=$dataFiltro ?? date('Y-m-d');
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/',$dataFiltro) || strtotime($dataFiltro)===false) $dataFiltro=date('Y-m-d');
+$listaAgendamentos=array_values(array_filter($listaAgendamentos,fn($a)=>$a['data']===$dataFiltro &&
+    (empty($dentistaFiltro) || $a['id_dentista']==$dentistaFiltro)));
+$formas=\App\Config\Database::getConnection()->query('SELECT * FROM forma_pagamento ORDER BY nome')->fetchAll();
 include 'includes/head.php';
 ?>
 
@@ -33,6 +46,7 @@ include 'includes/head.php';
       </a>
     </div>
 
+    <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
     <?php if ($sucesso): ?>
       <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
     <?php endif; ?>
@@ -99,15 +113,24 @@ include 'includes/head.php';
               <td><?= limpar($agendamento['sala']) ?></td>
               <td><?= emblema($agendamento['status']) ?></td>
               <td>
-                <div style="display:flex;gap:5px;">
-                  <?php if (in_array($agendamento['status'], ['Aguardando', 'Agendado', 'Confirmado'])): ?>
+                <div style="display:flex;gap:5px;"><?php if (in_array($agendamento['status'],['Agendado','Aguardando','Em atendimento'],true)): ?>
+                  <form method="POST"><?= csrfCampo() ?><input type="hidden" name="id" value="<?= $agendamento['id'] ?>">
+                  <select name="status">
+                    <?php $opcoes=match($agendamento['status']){'Agendado'=>['Confirmado'],'Aguardando'=>['Em atendimento'],default=>['Concluída']};foreach ($opcoes as $st): ?><option><?= limpar($st) ?></option><?php endforeach; ?>
+                  </select><button class="btn btn-pequeno" name="atualizar_status">Atualizar</button></form><?php endif; ?>
+                  <?php if (!$agendamento['pago'] && $agendamento['status']!=='Cancelado'): ?>
+                  <form method="POST"><?= csrfCampo() ?><input type="hidden" name="id" value="<?= $agendamento['id'] ?>"><select name="forma"><?php foreach ($formas as $f): ?><option value="<?= $f['id'] ?>"><?= limpar($f['nome']) ?></option><?php endforeach; ?></select><button class="btn btn-pequeno" name="receber">Receber</button></form>
+                  <?php elseif ($agendamento['pago']): ?><span class="emblema-sucesso">Pago</span><?php endif; ?>
+                  <?php if (in_array($agendamento['status'], ['Agendado', 'Confirmado'])): ?>
                   <form method="POST" style="display:inline;">
+          <?= csrfCampo() ?>
                     <input type="hidden" name="id" value="<?= $agendamento['id'] ?>">
                     <button type="submit" name="fazer_checkin"
                             class="btn btn-primario btn-pequeno"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Check-in</button>
                   </form>
                   <form method="POST" style="display:inline;"
                         onsubmit="return confirm('Cancelar esta consulta?')">
+          <?= csrfCampo() ?>
                     <input type="hidden" name="id" value="<?= $agendamento['id'] ?>">
                     <button type="submit" name="cancelar_consulta"
                             class="btn btn-perigo btn-pequeno"><i class="bi bi-x-circle-fill" aria-hidden="true"></i></button>

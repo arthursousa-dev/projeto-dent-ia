@@ -9,9 +9,14 @@ $tituloPagina = 'Novo Agendamento';
 // pré-preenche o nome do paciente se veio da lista de pacientes
 $pacientePreenchido = limpar($_GET['paciente'] ?? '');
 
-$sucesso = isset($_POST['confirmar_agendamento'])
-    ? 'Agendamento confirmado! O paciente será notificado.' : '';
-
+$sucesso='';$erro='';
+if (isset($_POST['confirmar_agendamento'])) {
+    try { $id=criarAgendamento($_POST); $sucesso='Agendamento registrado: #'.$id.'.'; }
+    catch (Throwable $e) { $erro=mensagemOperacao($e); }
+}
+$pdo=\App\Config\Database::getConnection();
+$salas=$pdo->query('SELECT * FROM sala ORDER BY nome')->fetchAll();
+$formas=$pdo->query('SELECT * FROM forma_pagamento ORDER BY nome')->fetchAll();
 include 'includes/head.php';
 ?>
 
@@ -28,6 +33,7 @@ include 'includes/head.php';
       <a href="recepcionista_agenda.php" class="btn btn-fantasma">← Voltar à Agenda</a>
     </div>
 
+    <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
     <?php if ($sucesso): ?>
       <div class="alerta alerta-sucesso" role="status" aria-live="polite">
         <i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?>
@@ -38,13 +44,15 @@ include 'includes/head.php';
       <div class="cartao-cabecalho"><h3><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Dados do Agendamento</h3></div>
       <div class="cartao-corpo">
         <form method="POST" aria-label="Formulário completo de agendamento">
+          <?= csrfCampo() ?>
 
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="ag-paciente">Paciente (nome ou CPF)</label>
-              <input type="text" id="ag-paciente" name="paciente"
+              <input type="text" id="ag-paciente" name="paciente" list="pacientes-cadastrados"
                      value="<?= $pacientePreenchido ?>"
                      placeholder="Buscar paciente..." required>
+              <datalist id="pacientes-cadastrados"><?php foreach ($listaPacientes as $p): ?><option value="<?= limpar($p['cpf']) ?>"><?= limpar($p['nome']) ?></option><?php endforeach; ?></datalist>
             </div>
             <div class="grupo-campo">
               <label for="ag-procedimento">Procedimento</label>
@@ -63,17 +71,15 @@ include 'includes/head.php';
               <select id="ag-dentista" name="dentista" required>
                 <option value="">Selecione o dentista...</option>
                 <?php foreach ($listaDentistas as $dentista): ?>
-                  <option><?= limpar($dentista['nome']) ?> — <?= limpar($dentista['especialidade']) ?></option>
+                  <option value="<?= $dentista['id'] ?>"><?= limpar($dentista['nome']) ?> — <?= limpar($dentista['especialidade']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
             <div class="grupo-campo">
               <label for="ag-sala">Sala</label>
               <select id="ag-sala" name="sala">
-                <option>Sala 1</option>
-                <option>Sala 2</option>
-                <option>Sala 3</option>
-                <option>Sala 4</option>
+                <option value="">Sala padrão do dentista</option>
+                <?php foreach ($salas as $sala): ?><option><?= limpar($sala['nome']) ?></option><?php endforeach; ?>
               </select>
             </div>
           </div>
@@ -94,22 +100,8 @@ include 'includes/head.php';
             </div>
           </div>
 
-          <div class="linha-campos">
-            <div class="grupo-campo">
-              <label for="ag-pagamento">Forma de pagamento</label>
-              <select id="ag-pagamento" name="pagamento">
-                <option>Particular</option>
-                <option>Plano de Saúde</option>
-                <option>Convênio</option>
-              </select>
-            </div>
-            <div class="grupo-campo">
-              <label for="ag-valor">Valor estimado (R$)</label>
-              <input type="number" id="ag-valor" name="valor"
-                     placeholder="0,00" step="0.01" min="0">
-            </div>
-          </div>
-
+          <div class="grupo-campo"><label for="ag-valor">Valor estimado (R$)</label>
+          <input type="number" id="ag-valor" name="valor" step="0.01" min="0" placeholder="Preço do catálogo se vazio"></div>
           <div class="grupo-campo">
             <label for="ag-obs">Observações</label>
             <textarea id="ag-obs" name="obs" rows="3"
@@ -142,12 +134,13 @@ include 'includes/head.php';
           </thead>
           <tbody>
             <?php
-            $disponibilidade = [
-                ['Dr. Carlos Mendes',   'Clínico Geral', '5/8', '13:00',  'Disponível'],
-                ['Dra. Ana Silva',      'Ortodontia',    '6/8', '14:30',  'Disponível'],
-                ['Dr. Paulo Ramos',     'Cirurgia Oral', '8/8', 'Amanhã', 'Lotado'],
-                ['Dra. Luciana Torres', 'Endodontia',    '3/8', '10:00',  'Disponível'],
-            ];
+            $disponibilidade=[];
+            foreach ($listaDentistas as $d) {
+                $livres=horariosDisponiveis($d['id'],date('Y-m-d'));
+                $stmt=$pdo->prepare("SELECT count(*) FROM agendamentos WHERE id_dentista=:id AND data=CURRENT_DATE AND status<>'Cancelado'");
+                $stmt->execute(['id'=>$d['id']]);
+                $disponibilidade[]=[$d['nome'],$d['especialidade'],(string)$stmt->fetchColumn(),$livres[0] ?? 'Sem horário',$livres ? 'Disponível' : 'Lotado'];
+            }
             foreach ($disponibilidade as [$nome, $especialidade, $consultas, $proximo, $situacao]): ?>
             <tr>
               <td><strong><?= limpar($nome) ?></strong></td>

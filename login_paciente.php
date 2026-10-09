@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
 
       <form method="POST" novalidate id="frm">
-        <?= csrfCampo() ?>
+          <?= csrfCampo() ?>
         <div class="grupo">
           <label for="email">E-mail</label>
           <input type="email" id="email" name="email" placeholder="seu@email.com" required autocomplete="email" value="<?= limpar($_POST['email'] ?? '') ?>">

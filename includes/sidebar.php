@@ -24,6 +24,7 @@ $menusPorPerfil = [
             ['dono_relatorios.php',    '<i class="bi bi-graph-up-arrow" aria-hidden="true"></i>', 'Relatórios'],
         ],
         'Sistema' => [
+            ['dono_usuarios.php', '<i class="bi bi-people-fill" aria-hidden="true"></i>', 'Usuários'],
             ['dono_perfil.php',        '<i class="bi bi-person-fill" aria-hidden="true"></i>', 'Meu Perfil'],
             ['dono_configuracoes.php', '<i class="bi bi-gear-fill" aria-hidden="true"></i>', 'Configurações'],
             ['logout.php',             '<i class="bi bi-box-arrow-right" aria-hidden="true"></i>', 'Sair'],

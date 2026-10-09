@@ -5,6 +5,12 @@
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/seguranca.php';
+require_once __DIR__ . '/operacoes.php';
+date_default_timezone_set('America/Cuiaba');
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && !csrfValido($_POST['csrf_token'] ?? null)) {
+    http_response_code(400);
+    exit('Sessão expirada. Recarregue a página e tente novamente.');
+}
 
 function data_pt(string $formato, ?int $timestamp = null): string {
     if ($timestamp === null) $timestamp = time();
@@ -124,82 +130,34 @@ function verificarSessao(string $perfilNecessario): void {
     }
 }
 
-// Lê cada arquivo JSON e normaliza chaves para compatibilidade com os templates.
-
-$_raw_dentistas  = lerJson('dentistas.json');
-$_raw_pacientes  = lerJson('pacientes.json');
-$_raw_agend      = lerJson('agendamentos.json');
-
-// Normaliza dentistas: garante chave 'atendimentos' (pode vir como 'atendimentos_mes')
 $listaDentistas = array_map(function($d) {
-    $d['atendimentos']   = $d['atendimentos_mes'] ?? $d['atendimentos'] ?? 0;
-    return $d;
-}, $_raw_dentistas);
-
-// Usa fallback se arquivo estiver vazio
-if (empty($listaDentistas)) {
-    $listaDentistas = [
-        ['id'=>1,'nome'=>'Dr. Carlos Mendes',   'especialidade'=>'Clínico Geral', 'cro'=>'CRO-MS 12345','atendimentos'=>52,'status'=>'Ativo','email'=>'carlos@dentai.com',  'telefone'=>'(67) 99111-0001','admissao'=>'2020-03-01'],
-        ['id'=>2,'nome'=>'Dra. Ana Silva',       'especialidade'=>'Ortodontia',    'cro'=>'CRO-MS 23456','atendimentos'=>40,'status'=>'Ativo','email'=>'ana@dentai.com',      'telefone'=>'(67) 99111-0002','admissao'=>'2021-06-15'],
-        ['id'=>3,'nome'=>'Dr. Paulo Ramos',      'especialidade'=>'Cirurgia Oral', 'cro'=>'CRO-MS 34567','atendimentos'=>16,'status'=>'Ativo','email'=>'paulo@dentai.com',    'telefone'=>'(67) 99111-0003','admissao'=>'2022-01-10'],
-        ['id'=>4,'nome'=>'Dra. Luciana Torres',  'especialidade'=>'Endodontia',    'cro'=>'CRO-MS 45678','atendimentos'=>32,'status'=>'Ativo','email'=>'luciana@dentai.com',  'telefone'=>'(67) 99111-0004','admissao'=>'2019-09-20'],
-    ];
-}
-
-// Normaliza pacientes: garante chave 'ultimaConsulta' (pode vir como 'ultima_consulta')
-$listaPacientes = array_map(function($p) {
-    $raw = $p['ultima_consulta'] ?? $p['ultimaConsulta'] ?? '—';
-    // Converte de YYYY-MM-DD para DD/MM/YYYY se necessário
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
-        $raw = date('d/m/Y', strtotime($raw));
+    $d['atendimentos']=$d['atendimentos_mes']; return $d;
+},lerJson('dentistas.json'));
+$listaPacientes = lerJson('pacientes.json');
+$listaAgendamentos = array_map(function($a) {
+    $a['procedimento']=$a['servico']; return $a;
+},lerJson('agendamentos.json'));
+if (in_array($_SESSION['perfil'] ?? '',['dentista','cliente'],true)) {
+    $u=usuarioSessao();
+    if ($u['tipo']==='cliente') {
+        $pac=buscarPorCampo($listaPacientes,'id_usuario',$u['id']);
+        $listaAgendamentos=array_values(array_filter($listaAgendamentos,fn($a)=>$a['id_paciente']===($pac['id'] ?? 0)));
+        $listaPacientes=$pac ? [$pac] : [];
+    } else {
+        $dent=buscarPorCampo($listaDentistas,'id_usuario',$u['id']);
+        $listaAgendamentos=array_values(array_filter($listaAgendamentos,fn($a)=>$a['id_dentista']===($dent['id'] ?? 0)));
+        $ids=array_column($listaAgendamentos,'id_paciente');
+        $listaPacientes=array_values(array_filter($listaPacientes,fn($p)=>in_array($p['id'],$ids,true)));
     }
-    $p['ultimaConsulta'] = $raw;
-    return $p;
-}, $_raw_pacientes);
-
-if (empty($listaPacientes)) {
-    $listaPacientes = [
-        ['id'=>1,'nome'=>'Maria Oliveira', 'cpf'=>'111.222.333-44','telefone'=>'(67) 99211-1111','email'=>'maria@email.com',    'nascimento'=>'1985-04-12','ultimaConsulta'=>'10/02/2026','status'=>'Ativo'],
-        ['id'=>2,'nome'=>'João Santos',    'cpf'=>'222.333.444-55','telefone'=>'(67) 99211-2222','email'=>'joao@email.com',     'nascimento'=>'1990-07-23','ultimaConsulta'=>'08/02/2026','status'=>'Ativo'],
-        ['id'=>3,'nome'=>'Carla Pereira',  'cpf'=>'333.444.555-66','telefone'=>'(67) 99211-3333','email'=>'carla@email.com',    'nascimento'=>'1978-11-05','ultimaConsulta'=>'05/02/2026','status'=>'Ativo'],
-        ['id'=>4,'nome'=>'Pedro Alves',    'cpf'=>'444.555.666-77','telefone'=>'(67) 99211-4444','email'=>'pedro@email.com',    'nascimento'=>'1995-01-30','ultimaConsulta'=>'01/02/2026','status'=>'Ativo'],
-        ['id'=>5,'nome'=>'Fernanda Costa', 'cpf'=>'555.666.777-88','telefone'=>'(67) 99211-5555','email'=>'fernanda@email.com', 'nascimento'=>'1988-09-17','ultimaConsulta'=>'28/01/2026','status'=>'Inativo'],
-        ['id'=>6,'nome'=>'Ricardo Souza',  'cpf'=>'666.777.888-99','telefone'=>'(67) 99211-6666','email'=>'ricardo@email.com',  'nascimento'=>'2000-03-08','ultimaConsulta'=>'20/01/2026','status'=>'Ativo'],
-    ];
 }
-
-// Normaliza: o JSON usa "servico", os templates esperam "procedimento"
-if (!empty($_raw_agend)) {
-    $_raw_agend = array_map(function($a) {
-        $a['procedimento'] = $a['servico'] ?? $a['procedimento'] ?? '—';
-        return $a;
-    }, $_raw_agend);
+$visitas=\App\Config\Database::getConnection()->query("SELECT id_paciente,
+    MAX(data) FILTER (WHERE status='Concluída') AS ultima,
+    MIN(data) FILTER (WHERE data>=CURRENT_DATE AND status IN ('Agendado','Confirmado','Aguardando')) AS proxima
+    FROM agendamentos GROUP BY id_paciente")->fetchAll(PDO::FETCH_UNIQUE);
+foreach ($listaPacientes as &$p) {
+    $p['ultimaConsulta']=!empty($visitas[$p['id']]['ultima']) ? date('d/m/Y',strtotime($visitas[$p['id']]['ultima'])) : '—';
+    $p['proximaConsulta']=!empty($visitas[$p['id']]['proxima']) ? date('d/m/Y',strtotime($visitas[$p['id']]['proxima'])) : '—';
 }
-
-$listaAgendamentos = !empty($_raw_agend) ? $_raw_agend : [
-    ['id'=>1,'paciente'=>'Maria Oliveira', 'procedimento'=>'Limpeza Dental',  'dentista'=>'Dr. Carlos Mendes',  'data'=>'2026-04-10','hora'=>'08:00','sala'=>'Sala 1','status'=>'Confirmado'],
-    ['id'=>2,'paciente'=>'João Santos',    'procedimento'=>'Clareamento',     'dentista'=>'Dra. Ana Silva',     'data'=>'2026-04-10','hora'=>'09:00','sala'=>'Sala 2','status'=>'Em atendimento'],
-    ['id'=>3,'paciente'=>'Carla Pereira',  'procedimento'=>'Ortodontia',      'dentista'=>'Dra. Ana Silva',     'data'=>'2026-04-10','hora'=>'10:00','sala'=>'Sala 2','status'=>'Aguardando'],
-    ['id'=>4,'paciente'=>'Pedro Alves',    'procedimento'=>'Extração',        'dentista'=>'Dr. Paulo Ramos',    'data'=>'2026-04-10','hora'=>'11:00','sala'=>'Sala 3','status'=>'Aguardando'],
-    ['id'=>5,'paciente'=>'Fernanda Costa', 'procedimento'=>'Consulta Rotina', 'dentista'=>'Dr. Carlos Mendes',  'data'=>'2026-04-10','hora'=>'14:00','sala'=>'Sala 1','status'=>'Agendado'],
-    ['id'=>6,'paciente'=>'Ricardo Souza',  'procedimento'=>'Canal Radicular', 'dentista'=>'Dra. Luciana Torres','data'=>'2026-04-11','hora'=>'09:00','sala'=>'Sala 4','status'=>'Agendado'],
-    ['id'=>7,'paciente'=>'Ana Ferreira',   'procedimento'=>'Limpeza Dental',  'dentista'=>'Dr. Carlos Mendes',  'data'=>'2026-04-11','hora'=>'10:00','sala'=>'Sala 1','status'=>'Agendado'],
-];
-
-$listaProcedimentos = [];
-$_raw_procs = lerJson('procedimentos.json');
-if (!empty($_raw_procs)) {
-    $listaProcedimentos = array_column($_raw_procs, 'nome');
-}
-if (empty($listaProcedimentos)) {
-    $listaProcedimentos = [
-        'Limpeza Dental','Clareamento Dental','Ortodontia','Extração','Restauração',
-        'Canal Radicular','Implante','Consulta de Rotina','Periodontia','Prótese',
-        'Selante','Placa Miorrelaxante',
-    ];
-}
-
-$listaHorarios = [
-    '07:30','08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30',
-    '13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30',
-];
+unset($p);
+$listaProcedimentos=array_column(lerJson('procedimentos.json'),'nome');
+$listaHorarios=\App\Config\Database::getConnection()->query("SELECT DISTINCT to_char(hora,'HH24:MI') FROM disponibilidade_dentista ORDER BY 1")->fetchAll(PDO::FETCH_COLUMN);

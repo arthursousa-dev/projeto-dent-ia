@@ -7,11 +7,23 @@ verificarSessao('recepcionista');
 $tituloPagina = 'Painel da Recepção';
 
 // processa as ações rápidas da tabela de agenda
-$sucesso = '';
-if (isset($_POST['fazer_checkin']))   $sucesso = 'Check-in realizado com sucesso!';
-if (isset($_POST['cancelar_consulta'])) $sucesso = 'Consulta cancelada.';
-if (isset($_POST['agendar_rapido']))  $sucesso = 'Agendamento realizado com sucesso!';
-
+$sucesso='';$erro='';
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+    try {
+        if (isset($_POST['receber'])) confirmarPagamento((int)$_POST['id'],(int)$_POST['forma']);
+        else {
+            $status=isset($_POST['fazer_checkin']) ? 'Aguardando' : (isset($_POST['cancelar_consulta']) ? 'Cancelado' : ($_POST['status'] ?? ''));
+            alterarStatusAgenda((int)($_POST['id'] ?? 0),$status);
+        }
+        $sucesso='Consulta atualizada.';
+    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
+}
+$listaAgendamentos=array_map(function($a){$a['procedimento']=$a['servico'];return $a;},lerJson('agendamentos.json'));
+$dataFiltro=$dataFiltro ?? date('Y-m-d');
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/',$dataFiltro) || strtotime($dataFiltro)===false) $dataFiltro=date('Y-m-d');
+$listaAgendamentos=array_values(array_filter($listaAgendamentos,fn($a)=>$a['data']===$dataFiltro &&
+    (empty($dentistaFiltro) || $a['id_dentista']==$dentistaFiltro)));
+$formas=\App\Config\Database::getConnection()->query('SELECT * FROM forma_pagamento ORDER BY nome')->fetchAll();
 include 'includes/head.php';
 ?>
 
@@ -30,6 +42,7 @@ include 'includes/head.php';
       </a>
     </div>
 
+    <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
     <?php if ($sucesso): ?>
       <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
     <?php endif; ?>
@@ -38,19 +51,19 @@ include 'includes/head.php';
     <div class="grade-estatisticas">
       <div class="cartao-estatistica">
         <div class="icone-estatistica verde" aria-hidden="true"><i class="bi bi-check-circle-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>8</strong><span>Atendidos hoje</span></div>
+        <div class="info-estatistica"><strong><?= count(array_filter($listaAgendamentos,fn($a)=>$a['status']==='Concluída')) ?></strong><span>Atendidos hoje</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica amarelo" aria-hidden="true">⏳</div>
-        <div class="info-estatistica"><strong>4</strong><span>Aguardando</span></div>
+        <div class="info-estatistica"><strong><?= count(array_filter($listaAgendamentos,fn($a)=>$a['status']==='Aguardando')) ?></strong><span>Aguardando</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica azul" aria-hidden="true"><i class="bi bi-calendar-event-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>12</strong><span>Total hoje</span></div>
+        <div class="info-estatistica"><strong><?= count($listaAgendamentos) ?></strong><span>Total hoje</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica vermelho" aria-hidden="true"><i class="bi bi-x-circle-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>2</strong><span>Cancelados</span></div>
+        <div class="info-estatistica"><strong><?= count(array_filter($listaAgendamentos,fn($a)=>$a['status']==='Cancelado')) ?></strong><span>Cancelados</span></div>
       </div>
     </div>
 
@@ -82,9 +95,10 @@ include 'includes/head.php';
               <td><?= emblema($agendamento['status']) ?></td>
               <td>
                 <div style="display:flex;gap:5px;">
-                  <?php if (in_array($agendamento['status'], ['Aguardando', 'Agendado', 'Confirmado'])): ?>
+                  <?php if (in_array($agendamento['status'], ['Agendado', 'Confirmado'])): ?>
                   <!-- botão de check-in -->
                   <form method="POST" style="display:inline;">
+          <?= csrfCampo() ?>
                     <input type="hidden" name="id" value="<?= $agendamento['id'] ?>">
                     <button type="submit" name="fazer_checkin"
                             class="btn btn-primario btn-pequeno"
@@ -94,7 +108,8 @@ include 'includes/head.php';
                   </form>
                   <!-- botão de cancelar -->
                   <form method="POST" style="display:inline;"
-                        onsubmit="return confirm('Cancelar consulta de <?= limpar($agendamento['paciente']) ?>?')">
+                        onsubmit="return confirm('Cancelar consulta de <?= limpar($agendamento['paciente']) ?>
+          <?= csrfCampo() ?>?')">
                     <input type="hidden" name="id" value="<?= $agendamento['id'] ?>">
                     <button type="submit" name="cancelar_consulta"
                             class="btn btn-perigo btn-pequeno"
@@ -122,6 +137,7 @@ include 'includes/head.php';
       </div>
       <div class="cartao-corpo">
         <form method="POST" aria-label="Formulário de agendamento rápido">
+          <?= csrfCampo() ?>
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="rapido-paciente">Paciente</label>

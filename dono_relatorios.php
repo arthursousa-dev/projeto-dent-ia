@@ -17,23 +17,33 @@ $pacientes  = lerJson('pacientes.json');
 $dentistas  = lerJson('dentistas.json');
 $procedimentos = lerJson('procedimentos.json');
 
-// Resumo gerado
-$sucesso = '';
+$sucesso='';
 if (isset($_POST['gerar'])) {
-    $tipo = limpar($_POST['tipo'] ?? 'geral');
-    $sucesso = 'Relatório de ' . $tipo . ' compilado com dados do sistema em ' . data_pt('d/m/Y \à\s H:i') . '.';
+    $tipo=$_POST['tipo'] ?? '';
+    $linhas=match($tipo) {
+        'Financeiro Mensal'=>$historico,
+        'Produção por Dentista'=>$mesAtual['por_dentista'],
+        'Pacientes Ativos'=>array_values(array_filter($pacientes,fn($p)=>$p['status']==='Ativo')),
+        'Agendamentos do Período'=>array_values(array_filter($agendamentos,fn($a)=>substr($a['data'],0,7)===date('Y-m'))),
+        'Procedimentos Realizados'=>array_values(array_filter($agendamentos,fn($a)=>$a['status']==='Concluída')),
+        default=>[],
+    };
+    header('Content-Type: text/csv; charset=UTF-8');header('Content-Disposition: attachment; filename="relatorio-dentia.csv"');
+    $out=fopen('php://output','w');fwrite($out,"\xEF\xBB\xBF");
+    if ($linhas) { fputcsv($out,array_keys($linhas[0]),';');foreach ($linhas as $l) fputcsv($out,$l,';'); }
+    fclose($out);exit;
 }
-
 // Cálculos para o relatório geral
 $totalPacientes = count($pacientes);
 $pacAtivos      = count(array_filter($pacientes, fn($p) => strtolower($p['status']??'') === 'ativo'));
-$totalDentistas = count($dentistas);
+$totalDentistas = count(array_filter($dentistas,fn($d)=>$d['status']==='Ativo'));
 $totalAgend     = count($agendamentos);
-$agConcluidos   = count(array_filter($agendamentos, fn($a) => in_array($a['status']??'', ['Concluída','Confirmado'])));
+$agConcluidos   = count(array_filter($agendamentos, fn($a) => ($a['status']??'')==='Concluída'));
 
 // Contagem de procedimentos
 $contProc = [];
 foreach ($agendamentos as $a) {
+    if ($a['status']!=='Concluída') continue;
     $proc = $a['procedimento'] ?? '—';
     $contProc[$proc] = ($contProc[$proc] ?? 0) + 1;
 }
@@ -236,6 +246,7 @@ include 'includes/head.php';
       <div class="cartao-cabecalho"><h3><i class="bi bi-file-earmark-text-fill" aria-hidden="true"></i> Gerar Relatório</h3></div>
       <div class="cartao-corpo">
         <form method="POST" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+          <?= csrfCampo() ?>
           <div class="grupo-campo" style="flex:1;min-width:200px;">
             <label for="rel-tipo">Tipo de relatório</label>
             <select id="rel-tipo" name="tipo"

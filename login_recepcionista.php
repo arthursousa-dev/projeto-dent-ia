@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <p>Acesse para gerenciar a agenda e os pacientes</p>
       <?php if($erro):?><div class="erro" role="alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?=limpar($erro)?></div><?php endif;?>
       <form method="POST" novalidate id="frm">
-        <?= csrfCampo() ?>
+          <?= csrfCampo() ?>
         <div class="grupo"><label for="email">E-mail</label><input type="email" id="email" name="email" placeholder="recepcao@dentai.com" required autocomplete="email" value="<?=limpar($_POST['email']??'')?>"></div>
         <div class="grupo"><label for="senha">Senha</label>
           <div class="campo-senha">

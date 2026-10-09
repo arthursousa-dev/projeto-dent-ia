@@ -9,32 +9,20 @@ $mesAtual   = $fat['mes_atual']       ?? [];
 $historico  = $fat['historico_mensal']?? [];
 $transacoes = $fat['transacoes']      ?? [];
 
-// Salvar novo lançamento
-$sucesso = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['salvar'])) {
-    $nova = [
-        'id'             => proximoId($transacoes),
-        'data'           => date('Y-m-d'),
-        'tipo'           => $_POST['tipo']      ?? 'Receita',
-        'descricao'      => trim($_POST['descricao'] ?? ''),
-        'valor'          => (float)str_replace(',','.',str_replace('.','',($_POST['valor']??'0'))),
-        'id_agendamento' => null,
-    ];
-    if ($nova['descricao'] && $nova['valor'] > 0) {
-        $transacoes[] = $nova;
-        $fat['transacoes'] = $transacoes;
-        // Atualiza totais do mês atual
-        if ($nova['tipo'] === 'Receita') {
-            $fat['mes_atual']['receita_total'] = ($fat['mes_atual']['receita_total'] ?? 0) + $nova['valor'];
-        } else {
-            $fat['mes_atual']['despesas_total'] = ($fat['mes_atual']['despesas_total'] ?? 0) + $nova['valor'];
-        }
-        $fat['mes_atual']['lucro'] = ($fat['mes_atual']['receita_total'] ?? 0) - ($fat['mes_atual']['despesas_total'] ?? 0);
-        salvarJson('faturamento.json', $fat);
-        $sucesso = 'Lançamento registrado em ' . data_pt('d/m/Y \à\s H:i') . '!';
-    }
+$sucesso=''; $erro='';
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+    try {
+        if (isset($_POST['salvar'])) registrarLancamento($_POST);
+        elseif (isset($_POST['receber'])) confirmarPagamento((int)$_POST['id'],(int)$_POST['forma']);
+        $sucesso='Registro financeiro salvo.';
+    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
+    $fat=lerJsonObjeto('faturamento.json');
+    $mesAtual=$fat['mes_atual']; $historico=$fat['historico_mensal']; $transacoes=$fat['transacoes'];
 }
-
+$pdo=\App\Config\Database::getConnection();
+$categorias=$pdo->query('SELECT * FROM categoria_lancamento ORDER BY tipo,nome')->fetchAll();
+$formas=$pdo->query('SELECT * FROM forma_pagamento ORDER BY nome')->fetchAll();
+$pendentes=array_values(array_filter(lerJson('agendamentos.json'),fn($a)=>!$a['pago'] && $a['status']!=='Cancelado'));
 // Valores calculados
 $receita   = $mesAtual['receita_total']    ?? 0;
 $despesas  = $mesAtual['despesas_total']   ?? 0;
@@ -58,6 +46,7 @@ include 'includes/head.php';
       <a href="dono_relatorios.php" class="btn btn-primario"><i class="bi bi-file-earmark-text-fill" aria-hidden="true"></i> Relatórios</a>
     </div>
 
+    <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
     <?php if ($sucesso): ?><div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div><?php endif; ?>
 
     <!-- KPIs -->
@@ -90,7 +79,7 @@ include 'includes/head.php';
         <div class="icone-estatistica"><i class="bi bi-bullseye" aria-hidden="true"></i></div>
         <div class="info-estatistica">
           <strong>R$ <?= number_format($ticketMed,2,',','.') ?></strong>
-          <span>Ticket médio</span>
+          <span>Ticket médio dos atendimentos concluídos</span>
         </div>
       </div>
     </div>
@@ -210,11 +199,24 @@ include 'includes/head.php';
       </div>
     </div>
 
+    <div class="cartao">
+      <div class="cartao-cabecalho"><h3>Consultas a receber</h3><span>R$ <?= number_format($mesAtual['a_receber'],2,',','.') ?> no mês</span></div>
+      <div class="tabela-wrapper"><table><thead><tr><th>Paciente</th><th>Consulta</th><th>Valor</th><th>Recebimento</th></tr></thead><tbody>
+      <?php foreach ($pendentes as $a): ?><tr>
+        <td><?= limpar($a['paciente']) ?></td><td><?= limpar($a['data'].' '.$a['servico']) ?></td><td>R$ <?= number_format($a['valor'],2,',','.') ?></td>
+        <td><form method="POST"><?= csrfCampo() ?><input type="hidden" name="id" value="<?= $a['id'] ?>">
+          <select name="forma"><?php foreach ($formas as $f): ?><option value="<?= $f['id'] ?>"><?= limpar($f['nome']) ?></option><?php endforeach; ?></select>
+          <button class="btn btn-primario btn-pequeno" name="receber">Confirmar pagamento</button></form></td>
+      </tr><?php endforeach; ?>
+      <?php if (!$pendentes): ?><tr><td colspan="4">Nenhuma consulta pendente.</td></tr><?php endif; ?>
+      </tbody></table></div>
+    </div>
     <!-- Novo lançamento -->
     <div class="cartao">
       <div class="cartao-cabecalho"><h3><i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Novo Lançamento</h3></div>
       <div class="cartao-corpo">
         <form method="POST" novalidate>
+          <?= csrfCampo() ?>
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="fat-tipo">Tipo</label>
@@ -228,6 +230,8 @@ include 'includes/head.php';
               <input type="number" id="fat-val" name="valor" min="0" step="0.01" placeholder="0,00">
             </div>
           </div>
+          <div class="grupo-campo"><label for="fat-categoria">Categoria</label><select id="fat-categoria" name="id_categoria"><option value="">Categoria padrão do tipo</option>
+          <?php foreach ($categorias as $c): ?><option value="<?= $c['id'] ?>"><?= limpar($c['tipo'].' — '.$c['nome']) ?></option><?php endforeach; ?></select></div>
           <div class="grupo-campo">
             <label for="fat-desc">Descrição</label>
             <input type="text" id="fat-desc" name="descricao" placeholder="Ex: Limpeza — Maria Oliveira">

@@ -4,31 +4,26 @@ require_once 'includes/functions.php';
 verificarSessao('dentista');
 
 $tituloPagina = 'Prontuários';
-$pacienteSelecionado = $_GET['paciente'] ?? '';
-$sucesso = isset($_POST['salvar_prontuario']) ? 'Prontuário salvo em ' . data_pt('d/m/Y \à\s H:i') . '!' : '';
-
-$dadosPaciente = null;
-foreach ($listaPacientes as $p) {
-    if ($p['nome'] === $pacienteSelecionado) { $dadosPaciente = $p; break; }
+$pacienteSelecionado = (string)($_GET['paciente'] ?? '');
+$erro='';$sucesso='';$dadosPaciente=null;$prontuarioPaciente=null;
+if ($pacienteSelecionado!=='') {
+    try { $dadosPaciente=localizarPaciente($pacienteSelecionado);pacientePermitido($dadosPaciente['id']); }
+    catch (Throwable $e) { $erro=mensagemOperacao($e);$dadosPaciente=null; }
 }
-
-// Carrega odontograma do prontuarios.json para o paciente selecionado
-$prontuarios = lerJson('prontuarios.json');
-$prontuarioPaciente = null;
-foreach ($prontuarios as $pr) {
-    if (($pr['paciente'] ?? '') === $pacienteSelecionado) {
-        $prontuarioPaciente = $pr;
-        break;
-    }
+if ($_SERVER['REQUEST_METHOD']==='POST' && $dadosPaciente) {
+    try {
+        if (isset($_POST['salvar_prontuario'])) registrarEvolucao($_POST+['paciente'=>(string)$dadosPaciente['id']]);
+        elseif (isset($_POST['salvar_odontograma'])) salvarOdontograma($dadosPaciente['id'],json_decode($_POST['odontograma'] ?? '{}',true,512,JSON_THROW_ON_ERROR));
+        $sucesso='Prontuário salvo.';
+    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
-// Fallback: primeiro prontuário disponível se nenhum paciente selecionado
-if (!$prontuarioPaciente && !empty($prontuarios)) {
-    $prontuarioPaciente = $prontuarios[0];
+foreach (lerJson('prontuarios.json') as $pr) {
+    if ($dadosPaciente && $pr['id_paciente']===$dadosPaciente['id']) { $prontuarioPaciente=$pr;break; }
 }
-$odontoDados = $prontuarioPaciente['odontograma'] ?? [];
-$historicoClinico = $prontuarioPaciente['historico'] ?? [];
-$odontoDadosJson = json_encode($odontoDados ?: new stdClass(), JSON_UNESCAPED_UNICODE);
-
+$odontoDados=$prontuarioPaciente['odontograma'] ?? [];
+$historicoClinico=$prontuarioPaciente['historico'] ?? [];
+$odontoDadosJson=json_encode($odontoDados ?: new stdClass(),JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT);
+$listaProcedimentos=dentistaSessao()['procedimentos'] ?? [];
 include 'includes/head.php';
 ?>
 
@@ -45,6 +40,7 @@ include 'includes/head.php';
       <a href="dentista_pacientes.php" class="btn btn-fantasma">← Pacientes</a>
     </div>
 
+    <?php if ($erro): ?><div class="alerta alerta-erro"><?= limpar($erro) ?></div><?php endif; ?>
     <?php if ($sucesso): ?>
       <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
     <?php endif; ?>
@@ -59,7 +55,7 @@ include 'includes/head.php';
               style="width:100%;padding:11px 14px;border:2px solid var(--borda);border-radius:var(--raio-pilula);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);">
               <option value="">Selecione um paciente...</option>
               <?php foreach ($listaPacientes as $p): ?>
-                <option value="<?= limpar($p['nome']) ?>" <?= $pacienteSelecionado === $p['nome'] ? 'selected' : '' ?>>
+                <option value="<?= $p['id'] ?>" <?= ($dadosPaciente['id'] ?? 0) === $p['id'] ? 'selected' : '' ?>>
                   <?= limpar($p['nome']) ?>
                 </option>
               <?php endforeach; ?>
@@ -164,6 +160,9 @@ include 'includes/head.php';
       </div>
     </div>
 
+    <form method="POST" id="salvar-odontograma" style="margin-bottom:20px;"><?= csrfCampo() ?>
+      <input type="hidden" name="odontograma" id="odontograma-json"><button class="btn btn-primario" name="salvar_odontograma">Salvar odontograma</button>
+    </form>
     <!-- Histórico Clínico -->
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-corpo">
@@ -173,12 +172,7 @@ include 'includes/head.php';
         </div>
         <div style="display:flex;flex-direction:column;gap:12px;">
           <?php
-          $historico = [
-            ['data'=>'15/03/2026','dentista'=>'Dr. Carlos Mendes','proc'=>'Restauração','dentes'=>'41','obs'=>'Restauração composta fotopolimerizável. Sem intercorrências.','valor'=>220],
-            ['data'=>'10/01/2026','dentista'=>'Dr. Carlos Mendes','proc'=>'Clareamento Dental','dentes'=>'11, 12, 21, 22','obs'=>'Clareamento com moldeiras. 3 sessões. Instruído para evitar alimentos pigmentantes 48h.','valor'=>450],
-            ['data'=>'20/05/2025','dentista'=>'Dr. Carlos Mendes','proc'=>'Restauração','dentes'=>'15','obs'=>'Restauração de resina classe I. Sem intercorrências.','valor'=>180],
-            ['data'=>'12/08/2024','dentista'=>'Dr. Carlos Mendes','proc'=>'Selante Preventivo','dentes'=>'16, 26','obs'=>'Aplicação de selante nos molares. Orientações de higiene bucal reforçadas.','valor'=>160],
-          ];
+          $historico = $historicoClinico;
           foreach ($historico as $reg):
           ?>
           <div style="padding:16px;background:var(--fundo-campo);border-radius:var(--raio-pequeno);border-left:3px solid var(--destaque);">
@@ -205,6 +199,7 @@ include 'includes/head.php';
       <div class="cartao-corpo">
         <h3 style="font-size:16px;font-weight:700;margin-bottom:20px;"><i class="bi bi-pencil-fill" aria-hidden="true"></i> Novo Registro Clínico</h3>
         <form method="POST" novalidate>
+          <?= csrfCampo() ?>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
             <div class="grupo-campo">
               <label>Procedimento</label>
@@ -254,6 +249,7 @@ include 'includes/head.php';
 
 // Dados dos dentes do prontuário (vindos do PHP)
 const dadosBanco = <?= $odontoDadosJson ?>;
+const dadosOriginais=JSON.parse(JSON.stringify(dadosBanco));
 
 // Posições e metadados dos 32 dentes, organizados por quadrante FDI
 const dentes = {
@@ -424,7 +420,7 @@ function mostrarPainel(num) {
   const procs = document.getElementById('dente-procedimentos');
   const lista = dados.procedimentos || [];
   if (lista.length) {
-    procs.innerHTML = lista.map(p => `<li style="padding:4px 0;border-bottom:1px solid var(--borda);display:flex;align-items:center;gap:8px;"><span style="color:var(--destaque);">•</span>${p}</li>`).join('');
+    procs.innerHTML = lista.map(p => `<li style="padding:4px 0;border-bottom:1px solid var(--borda);display:flex;align-items:center;gap:8px;"><span style="color:var(--destaque);">•</span>${String(p).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</li>`).join('');
   } else {
     procs.innerHTML = '<li style="color:var(--texto-fraco);font-style:italic;">Nenhum procedimento registrado</li>';
   }
@@ -460,12 +456,17 @@ function fecharPainel() {
 
 function resetOdontograma() {
   if (!confirm('Resetar o odontograma para os dados originais?')) return;
+  Object.keys(dadosBanco).forEach(k=>delete dadosBanco[k]);
+  Object.assign(dadosBanco,JSON.parse(JSON.stringify(dadosOriginais)));
   inicializarStatus();
   denteAtivo = null;
   document.getElementById('dente-painel').style.display = 'none';
   renderOdontograma();
 }
 
+document.getElementById('salvar-odontograma')?.addEventListener('submit',()=> {
+  document.getElementById('odontograma-json').value=JSON.stringify(dadosBanco);
+});
 inicializarStatus();
 renderOdontograma();
 </script>

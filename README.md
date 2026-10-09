@@ -42,6 +42,8 @@ Para regenerar o seed: `python3 scripts/gerar_seed_do_json_legado.py`. Inicializ
 - Cabeçalhos HTTP: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`
 - Saída sempre escapada com `htmlspecialchars()` antes de ir pro HTML
 
+**Instalação e roteiro de teste integrados:** [docs/INSTALACAO_INTEGRADA.md](docs/INSTALACAO_INTEGRADA.md).
+
 ## Como rodar localmente
 
 ```bash

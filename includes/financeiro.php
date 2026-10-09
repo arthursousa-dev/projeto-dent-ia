@@ -20,7 +20,7 @@ function resumoFinanceiro(PDO $pdo, ?string $data = null): array {
     $porDentista = $pdo->prepare("SELECT d.id AS id_dentista, p.nome,
         (SELECT count(*) FROM agendamentos a WHERE a.id_dentista=d.id AND a.status='Concluída' AND a.data>=:inicio AND a.data<:fim) AS procedimentos,
         COALESCE((SELECT sum(pg.valor) FROM pagamento pg JOIN agendamentos a ON a.id=pg.id_agendamento
-            WHERE a.id_dentista=d.id AND pg.pago_em>=:de::date AND pg.pago_em<:ate::date),0) AS receita
+            WHERE a.id_dentista=d.id AND pg.pago_em IS NOT NULL AND pg.pago_em>=CAST(:de AS date) AND pg.pago_em<CAST(:ate AS date)),0) AS receita
         FROM dentistas d JOIN pessoa p ON p.id=d.id_pessoa ORDER BY receita DESC,p.nome");
     $porDentista->execute(['inicio'=>$inicio,'fim'=>$fim,'de'=>$inicio,'ate'=>$fim]);
     $stmt = $pdo->prepare("SELECT COALESCE(sum(a.valor),0) FROM agendamentos a LEFT JOIN pagamento pg ON pg.id_agendamento=a.id
@@ -30,7 +30,7 @@ function resumoFinanceiro(PDO $pdo, ?string $data = null): array {
     $stmt=$pdo->prepare("SELECT pl.nome, SUM(pg.valor) AS receita FROM pagamento pg
         JOIN agendamentos a ON a.id=pg.id_agendamento JOIN pacientes pac ON pac.id=a.id_paciente
         JOIN plano_saude pl ON pl.id=pac.id_plano
-        WHERE pg.pago_em>=:inicio::date AND pg.pago_em<:fim::date GROUP BY pl.nome ORDER BY receita DESC,pl.nome");
+        WHERE pg.pago_em IS NOT NULL AND pg.pago_em>=CAST(:inicio AS date) AND pg.pago_em<CAST(:fim AS date) GROUP BY pl.nome ORDER BY receita DESC,pl.nome");
     $stmt->execute(['inicio'=>$inicio,'fim'=>$fim]);
     $porPlano=[];
     foreach ($stmt->fetchAll() as $plano) $porPlano[$plano['nome']]=(float)$plano['receita'];

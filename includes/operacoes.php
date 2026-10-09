@@ -85,6 +85,7 @@ function criarAgendamento(array $dados): int {
     $c=lerJsonObjeto('clinica.json');
     $minimo=date('Y-m-d',strtotime('+'.($u['tipo']==='cliente' ? (int)$c['antecedencia_min_dias'] : 0).' days'));
     if ($data<$minimo) throw new InvalidArgumentException('A data não respeita a antecedência mínima.');
+    if ($data < date('Y-m-d')) throw new InvalidArgumentException('Não é possível agendar uma consulta no passado.');
     return transacaoOperacao(function(PDO $pdo) use($dados,$paciente,$data,$hora,$c) {
         $pdo->prepare('SELECT pg_advisory_xact_lock(hashtext(:dia))')->execute(['dia'=>'agenda-'.$data]);
         $stmt=$pdo->prepare("SELECT count(*) FROM agendamentos WHERE data=:data AND status<>'Cancelado'");
@@ -160,6 +161,9 @@ function confirmarPagamento(int $id, int $forma): void {
         if (!$a || $a['status']==='Cancelado') throw new InvalidArgumentException('Consulta não disponível para pagamento.');
         $stmt=$pdo->prepare('SELECT 1 FROM pagamento WHERE id_agendamento=:id AND pago_em IS NOT NULL');$stmt->execute(['id'=>$id]);
         if ($stmt->fetchColumn()) throw new InvalidArgumentException('Pagamento já confirmado.');
+        $stmt=$pdo->prepare('SELECT 1 FROM forma_pagamento WHERE id=:id');
+        $stmt->execute(['id'=>$forma]);
+        if (!$stmt->fetchColumn()) throw new InvalidArgumentException('Forma de pagamento inválida.');
         $stmt=$pdo->prepare('INSERT INTO pagamento (id_agendamento,id_forma_pagamento,valor,pago_em)
             VALUES (:id,:forma,:valor,now()) ON CONFLICT (id_agendamento) DO UPDATE SET
             id_forma_pagamento=EXCLUDED.id_forma_pagamento,valor=EXCLUDED.valor,pago_em=EXCLUDED.pago_em');

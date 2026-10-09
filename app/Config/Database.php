@@ -14,9 +14,28 @@ class Database
 {
     private static ?PDO $instancia = null;
 
+    /** Lê .env local sem dependências externas; variáveis já definidas têm precedência. */
+    private static function carregarAmbiente(): void
+    {
+        $arquivo = dirname(__DIR__, 2) . '/.env';
+        if (!is_readable($arquivo)) return;
+        foreach (file($arquivo, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $linha) {
+            $linha = trim($linha);
+            if ($linha === '' || $linha[0] === '#' || !str_contains($linha, '=')) continue;
+            [$chave, $valor] = array_map('trim', explode('=', $linha, 2));
+            if (!preg_match('/^[A-Z][A-Z0-9_]*$/', $chave) || getenv($chave) !== false) continue;
+            $valor = trim($valor, "\"'");
+            putenv($chave . '=' . $valor);
+        }
+    }
+
     public static function getConnection(): PDO
     {
         if (self::$instancia === null) {
+            self::carregarAmbiente();
+            if (!extension_loaded('pdo_pgsql')) {
+                throw new \RuntimeException('A extensão pdo_pgsql não está habilitada no PHP. Ative php-pgsql.');
+            }
             $host = getenv('DB_HOST') ?: 'localhost';
             $port = getenv('DB_PORT') ?: '5432';
             $nome = getenv('DB_NAME') ?: 'dentia';
@@ -32,8 +51,7 @@ class Database
                     PDO::ATTR_EMULATE_PREPARES   => false,
                 ]);
             } catch (PDOException $e) {
-                http_response_code(500);
-                die('Não foi possível conectar ao banco de dados.');
+                throw new \RuntimeException('Não foi possível conectar ao PostgreSQL. Confira o arquivo .env e se o serviço do banco está ativo.', 0, $e);
             }
         }
 

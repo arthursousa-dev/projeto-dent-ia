@@ -9,7 +9,7 @@ $erro = ''; $sucesso = '';
 $usuarios  = lerJson('usuarios.json');
 $pacientes = lerJson('pacientes.json');
 $usuarioAtual  = buscarPorCampo($usuarios,  'email', $emailSessao) ?? [];
-$pacienteAtual = buscarPorCampo($pacientes, 'email', $emailSessao) ?? [];
+$pacienteAtual = buscarPorCampo($pacientes, 'id_usuario', $usuarioAtual['id'] ?? 0) ?? [];
 $dados = array_merge($usuarioAtual, $pacienteAtual);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['salvar_perfil'])) {
@@ -24,9 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['salvar_perfil'])) {
             }
         }
         salvarJson('usuarios.json', $usuarios);
+        $pacientes = lerJson('pacientes.json');
         $atualizado = false;
         foreach ($pacientes as &$p) {
-            if (strtolower($p['email']) === $emailSessao) {
+            if (($p['id_usuario'] ?? null) === ($usuarioAtual['id'] ?? 0)) {
                 $p['nome']        = $novoNome;
                 $p['telefone']    = trim($_POST['telefone']    ?? '');
                 $p['nascimento']  = $_POST['nascimento']       ?? '';

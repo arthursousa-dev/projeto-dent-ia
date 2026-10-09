@@ -16,7 +16,7 @@ $sqlBase = "
     SELECT p.*,
            (SELECT MAX(a.data) FROM agendamentos a
              WHERE a.id_paciente = p.id AND a.status = 'Concluída') AS ultima_consulta_data
-    FROM pacientes p
+    FROM vw_pacientes p
 ";
 
 if ($termoBusca) {

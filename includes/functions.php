@@ -67,8 +67,9 @@ function autenticarUsuario(string $email, string $senha, string $perfilEsperado)
     ];
 
     $stmt = $pdo->prepare(
-        'SELECT id, nome, tipo, status, senha_hash, tentativas_login, bloqueado_ate
-         FROM usuarios WHERE email = :email AND tipo = :tipo'
+        'SELECT u.id, p.nome, u.tipo, u.status, u.senha_hash, u.tentativas_login, u.bloqueado_ate
+         FROM usuarios u JOIN pessoa p ON p.id = u.id_pessoa
+         WHERE u.email = :email AND u.tipo = :tipo'
     );
     $stmt->execute([':email' => $email, ':tipo' => $perfilEsperado]);
     $u = $stmt->fetch();

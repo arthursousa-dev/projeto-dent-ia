@@ -70,7 +70,7 @@ include 'includes/head.php';
             ['Ticket Médio','<i class="bi bi-bullseye" aria-hidden="true"></i>','R$ '.number_format($mesAtual['ticket_medio']??0,2,',','.')],
             ['Dentistas','<i class="bi bi-emoji-smile-fill" aria-hidden="true"></i>',count($dentistas)],
             ['Pacientes Ativos','<i class="bi bi-people-fill" aria-hidden="true"></i>',count(filtrarPorCampo($pacientes,'status','Ativo'))],
-            ['Crescimento','<i class="bi bi-graph-up-arrow" aria-hidden="true"></i>','+'.number_format($mesAtual['crescimento_percentual']??0,1,',','.').'%'],
+            ['Crescimento','<i class="bi bi-graph-up-arrow" aria-hidden="true"></i>',(($mesAtual['crescimento_percentual']??0)>=0 ? '+' : '').number_format($mesAtual['crescimento_percentual']??0,1,',','.').'%'],
           ];
           foreach ($stats as [$lbl,$icon,$val]): ?>
           <div style="padding:16px;background:var(--fundo-campo);border-radius:var(--raio-pequeno);border:1px solid var(--borda);text-align:center;">

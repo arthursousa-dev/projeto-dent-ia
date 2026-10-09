@@ -11,7 +11,7 @@ $dataFiltro     = $_GET['data']     ?? date('Y-m-d');
 $dentistaFiltro = $_GET['dentista'] ?? '';
 
 // processa ações da tabela
-$sucesso=isset($_GET['criado']) && ctype_digit((string)$_GET['criado']) ? 'Agendamento #'.(int)$_GET['criado'].' criado e vinculado ao paciente com sucesso.' : ''; $erro='';
+$sucesso=isset($_GET['criado']) && ctype_digit((string)$_GET['criado']) ? 'Agendamento #'.(int)$_GET['criado'].' criado e vinculado ao paciente com sucesso.' : (isset($_GET['atualizado']) ? 'Consulta atualizada.' : ''); $erro='';
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     try {
         if (isset($_POST['receber'])) confirmarPagamento((int)$_POST['id'],(int)$_POST['forma']);
@@ -19,14 +19,28 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             $status=isset($_POST['fazer_checkin']) ? 'Aguardando' : (isset($_POST['cancelar_consulta']) ? 'Cancelado' : ($_POST['status'] ?? ''));
             alterarStatusAgenda((int)($_POST['id'] ?? 0),$status);
         }
-        $sucesso='Consulta atualizada.';
+        header('Location: recepcionista_agenda.php?data='.urlencode($dataFiltro).'&dentista='.urlencode($dentistaFiltro).'&atualizado=1'); exit;
     } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
-$listaAgendamentos=array_map(function($a){$a['procedimento']=$a['servico'];return $a;},lerJson('agendamentos.json'));
-$dataFiltro=$dataFiltro ?? date('Y-m-d');
-if (!preg_match('/^\d{4}-\d{2}-\d{2}$/',$dataFiltro) || strtotime($dataFiltro)===false) $dataFiltro=date('Y-m-d');
-$listaAgendamentos=array_values(array_filter($listaAgendamentos,fn($a)=>$a['data']===$dataFiltro &&
-    (empty($dentistaFiltro) || $a['id_dentista']==$dentistaFiltro)));
+// A agenda consulta diretamente o PostgreSQL, sempre com filtros de data e dentista.
+// Evita registros de outras datas e reflete imediatamente inclusões/alterações.
+$dataFiltro = (string) ($_GET['data'] ?? date('Y-m-d'));
+$dtFiltro = DateTimeImmutable::createFromFormat('!Y-m-d', $dataFiltro);
+if (!$dtFiltro || $dtFiltro->format('Y-m-d') !== $dataFiltro) $dataFiltro = date('Y-m-d');
+$dentistaFiltro = (string) ($_GET['dentista'] ?? '');
+if ($dentistaFiltro !== '' && (!ctype_digit($dentistaFiltro) || (int)$dentistaFiltro < 1)) $dentistaFiltro = '';
+$pdo = \App\Config\Database::getConnection();
+$sqlAgenda = "SELECT v.*, v.servico AS procedimento FROM vw_agendamentos v
+    WHERE v.data = :data";
+$paramsAgenda = ['data' => $dataFiltro];
+if ($dentistaFiltro !== '') {
+    $sqlAgenda .= ' AND v.id_dentista = :dentista';
+    $paramsAgenda['dentista'] = (int)$dentistaFiltro;
+}
+$sqlAgenda .= ' ORDER BY v.hora, v.id';
+$stmtAgenda = $pdo->prepare($sqlAgenda);
+$stmtAgenda->execute($paramsAgenda);
+$listaAgendamentos = $stmtAgenda->fetchAll(PDO::FETCH_ASSOC);
 $formas=\App\Config\Database::getConnection()->query('SELECT * FROM forma_pagamento ORDER BY nome')->fetchAll();
 include 'includes/head.php';
 ?>
@@ -41,7 +55,7 @@ include 'includes/head.php';
         <h1><i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Agenda do Dia</h1>
         <p><?= data_pt('l, d \d\e F \d\e Y', strtotime($dataFiltro)) ?></p>
       </div>
-      <a href="recepcionista_novo_agendamento.php" class="btn btn-primario">
+      <a href="recepcionista_novo_agendamento.php?data=<?= urlencode($dataFiltro) ?>" class="btn btn-primario">
         + Novo Agendamento
       </a>
     </div>
@@ -74,7 +88,7 @@ include 'includes/head.php';
           <button type="submit" class="btn btn-primario">Filtrar</button>
           <a href="recepcionista_agenda.php" class="btn btn-fantasma">Limpar</a>
           <!-- navegar para o próximo dia -->
-          <a href="?data=<?= date('Y-m-d', strtotime($dataFiltro . ' +1 day')) ?>"
+          <a href="?data=<?= date('Y-m-d', strtotime($dataFiltro . ' +1 day')) ?>&amp;dentista=<?= urlencode($dentistaFiltro) ?>"
              class="btn btn-fantasma">
             Próximo dia →
           </a>

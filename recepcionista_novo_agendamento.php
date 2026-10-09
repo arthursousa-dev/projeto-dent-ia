@@ -8,6 +8,9 @@ $tituloPagina = 'Novo Agendamento';
 
 // pré-preenche o nome do paciente se veio da lista de pacientes
 $pacientePreenchido = (int)($_GET['paciente_id'] ?? 0);
+$dataPreenchida = (string)($_POST['data'] ?? $_GET['data'] ?? date('Y-m-d'));
+$validacaoData = DateTimeImmutable::createFromFormat('!Y-m-d', $dataPreenchida);
+if (!$validacaoData || $validacaoData->format('Y-m-d') !== $dataPreenchida || $dataPreenchida < date('Y-m-d')) $dataPreenchida = date('Y-m-d');
 
 $sucesso='';$erro='';
 if (isset($_POST['confirmar_agendamento'])) {
@@ -91,7 +94,7 @@ include 'includes/head.php';
             <div class="grupo-campo">
               <label for="ag-data">Data da consulta</label>
               <input type="date" id="ag-data" name="data"
-                     min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>" required>
+                     min="<?= date('Y-m-d') ?>" value="<?= limpar($dataPreenchida) ?>" required>
             </div>
             <div class="grupo-campo">
               <label for="ag-horario">Horário</label>

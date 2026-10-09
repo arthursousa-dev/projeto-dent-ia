@@ -36,13 +36,32 @@ class Database
             if (!extension_loaded('pdo_pgsql')) {
                 throw new \RuntimeException('A extensão pdo_pgsql não está habilitada no PHP. Ative php-pgsql.');
             }
-            $host = getenv('DB_HOST') ?: 'localhost';
-            $port = getenv('DB_PORT') ?: '5432';
-            $nome = getenv('DB_NAME') ?: 'dentia';
-            $user = getenv('DB_USER') ?: 'postgres';
-            $pass = getenv('DB_PASS') ?: '';
-
+            // Railway: variáveis DB_* explícitas, URL ou PG* padrão.
+            $url = getenv('DATABASE_URL') ?: getenv('POSTGRES_URL') ?: '';
+            $parts = $url !== '' ? parse_url($url) : [];
+            if ($url !== '' && $parts === false) {
+                throw new \RuntimeException('DATABASE_URL inválida.');
+            }
+            $host = getenv('DB_HOST') ?: ($parts['host'] ?? getenv('PGHOST') ?: 'localhost');
+            $port = getenv('DB_PORT') ?: ($parts['port'] ?? getenv('PGPORT') ?: '5432');
+            $nome = getenv('DB_NAME') ?: (isset($parts['path']) ? ltrim($parts['path'], '/') : (getenv('PGDATABASE') ?: 'dentia'));
+            $user = getenv('DB_USER') ?: (isset($parts['user']) ? rawurldecode($parts['user']) : (getenv('PGUSER') ?: 'postgres'));
+            $pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : (isset($parts['pass']) ? rawurldecode($parts['pass']) : (getenv('PGPASSWORD') ?: ''));
+            $query = [];
+            if (!empty($parts['query'])) parse_str($parts['query'], $query);
+            $sslmode = getenv('DB_SSLMODE') ?: ($query['sslmode'] ?? '');
+            foreach (['host'=>$host,'port'=>$port,'dbname'=>$nome] as $key=>$value) {
+                if (str_contains((string)$value, ';') || str_contains((string)$value, "\\")) {
+                    throw new \RuntimeException('Configuração de banco inválida: ' . $key);
+                }
+            }
             $dsn = "pgsql:host={$host};port={$port};dbname={$nome}";
+            if ($sslmode !== '') {
+                if (!in_array($sslmode, ['disable','allow','prefer','require','verify-ca','verify-full'], true)) {
+                    throw new \RuntimeException('DB_SSLMODE inválido.');
+                }
+                $dsn .= ";sslmode={$sslmode}";
+            }
 
             try {
                 self::$instancia = new PDO($dsn, $user, $pass, [

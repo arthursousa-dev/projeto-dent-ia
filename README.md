@@ -20,14 +20,17 @@ Projeto de portfólio construído em PHP puro, sem framework, com foco em fundam
 
 ## Arquitetura de dados
 
-A aplicação foi escrita originalmente contra arquivos JSON (`lerJson()`/`salvarJson()`). Em vez de reescrever as ~30 páginas de uma vez, a migração pro PostgreSQL manteve essa mesma interface: `includes/db.php` virou um adaptador que por baixo faz tudo em SQL, e por cima devolve exatamente os arrays que o resto do código já esperava. Isso reduziu drasticamente o risco de quebrar alguma tela durante a troca de banco.
+O banco PostgreSQL usa 25 tabelas normalizadas e 7 views de compatibilidade. `pessoa` centraliza os dados civis; telefone, endereço, disponibilidade, histórico clínico e pagamento têm tabelas próprias. Especialidades, categorias, planos, salas e formas de pagamento são referências. `faturamento_mensal` representa um fechamento consolidado com chave `(ano, mes_num)`.
 
-```
-database/
-├── schema.sql          # DDL completo (11 tabelas/tipos)
-├── seed.sql             # dados de demonstração, migrados do JSON legado
-└── dados_legado/        # JSONs originais, mantidos só como referência histórica
-```
+`includes/db.php` preserva `lerJson()`, `lerJsonObjeto()` e `salvarJson()`: lê pelas views e grava nas tabelas base em transações. Cargo e pagamento confirmado são derivados. Os e-mails de login e de contato podem ser diferentes; os perfis usam o vínculo `id_usuario`.
+
+- `database/schema.sql`: estrutura, domínios, funções, índices, triggers, views e referências iniciais.
+- `database/seed.sql`: demonstração reproduzível a partir dos JSONs legados.
+- `database/dados_legado/`: originais preservados.
+- [Modelo de dados](docs/modelo-de-dados.md): diagrama ER e análise de 1FN, 2FN e 3FN.
+- [Validação executada](docs/validacao.md): compatibilidade, testes e contagens.
+
+Para regenerar o seed: `python3 scripts/gerar_seed_do_json_legado.py`. Inicialize um banco vazio com schema e seed; estes arquivos não fazem migração destrutiva de bancos existentes.
 
 ## Segurança
 
@@ -43,10 +46,13 @@ database/
 
 ```bash
 createdb dentia
-psql dentia < database/schema.sql
-psql dentia < database/seed.sql
+psql -v ON_ERROR_STOP=1 dentia < database/schema.sql
+psql -v ON_ERROR_STOP=1 dentia < database/seed.sql
 
-cp .env.example .env   # ajuste as credenciais do seu Postgres local
+cp .env.example .env
+set -a
+. ./.env
+set +a
 
 php -S localhost:8000
 ```
@@ -62,7 +68,7 @@ Acesse `http://localhost:8000`.
 | Recepcionista | recepcao@dentai.com | 123456 |
 | Paciente | cliente@gmail.com | 123456 |
 
-> Dados fictícios, gerados só para demonstração do sistema. Os agendamentos de exemplo têm datas fixas (mar/abr de 2026) herdadas dos dados originais — por isso os contadores de "atendimentos no mês" no dashboard podem aparecer zerados fora desse período; é o comportamento esperado pra dados de demonstração estáticos.
+> O seed tem 1 dono, 4 dentistas legados, 2 recepcionistas, 10 pacientes e 20 agendamentos. Os novos logins (`recepcao2@dentai.com`, `paciente9@dentia.local` e `paciente10@dentia.local`) também usam `123456`. Dados fictícios, gerados só para demonstração do sistema. Os agendamentos de exemplo têm datas fixas (mar/abr/set de 2026) herdadas dos dados originais — por isso os contadores de "atendimentos no mês" no dashboard podem aparecer zerados fora desse período; é o comportamento esperado pra dados de demonstração estáticos.
 
 ## Estrutura
 
@@ -77,7 +83,7 @@ dentia/
 │   ├── seguranca.php              # CSRF
 │   └── head.php / sidebar.php / a11y_bar.php
 ├── scripts/
-│   └── gerar_seed_do_json_legado.py   # ferramenta usada na migração (documentação)
+│   └── gerar_seed_do_json_legado.py   # gerador do seed normalizado
 ├── login_dono.php / login_dentista.php / login_paciente.php / login_recepcionista.php
 ├── dono_*.php / dentista_*.php / recepcionista_*.php / cliente_*.php
 └── index.php
@@ -96,7 +102,8 @@ dentia/
 ```bash
 composer install
 createdb dentia_test
-psql dentia_test < database/schema.sql
+psql -v ON_ERROR_STOP=1 dentia_test < database/schema.sql
+psql -v ON_ERROR_STOP=1 dentia_test < database/seed.sql
 DB_NAME=dentia_test vendor/bin/phpunit
 ```
 

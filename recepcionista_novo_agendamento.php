@@ -7,11 +7,11 @@ verificarSessao('recepcionista');
 $tituloPagina = 'Novo Agendamento';
 
 // pré-preenche o nome do paciente se veio da lista de pacientes
-$pacientePreenchido = limpar($_GET['paciente'] ?? '');
+$pacientePreenchido = (int)($_GET['paciente_id'] ?? 0);
 
 $sucesso='';$erro='';
 if (isset($_POST['confirmar_agendamento'])) {
-    try { $id=criarAgendamento($_POST); $sucesso='Agendamento registrado: #'.$id.'.'; }
+    try { $id=criarAgendamento($_POST); header('Location: recepcionista_agenda.php?data='.urlencode($_POST['data']).'&criado='.$id); exit; }
     catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
 $pdo=\App\Config\Database::getConnection();
@@ -48,11 +48,14 @@ include 'includes/head.php';
 
           <div class="linha-campos">
             <div class="grupo-campo">
-              <label for="ag-paciente">Paciente (nome ou CPF)</label>
-              <input type="text" id="ag-paciente" name="paciente" list="pacientes-cadastrados"
-                     value="<?= $pacientePreenchido ?>"
-                     placeholder="Buscar paciente..." required>
-              <datalist id="pacientes-cadastrados"><?php foreach ($listaPacientes as $p): ?><option value="<?= limpar($p['cpf']) ?>"><?= limpar($p['nome']) ?></option><?php endforeach; ?></datalist>
+              <label for="ag-paciente">Paciente cadastrado</label>
+              <select id="ag-paciente" name="paciente_id" required>
+                <option value="">Selecione um paciente...</option>
+                <?php foreach ($listaPacientes as $p): if ($p['status'] !== 'Ativo') continue; ?>
+                  <option value="<?= (int)$p['id'] ?>" <?= $pacientePreenchido === (int)$p['id'] ? 'selected' : '' ?>><?= limpar($p['nome']) ?> — <?= limpar($p['cpf']) ?></option>
+                <?php endforeach; ?>
+              </select>
+              <small>Não encontrou? <a href="recepcionista_pacientes.php">Cadastre o paciente primeiro.</a></small>
             </div>
             <div class="grupo-campo">
               <label for="ag-procedimento">Procedimento</label>

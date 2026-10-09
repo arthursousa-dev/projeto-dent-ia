@@ -10,7 +10,8 @@ $tituloPagina = 'Painel da Recepção';
 $sucesso='';$erro='';
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     try {
-        if (isset($_POST['receber'])) confirmarPagamento((int)$_POST['id'],(int)$_POST['forma']);
+        if (isset($_POST['agendar_rapido'])) { $novoId=criarAgendamento($_POST); header('Location: recepcionista_agenda.php?data='.urlencode($_POST['data']).'&criado='.$novoId); exit; }
+        elseif (isset($_POST['receber'])) confirmarPagamento((int)$_POST['id'],(int)$_POST['forma']);
         else {
             $status=isset($_POST['fazer_checkin']) ? 'Aguardando' : (isset($_POST['cancelar_consulta']) ? 'Cancelado' : ($_POST['status'] ?? ''));
             alterarStatusAgenda((int)($_POST['id'] ?? 0),$status);
@@ -141,8 +142,12 @@ include 'includes/head.php';
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="rapido-paciente">Paciente</label>
-              <input type="text" id="rapido-paciente" name="paciente"
-                     placeholder="Nome ou CPF do paciente..." required>
+              <select id="rapido-paciente" name="paciente_id" required>
+                <option value="">Selecione um paciente...</option>
+                <?php foreach ($listaPacientes as $p): if ($p['status'] !== 'Ativo') continue; ?>
+                <option value="<?= (int)$p['id'] ?>"><?= limpar($p['nome']) ?> — <?= limpar($p['cpf']) ?></option>
+                <?php endforeach; ?>
+              </select>
             </div>
             <div class="grupo-campo">
               <label for="rapido-procedimento">Procedimento</label>
@@ -158,7 +163,7 @@ include 'includes/head.php';
               <label for="rapido-dentista">Dentista</label>
               <select id="rapido-dentista" name="dentista">
                 <?php foreach ($listaDentistas as $dentista): ?>
-                  <option><?= limpar($dentista['nome']) ?></option>
+                  <option value="<?= (int)$dentista['id'] ?>"><?= limpar($dentista['nome']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>

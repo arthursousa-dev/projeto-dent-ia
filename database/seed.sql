@@ -1,159 +1,684 @@
--- ============================================================
--- DENT IA — Dados de demonstração (migrados do armazenamento
--- em JSON original para o schema PostgreSQL)
--- ============================================================
-
--- usuarios
-INSERT INTO usuarios (id, email, senha_hash, tipo, nome, cpf, telefone, nascimento, cargo, status, criado_em) VALUES
-(1, 'dono@dentai.com', '$2b$10$gQkZCg8hNrlWwiHZXXmg.e5HQ76nbCnGd96AetT62q3FN7Ffd1TIW', 'dono', 'Arthur Sousa', '444.555.666-77', '(67) 99292-8122', '1995-05-10', 'Proprietário', 'ativo', '2019-01-01'::timestamp),
-(2, 'dentista@dentai.com', '$2b$10$faf7bTrGRCY7WfN0/KaLN./.02S2sC9cesFcKJiP1kdnJJSOizwWW', 'dentista', 'Dr. Carlos Mendes', '333.444.555-66', '(67) 99111-0001', '1978-03-20', NULL, 'ativo', '2020-03-01'::timestamp),
-(3, 'recepcao@dentai.com', '$2b$10$Avfl3IHtC/4reK4SjL6OsekGMLChIWqJ.a6RfNu/E1nU0ykmjSlYq', 'recepcionista', 'João Recepção', '222.333.444-55', '(67) 99211-2222', '1990-07-23', 'Recepcionista', 'ativo', '2023-06-01'::timestamp),
-(4, 'cliente@gmail.com', '$2b$10$aawDJlVYnFexl03flR4VrO1RTYT4b19MCxV/oVQWUMlnZg/xfdyBi', 'cliente', 'Maria Oliveira', '111.222.333-44', '(67) 99211-1111', '1985-04-12', NULL, 'ativo', '2024-01-15'::timestamp),
-(5, 'ana@dentai.com', '$2b$10$IVHxFKz08QBndxOLTAImcuKLsmMSu0X33P/OFve0XkHPdXwcUC6/S', 'dentista', 'Dra. Ana Silva', '555.111.222-33', '(67) 99111-0002', '1982-09-14', NULL, 'ativo', '2021-06-15'::timestamp),
-(6, 'paulo@dentai.com', '$2b$10$zaPL2a6e6nRSqp.o5.LiZeJx9KSYbOhLRyt/nyKec66X/pVEiORza', 'dentista', 'Dr. Paulo Ramos', '666.222.333-44', '(67) 99111-0003', '1974-11-08', NULL, 'ativo', '2022-01-10'::timestamp),
-(7, 'luciana@dentai.com', '$2b$10$u2mBhFLNJSVp9U2FAjLddeXYCCtFeJXbL5C/oXh18edcW6s2v77kG', 'dentista', 'Dra. Luciana Torres', '777.333.444-55', '(67) 99111-0004', '1980-06-25', NULL, 'ativo', '2019-09-20'::timestamp);
-SELECT setval('usuarios_id_seq', 7);
-
--- clinica (linha única)
-INSERT INTO clinica (id, nome, razao_social, cnpj, telefone, email, endereco, bairro, cidade, estado, cep, horario, logo_texto, cor_primaria, cor_destaque, limite_agendamentos_dia, antecedencia_min_dias, atualizado_em) VALUES
-(1, 'DENT IA', 'Clínica Odontológica DENT IA Ltda.', '12.345.678/0001-99', '(67) 99292-8122', 'contato@dentai.com.br', 'Rua das Flores, 142', 'Centro', 'Campo Grande', 'MS', '79002-000', 'Segunda a Sexta: 08h às 18h | Sábado: 08h às 13h', 'DENT IA', '#0b2845', '#00c9a7', 20, 1, '2026-04-10'::timestamp);
-
--- pacientes
-INSERT INTO pacientes (id, id_usuario, nome, cpf, rg, email, telefone, telefone_emergencia, nascimento, sexo, estado_civil, profissao, plano, numero_carteirinha, endereco, bairro, cidade, estado, cep, alergias, medicamentos_em_uso, doencas_preexistentes, observacoes, status, criado_em) VALUES
-(1, 4, 'Maria Oliveira', '111.222.333-44', '1.234.567', 'maria@email.com', '(67) 99211-1111', '(67) 99211-9999', '1985-04-12', 'F', 'Casada', 'Professora', 'Particular', NULL, 'Rua das Flores, 45', 'Centro', 'Campo Grande', 'MS', '79002-000', 'Nenhuma conhecida', 'Nenhum', 'Nenhuma', 'Paciente colaborativa, sem complicações anteriores.', 'ativo', '2024-01-15'::timestamp),
-(2, NULL, 'João Santos', '222.333.444-55', '2.345.678', 'joao@email.com', '(67) 99211-2222', '(67) 99211-8888', '1990-07-23', 'M', 'Solteiro', 'Engenheiro', 'Unimed Odonto', 'UNI-00123456', 'Av. Afonso Pena, 1200', 'Jardim dos Estados', 'Campo Grande', 'MS', '79020-001', 'Lidocaína', 'Nenhum', 'Nenhuma', 'Alergia a anestésico convencional — usar Mepivacaína.', 'ativo', '2024-03-10'::timestamp),
-(3, NULL, 'Carla Pereira', '333.444.555-66', '3.456.789', 'carla@email.com', '(67) 99211-3333', '(67) 99211-7777', '1978-11-05', 'F', 'Casada', 'Contadora', 'SulAmérica Odonto', 'SUL-00234567', 'Rua Bahia, 320', 'Bela Vista', 'Campo Grande', 'MS', '79040-100', 'Nenhuma conhecida', 'Levotiroxina 50mcg', 'Hipotireoidismo', 'Em tratamento ortodôntico há 18 meses.', 'ativo', '2024-02-20'::timestamp),
-(4, NULL, 'Pedro Alves', '444.555.666-77', '4.567.890', 'pedro@email.com', '(67) 99211-4444', '(67) 99211-6666', '1995-01-30', 'M', 'Solteiro', 'Analista de TI', 'Particular', NULL, 'Rua Ceará, 780', 'Monte Castelo', 'Campo Grande', 'MS', '79010-200', 'Nenhuma conhecida', 'Nenhum', 'Nenhuma', 'Candidato a implante dentário no quadrante inferior esquerdo.', 'ativo', '2024-04-05'::timestamp),
-(5, NULL, 'Fernanda Costa', '555.666.777-88', '5.678.901', 'fernanda@email.com', '(67) 99211-5555', '(67) 99211-5500', '1988-09-17', 'F', 'Divorciada', 'Médica', 'Odontoprev', 'ODP-00345678', 'Av. Mato Grosso, 560', 'Cabreúva', 'Campo Grande', 'MS', '79050-300', 'Nenhuma conhecida', 'Nenhum', 'Nenhuma', 'Paciente inativa — contatar para retorno.', 'inativo', '2023-11-12'::timestamp),
-(6, NULL, 'Ricardo Souza', '666.777.888-99', '6.789.012', 'ricardo@email.com', '(67) 99211-6666', '(67) 99211-6600', '2000-03-08', 'M', 'Solteiro', 'Estudante', 'Particular', NULL, 'Rua Minas Gerais, 200', 'Pioneiros', 'Campo Grande', 'MS', '79060-400', 'Nenhuma conhecida', 'Nenhum', 'Bruxismo', 'Bruxismo — placa miorrelaxante indicada.', 'ativo', '2024-05-18'::timestamp),
-(7, NULL, 'Ana Ferreira', '777.888.999-00', '7.890.123', 'ana.ferreira@email.com', '(67) 99211-7777', '(67) 99211-7700', '1972-06-30', 'F', 'Casada', 'Empresária', 'Bradesco Saúde Dental', 'BRS-00456789', 'Rua Espírito Santo, 100', 'Santa Fé', 'Campo Grande', 'MS', '79070-500', 'Penicilina', 'Atenolol 25mg, Losartana 50mg', 'Hipertensão arterial', 'Hipertensa — monitorar pressão antes de anestesia. Não usar vasoconstritores.', 'ativo', '2023-08-22'::timestamp),
-(8, NULL, 'Lucas Martins', '888.999.000-11', '8.901.234', 'lucas@email.com', '(67) 99211-8888', '(67) 99211-8800', '2010-12-15', 'M', 'Solteiro', 'Estudante', 'Unimed Odonto', 'UNI-00567890', 'Rua Paraná, 450', 'Amambai', 'Campo Grande', 'MS', '79080-600', 'Nenhuma conhecida', 'Nenhum', 'Nenhuma', 'Paciente pediátrico. Dentição mista — acompanhamento de erupção.', 'ativo', '2024-06-01'::timestamp);
-SELECT setval('pacientes_id_seq', 8);
-
--- dentistas
-INSERT INTO dentistas (id, id_usuario, nome, email, telefone, cpf, nascimento, cro, especialidade, titulacao, faculdade, ano_formatura, admissao, cor, sala, status, horarios, dias_atendimento) VALUES
-(1, 2, 'Dr. Carlos Mendes', 'carlos@dentai.com', '(67) 99111-0001', '333.444.555-66', '1978-03-20', 'CRO-MS 12345', 'Clínico Geral', 'Especialista em Dentística', 'UFMS', 2002, '2020-03-01', '#00c9a7', 'Sala 1', 'ativo', '{"08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00"}', '{"Segunda","Terça","Quarta","Quinta","Sexta"}'),
-(2, 5, 'Dra. Ana Silva', 'ana@dentai.com', '(67) 99111-0002', '555.111.222-33', '1982-09-14', 'CRO-MS 23456', 'Ortodontia', 'Mestre em Ortodontia - USP', 'USP', 2006, '2021-06-15', '#3182ce', 'Sala 2', 'ativo', '{"09:00","09:30","10:00","10:30","11:00","14:00","14:30","15:00","15:30","16:00","16:30"}', '{"Segunda","Terça","Quarta","Quinta","Sexta"}'),
-(3, 6, 'Dr. Paulo Ramos', 'paulo@dentai.com', '(67) 99111-0003', '666.222.333-44', '1974-11-08', 'CRO-MS 34567', 'Cirurgia Oral', 'Doutor em Cirurgia Oral - UNICAMP', 'UNICAMP', 1998, '2022-01-10', '#d97706', 'Sala 3', 'ativo', '{"08:00","09:00","10:00","11:00","14:00","15:00","16:00"}', '{"Terça","Quinta"}'),
-(4, 7, 'Dra. Luciana Torres', 'luciana@dentai.com', '(67) 99111-0004', '777.333.444-55', '1980-06-25', 'CRO-MS 45678', 'Endodontia', 'Especialista em Endodontia', 'PUC-SP', 2004, '2019-09-20', '#805ad5', 'Sala 4', 'ativo', '{"08:00","08:30","09:00","09:30","10:00","10:30","11:00","14:00","14:30","15:00","15:30","16:00"}', '{"Segunda","Quarta","Sexta"}');
-SELECT setval('dentistas_id_seq', 4);
-
--- procedimentos
-INSERT INTO procedimentos (id, nome, categoria, duracao_min, valor_base) VALUES
-(1, 'Consulta de Rotina', 'Preventivo', 30, 90.0),
-(2, 'Limpeza Dental', 'Preventivo', 60, 120.0),
-(3, 'Selante', 'Preventivo', 30, 80.0),
-(4, 'Flúor Tópico', 'Preventivo', 20, 50.0),
-(5, 'Restauração', 'Restaurador', 60, 180.0),
-(6, 'Restauração Ampla', 'Restaurador', 90, 280.0),
-(7, 'Clareamento Dental', 'Estético', 90, 450.0),
-(8, 'Faceta de Porcelana', 'Estético', 120, 1200.0),
-(9, 'Canal Radicular', 'Endodontia', 120, 1200.0),
-(10, 'Retratamento Endodôntico', 'Endodontia', 150, 1500.0),
-(11, 'Extração Simples', 'Cirurgia', 45, 180.0),
-(12, 'Extração de Siso', 'Cirurgia', 90, 350.0),
-(13, 'Implante Dentário', 'Implantodontia', 120, 2800.0),
-(14, 'Ortodontia (Aparelho Metálico)', 'Ortodontia', 60, 280.0),
-(15, 'Ortodontia (Aparelho Estético)', 'Ortodontia', 60, 350.0),
-(16, 'Alinhadores Transparentes', 'Ortodontia', 60, 400.0),
-(17, 'Coroa de Porcelana', 'Prótese', 90, 1800.0),
-(18, 'Prótese Total', 'Prótese', 60, 2200.0),
-(19, 'Placa Miorrelaxante', 'Preventivo', 30, 600.0),
-(20, 'Periodontia', 'Periodontia', 60, 250.0),
-(21, 'Cirurgia de Gengiva', 'Periodontia', 90, 800.0),
-(22, 'Enxerto Ósseo', 'Implantodontia', 120, 2000.0),
-(23, 'Pulpotomia', 'Endodontia', 60, 500.0),
-(24, 'Contenção Ortodôntica', 'Ortodontia', 30, 200.0);
-SELECT setval('procedimentos_id_seq', 24);
-
--- dentista_procedimentos
-INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES
-(1, 2),
-(1, 5),
-(1, 7),
-(1, 1),
-(1, 3),
-(1, 20),
-(2, 14),
-(2, 15),
-(2, 24),
-(2, 16),
-(3, 11),
-(3, 12),
-(3, 13),
-(3, 21),
-(3, 22),
-(4, 9),
-(4, 10),
-(4, 23);
-
--- agendamentos
-INSERT INTO agendamentos (id, id_paciente, id_dentista, id_procedimento, data, hora, sala, status, valor, pago, forma_pagamento, observacoes) VALUES
-(1, 1, 1, 2, '2026-04-10', '08:00', 'Sala 1', 'Confirmado', 120.0, true, 'Pix', NULL),
-(2, 2, 2, 14, '2026-04-10', '09:00', 'Sala 2', 'Em atendimento', 280.0, false, '', 'Ajuste mensal — 3° mês'),
-(3, 3, 2, 14, '2026-04-10', '10:00', 'Sala 2', 'Aguardando', 180.0, false, '', 'Ajuste mensal de aparelho — 18° mês'),
-(4, 4, 3, 12, '2026-04-10', '11:00', 'Sala 3', 'Aguardando', 350.0, false, '', 'Extração do siso inferior esquerdo (38)'),
-(5, 5, 1, 1, '2026-04-10', '14:00', 'Sala 1', 'Agendado', 90.0, false, '', 'Retorno após inatividade'),
-(6, 6, 4, 9, '2026-04-11', '09:00', 'Sala 4', 'Agendado', 1200.0, false, '', 'Dente 46 — sessão inicial. Verificar sensibilidade.'),
-(7, 7, 1, 2, '2026-04-11', '10:00', 'Sala 1', 'Agendado', 120.0, false, '', 'Hipertensa — verificar PA antes do procedimento'),
-(8, 8, 1, 1, '2026-04-11', '14:30', 'Sala 1', 'Agendado', 90.0, false, '', 'Acompanhamento dentição mista — paciente pediátrico'),
-(9, 1, 1, 5, '2026-03-15', '08:00', 'Sala 1', 'Concluída', 220.0, true, 'Cartão Crédito', 'Restauração dente 41 — concluída sem intercorrências'),
-(10, 2, 1, 2, '2026-03-10', '09:00', 'Sala 1', 'Concluída', 120.0, true, 'Pix', 'Limpeza de rotina — sem intercorrências');
-SELECT setval('agendamentos_id_seq', 10);
-
--- prontuarios
-INSERT INTO prontuarios (id, id_paciente) VALUES
-(1, 1),
-(2, 2),
-(3, 6);
-SELECT setval('prontuarios_id_seq', 3);
-
--- odontograma_dentes + odontograma_procedimentos
-INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES
-(1, 1, 11, 'tratado', 'Clareamento realizado'),
-(2, 1, 15, 'tratado', 'Restauração composta classe I'),
-(3, 1, 16, 'precisaTratamento', 'Cárie Classe II face mesial'),
-(4, 1, 22, 'precisaTratamento', 'Trinca de esmalte visível'),
-(5, 1, 26, 'tratado', 'Selante preventivo aplicado'),
-(6, 1, 33, 'precisaTratamento', 'Cárie inicial face vestibular'),
-(7, 1, 36, 'tratado', 'Canal e coroa concluídos com sucesso'),
-(8, 1, 41, 'tratado', 'Restauração realizada'),
-(9, 1, 46, 'precisaTratamento', 'Cárie profunda, possível necessidade de canal'),
-(10, 2, 18, 'precisaTratamento', 'Siso incluso — avaliação cirúrgica indicada'),
-(11, 2, 28, 'precisaTratamento', 'Siso incluso — avaliação cirúrgica indicada'),
-(12, 2, 38, 'tratado', 'Extração realizada'),
-(13, 2, 48, 'tratado', 'Extração realizada'),
-(14, 3, 46, 'precisaTratamento', 'Cárie profunda com comprometimento pulpar — canal indicado'),
-(15, 3, 16, 'tratado', 'Restauração ampla'),
-(16, 3, 36, 'tratado', 'Restauração de resina');
-SELECT setval('odontograma_dentes_id_seq', 16);
-
-INSERT INTO odontograma_procedimentos (id, id_dente, descricao) VALUES
-(1, 1, 'Clareamento - Jan/2026'),
-(2, 2, 'Restauração - Mai/2025'),
-(3, 3, 'Restauração indicada'),
-(4, 4, 'Avaliação necessária'),
-(5, 5, 'Selante - Ago/2024'),
-(6, 6, 'Restauração preventiva'),
-(7, 7, 'Canal Radicular - Dez/2025'),
-(8, 7, 'Coroa de Porcelana - Jan/2026'),
-(9, 8, 'Restauração - Mar/2026'),
-(10, 9, 'Avaliação urgente'),
-(11, 9, 'Possível Canal Radicular'),
-(12, 10, 'Avaliação cirúrgica'),
-(13, 11, 'Avaliação cirúrgica'),
-(14, 12, 'Extração - Jun/2024'),
-(15, 13, 'Extração - Jun/2024'),
-(16, 14, 'Canal Radicular indicado'),
-(17, 15, 'Restauração - 2023'),
-(18, 16, 'Restauração - 2024');
-SELECT setval('odontograma_procedimentos_id_seq', 18);
-
--- faturamento_mensal
-INSERT INTO faturamento_mensal (ano, mes_num, receita, despesas, qtd_procedimentos) VALUES
-(2025, 11, 22100.0, 8400.0, 112),
-(2025, 12, 19800.0, 7600.0, 98),
-(2026, 1, 24300.0, 9200.0, 128),
-(2026, 2, 26100.0, 9800.0, 138),
-(2026, 3, 27900.0, 10200.0, 148),
-(2026, 4, 28750.0, 10600.0, 156);
+-- Dados fictícios de demonstração
+BEGIN;
+INSERT INTO pessoa (id, nome, cpf, nascimento, email, rg, sexo) VALUES (1, 'Arthur Sousa', '90000000175', '1995-05-10', 'dono@dentai.com', NULL, NULL);
+INSERT INTO usuarios (id, id_pessoa, email, senha_hash, tipo, status, criado_em) VALUES (1, 1, 'dono@dentai.com', '$2b$10$gQkZCg8hNrlWwiHZXXmg.e5HQ76nbCnGd96AetT62q3FN7Ffd1TIW', 'dono', 'ativo', '2019-01-01');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (1, '67992928122', 'principal');
+INSERT INTO pessoa (id, nome, cpf, nascimento, email, rg, sexo) VALUES (2, 'Dr. Carlos Mendes', '90000000256', '1978-03-20', 'carlos@dentai.com', NULL, NULL);
+INSERT INTO usuarios (id, id_pessoa, email, senha_hash, tipo, status, criado_em) VALUES (2, 2, 'dentista@dentai.com', '$2b$10$faf7bTrGRCY7WfN0/KaLN./.02S2sC9cesFcKJiP1kdnJJSOizwWW', 'dentista', 'ativo', '2020-03-01');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (2, '67991110001', 'principal');
+INSERT INTO pessoa (id, nome, cpf, nascimento, email, rg, sexo) VALUES (3, 'João Recepção', '90000000337', '1990-07-23', 'recepcao@dentai.com', NULL, NULL);
+INSERT INTO usuarios (id, id_pessoa, email, senha_hash, tipo, status, criado_em) VALUES (3, 3, 'recepcao@dentai.com', '$2b$10$Avfl3IHtC/4reK4SjL6OsekGMLChIWqJ.a6RfNu/E1nU0ykmjSlYq', 'recepcionista', 'ativo', '2023-06-01');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (3, '67992112222', 'principal');
+INSERT INTO pessoa (id, nome, cpf, nascimento, email, rg, sexo) VALUES (4, 'Maria Oliveira', '90000000418', '1985-04-12', 'maria@email.com', '1.234.567', 'F');
+INSERT INTO usuarios (id, id_pessoa, email, senha_hash, tipo, status, criado_em) VALUES (4, 4, 'cliente@gmail.com', '$2b$10$aawDJlVYnFexl03flR4VrO1RTYT4b19MCxV/oVQWUMlnZg/xfdyBi', 'cliente', 'ativo', '2024-01-15');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (4, '67992111111', 'principal');
+INSERT INTO pessoa (id, nome, cpf, nascimento, email, rg, sexo) VALUES (5, 'Dra. Ana Silva', '90000000507', '1982-09-14', 'ana@dentai.com', NULL, NULL);
+INSERT INTO usuarios (id, id_pessoa, email, senha_hash, tipo, status, criado_em) VALUES (5, 5, 'ana@dentai.com', '$2b$10$IVHxFKz08QBndxOLTAImcuKLsmMSu0X33P/OFve0XkHPdXwcUC6/S', 'dentista', 'ativo', '2021-06-15');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (5, '67991110002', 'principal');
+INSERT INTO pessoa (id, nome, cpf, nascimento, email, rg, sexo) VALUES (6, 'Dr. Paulo Ramos', '90000000680', '1974-11-08', 'paulo@dentai.com', NULL, NULL);
+INSERT INTO usuarios (id, id_pessoa, email, senha_hash, tipo, status, criado_em) VALUES (6, 6, 'paulo@dentai.com', '$2b$10$zaPL2a6e6nRSqp.o5.LiZeJx9KSYbOhLRyt/nyKec66X/pVEiORza', 'dentista', 'ativo', '2022-01-10');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (6, '67991110003', 'principal');
+INSERT INTO pessoa (id, nome, cpf, nascimento, email, rg, sexo) VALUES (7, 'Dra. Luciana Torres', '90000000760', '1980-06-25', 'luciana@dentai.com', NULL, NULL);
+INSERT INTO usuarios (id, id_pessoa, email, senha_hash, tipo, status, criado_em) VALUES (7, 7, 'luciana@dentai.com', '$2b$10$u2mBhFLNJSVp9U2FAjLddeXYCCtFeJXbL5C/oXh18edcW6s2v77kG', 'dentista', 'ativo', '2019-09-20');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (7, '67991110004', 'principal');
+INSERT INTO pessoa (id, nome, cpf, nascimento, email, rg, sexo) VALUES (8, 'Beatriz Lima', '90000000841', '1993-08-15', 'recepcao2@dentai.com', NULL, NULL);
+INSERT INTO usuarios (id, id_pessoa, email, senha_hash, tipo, status, criado_em) VALUES (8, 8, 'recepcao2@dentai.com', '$2y$10$GEmpivxXPvYn507Y6lkzduWXJBbiVyxRSzUyLMmKHKRZMPmNRok02', 'recepcionista', 'ativo', '2024-02-01');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (8, '67992119000', 'principal');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (4, '67992119999', 'emergencia');
+INSERT INTO cidade (nome, uf) VALUES ('Campo Grande', 'MS') ON CONFLICT (nome, uf) DO NOTHING;
+INSERT INTO endereco (id, logradouro, numero, bairro, cep, id_cidade) VALUES (101, 'Rua das Flores', '45', 'Centro', '79002000', (SELECT id FROM cidade WHERE nome='Campo Grande' AND uf='MS'));
+INSERT INTO plano_saude (nome) VALUES ('Particular') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO pacientes (id, id_pessoa, id_endereco, estado_civil, profissao, numero_carteirinha, observacoes, status, criado_em, id_plano) VALUES (1, 4, 101, 'Casada', 'Professora', NULL, 'Paciente colaborativa, sem complicações anteriores.', 'ativo', '2024-01-15', (SELECT id FROM plano_saude WHERE nome='Particular'));
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (1, 'alergia', 'Nenhuma conhecida');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (1, 'medicamento', 'Nenhum');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (1, 'condicao', 'Nenhuma');
+INSERT INTO pessoa (id, nome, cpf, rg, nascimento, sexo, email) VALUES (102, 'João Santos', '90000010219', '2.345.678', '1990-07-23', 'M', 'joao@email.com');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (102, '67992112222', 'principal');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (102, '67992118888', 'emergencia');
+INSERT INTO cidade (nome, uf) VALUES ('Campo Grande', 'MS') ON CONFLICT (nome, uf) DO NOTHING;
+INSERT INTO endereco (id, logradouro, numero, bairro, cep, id_cidade) VALUES (102, 'Av. Afonso Pena', '1200', 'Jardim dos Estados', '79020001', (SELECT id FROM cidade WHERE nome='Campo Grande' AND uf='MS'));
+INSERT INTO plano_saude (nome) VALUES ('Unimed Odonto') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO pacientes (id, id_pessoa, id_endereco, estado_civil, profissao, numero_carteirinha, observacoes, status, criado_em, id_plano) VALUES (2, 102, 102, 'Solteiro', 'Engenheiro', 'UNI-00123456', 'Alergia a anestésico convencional — usar Mepivacaína.', 'ativo', '2024-03-10', (SELECT id FROM plano_saude WHERE nome='Unimed Odonto'));
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (2, 'alergia', 'Lidocaína');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (2, 'medicamento', 'Nenhum');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (2, 'condicao', 'Nenhuma');
+INSERT INTO pessoa (id, nome, cpf, rg, nascimento, sexo, email) VALUES (103, 'Carla Pereira', '90000010308', '3.456.789', '1978-11-05', 'F', 'carla@email.com');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (103, '67992113333', 'principal');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (103, '67992117777', 'emergencia');
+INSERT INTO cidade (nome, uf) VALUES ('Campo Grande', 'MS') ON CONFLICT (nome, uf) DO NOTHING;
+INSERT INTO endereco (id, logradouro, numero, bairro, cep, id_cidade) VALUES (103, 'Rua Bahia', '320', 'Bela Vista', '79040100', (SELECT id FROM cidade WHERE nome='Campo Grande' AND uf='MS'));
+INSERT INTO plano_saude (nome) VALUES ('SulAmérica Odonto') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO pacientes (id, id_pessoa, id_endereco, estado_civil, profissao, numero_carteirinha, observacoes, status, criado_em, id_plano) VALUES (3, 103, 103, 'Casada', 'Contadora', 'SUL-00234567', 'Em tratamento ortodôntico há 18 meses.', 'ativo', '2024-02-20', (SELECT id FROM plano_saude WHERE nome='SulAmérica Odonto'));
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (3, 'alergia', 'Nenhuma conhecida');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (3, 'medicamento', 'Levotiroxina 50mcg');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (3, 'condicao', 'Hipotireoidismo');
+INSERT INTO pessoa (id, nome, cpf, rg, nascimento, sexo, email) VALUES (104, 'Pedro Alves', '90000010480', '4.567.890', '1995-01-30', 'M', 'pedro@email.com');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (104, '67992114444', 'principal');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (104, '67992116666', 'emergencia');
+INSERT INTO cidade (nome, uf) VALUES ('Campo Grande', 'MS') ON CONFLICT (nome, uf) DO NOTHING;
+INSERT INTO endereco (id, logradouro, numero, bairro, cep, id_cidade) VALUES (104, 'Rua Ceará', '780', 'Monte Castelo', '79010200', (SELECT id FROM cidade WHERE nome='Campo Grande' AND uf='MS'));
+INSERT INTO pacientes (id, id_pessoa, id_endereco, estado_civil, profissao, numero_carteirinha, observacoes, status, criado_em, id_plano) VALUES (4, 104, 104, 'Solteiro', 'Analista de TI', NULL, 'Candidato a implante dentário no quadrante inferior esquerdo.', 'ativo', '2024-04-05', (SELECT id FROM plano_saude WHERE nome='Particular'));
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (4, 'alergia', 'Nenhuma conhecida');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (4, 'medicamento', 'Nenhum');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (4, 'condicao', 'Nenhuma');
+INSERT INTO pessoa (id, nome, cpf, rg, nascimento, sexo, email) VALUES (105, 'Fernanda Costa', '90000010561', '5.678.901', '1988-09-17', 'F', 'fernanda@email.com');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (105, '67992115555', 'principal');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (105, '67992115500', 'emergencia');
+INSERT INTO cidade (nome, uf) VALUES ('Campo Grande', 'MS') ON CONFLICT (nome, uf) DO NOTHING;
+INSERT INTO endereco (id, logradouro, numero, bairro, cep, id_cidade) VALUES (105, 'Av. Mato Grosso', '560', 'Cabreúva', '79050300', (SELECT id FROM cidade WHERE nome='Campo Grande' AND uf='MS'));
+INSERT INTO plano_saude (nome) VALUES ('Odontoprev') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO pacientes (id, id_pessoa, id_endereco, estado_civil, profissao, numero_carteirinha, observacoes, status, criado_em, id_plano) VALUES (5, 105, 105, 'Divorciada', 'Médica', 'ODP-00345678', 'Paciente inativa — contatar para retorno.', 'inativo', '2023-11-12', (SELECT id FROM plano_saude WHERE nome='Odontoprev'));
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (5, 'alergia', 'Nenhuma conhecida');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (5, 'medicamento', 'Nenhum');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (5, 'condicao', 'Nenhuma');
+INSERT INTO pessoa (id, nome, cpf, rg, nascimento, sexo, email) VALUES (106, 'Ricardo Souza', '90000010642', '6.789.012', '2000-03-08', 'M', 'ricardo@email.com');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (106, '67992116666', 'principal');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (106, '67992116600', 'emergencia');
+INSERT INTO cidade (nome, uf) VALUES ('Campo Grande', 'MS') ON CONFLICT (nome, uf) DO NOTHING;
+INSERT INTO endereco (id, logradouro, numero, bairro, cep, id_cidade) VALUES (106, 'Rua Minas Gerais', '200', 'Pioneiros', '79060400', (SELECT id FROM cidade WHERE nome='Campo Grande' AND uf='MS'));
+INSERT INTO pacientes (id, id_pessoa, id_endereco, estado_civil, profissao, numero_carteirinha, observacoes, status, criado_em, id_plano) VALUES (6, 106, 106, 'Solteiro', 'Estudante', NULL, 'Bruxismo — placa miorrelaxante indicada.', 'ativo', '2024-05-18', (SELECT id FROM plano_saude WHERE nome='Particular'));
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (6, 'alergia', 'Nenhuma conhecida');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (6, 'medicamento', 'Nenhum');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (6, 'condicao', 'Bruxismo');
+INSERT INTO pessoa (id, nome, cpf, rg, nascimento, sexo, email) VALUES (107, 'Ana Ferreira', '90000010723', '7.890.123', '1972-06-30', 'F', 'ana.ferreira@email.com');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (107, '67992117777', 'principal');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (107, '67992117700', 'emergencia');
+INSERT INTO cidade (nome, uf) VALUES ('Campo Grande', 'MS') ON CONFLICT (nome, uf) DO NOTHING;
+INSERT INTO endereco (id, logradouro, numero, bairro, cep, id_cidade) VALUES (107, 'Rua Espírito Santo', '100', 'Santa Fé', '79070500', (SELECT id FROM cidade WHERE nome='Campo Grande' AND uf='MS'));
+INSERT INTO plano_saude (nome) VALUES ('Bradesco Saúde Dental') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO pacientes (id, id_pessoa, id_endereco, estado_civil, profissao, numero_carteirinha, observacoes, status, criado_em, id_plano) VALUES (7, 107, 107, 'Casada', 'Empresária', 'BRS-00456789', 'Hipertensa — monitorar pressão antes de anestesia. Não usar vasoconstritores.', 'ativo', '2023-08-22', (SELECT id FROM plano_saude WHERE nome='Bradesco Saúde Dental'));
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (7, 'alergia', 'Penicilina');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (7, 'medicamento', 'Atenolol 25mg');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (7, 'medicamento', 'Losartana 50mg');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (7, 'condicao', 'Hipertensão arterial');
+INSERT INTO pessoa (id, nome, cpf, rg, nascimento, sexo, email) VALUES (108, 'Lucas Martins', '90000010804', '8.901.234', '2010-12-15', 'M', 'lucas@email.com');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (108, '67992118888', 'principal');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (108, '67992118800', 'emergencia');
+INSERT INTO cidade (nome, uf) VALUES ('Campo Grande', 'MS') ON CONFLICT (nome, uf) DO NOTHING;
+INSERT INTO endereco (id, logradouro, numero, bairro, cep, id_cidade) VALUES (108, 'Rua Paraná', '450', 'Amambai', '79080600', (SELECT id FROM cidade WHERE nome='Campo Grande' AND uf='MS'));
+INSERT INTO pacientes (id, id_pessoa, id_endereco, estado_civil, profissao, numero_carteirinha, observacoes, status, criado_em, id_plano) VALUES (8, 108, 108, 'Solteiro', 'Estudante', 'UNI-00567890', 'Paciente pediátrico. Dentição mista — acompanhamento de erupção.', 'ativo', '2024-06-01', (SELECT id FROM plano_saude WHERE nome='Unimed Odonto'));
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (8, 'alergia', 'Nenhuma conhecida');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (8, 'medicamento', 'Nenhum');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (8, 'condicao', 'Nenhuma');
+INSERT INTO pessoa (id, nome, cpf, rg, nascimento, sexo, email) VALUES (109, 'Mariana Ribeiro', '90000010995', '1.234.567', '1992-06-12', 'F', 'paciente9@dentia.local');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (109, '67992110009', 'principal');
+INSERT INTO usuarios (id, id_pessoa, email, senha_hash, tipo, status, criado_em) VALUES (109, 109, 'paciente9@dentia.local', '$2y$10$GEmpivxXPvYn507Y6lkzduWXJBbiVyxRSzUyLMmKHKRZMPmNRok02', 'cliente', 'ativo', '2024-01-15');
+INSERT INTO cidade (nome, uf) VALUES ('Campo Grande', 'MS') ON CONFLICT (nome, uf) DO NOTHING;
+INSERT INTO endereco (id, logradouro, numero, bairro, cep, id_cidade) VALUES (109, 'Rua dos Ipês', '90', 'Centro', '79002000', (SELECT id FROM cidade WHERE nome='Campo Grande' AND uf='MS'));
+INSERT INTO pacientes (id, id_pessoa, id_endereco, estado_civil, profissao, numero_carteirinha, observacoes, status, criado_em, id_plano) VALUES (9, 109, 109, 'Casada', 'Professora', NULL, 'Consulta preventiva.', 'ativo', '2024-01-15', (SELECT id FROM plano_saude WHERE nome='Particular'));
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (9, 'alergia', 'Nenhuma conhecida');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (9, 'medicamento', 'Nenhum');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (9, 'condicao', 'Nenhuma');
+INSERT INTO pessoa (id, nome, cpf, rg, nascimento, sexo, email) VALUES (110, 'Rafael Nunes', '90000011029', '1.234.567', '1992-06-12', 'F', 'paciente10@dentia.local');
+INSERT INTO telefone (id_pessoa, numero, finalidade) VALUES (110, '67992110010', 'principal');
+INSERT INTO usuarios (id, id_pessoa, email, senha_hash, tipo, status, criado_em) VALUES (110, 110, 'paciente10@dentia.local', '$2y$10$GEmpivxXPvYn507Y6lkzduWXJBbiVyxRSzUyLMmKHKRZMPmNRok02', 'cliente', 'ativo', '2024-01-15');
+INSERT INTO cidade (nome, uf) VALUES ('Campo Grande', 'MS') ON CONFLICT (nome, uf) DO NOTHING;
+INSERT INTO endereco (id, logradouro, numero, bairro, cep, id_cidade) VALUES (110, 'Rua dos Ipês', '100', 'Centro', '79002000', (SELECT id FROM cidade WHERE nome='Campo Grande' AND uf='MS'));
+INSERT INTO pacientes (id, id_pessoa, id_endereco, estado_civil, profissao, numero_carteirinha, observacoes, status, criado_em, id_plano) VALUES (10, 110, 110, 'Casada', 'Professora', NULL, 'Consulta preventiva.', 'ativo', '2024-01-15', (SELECT id FROM plano_saude WHERE nome='Particular'));
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (10, 'alergia', 'Nenhuma conhecida');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (10, 'medicamento', 'Nenhum');
+INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES (10, 'condicao', 'Nenhuma');
+INSERT INTO cidade (nome, uf) VALUES ('Campo Grande', 'MS') ON CONFLICT (nome, uf) DO NOTHING;
+INSERT INTO endereco (id, logradouro, numero, bairro, cep, id_cidade) VALUES (1, 'Rua das Flores', '142', 'Centro', '79002000', (SELECT id FROM cidade WHERE nome='Campo Grande' AND uf='MS'));
+INSERT INTO clinica (id, nome, razao_social, email, horario, logo_texto, cor_primaria, cor_destaque, limite_agendamentos_dia, antecedencia_min_dias, atualizado_em, cnpj, id_endereco) VALUES (1, 'DENT IA', 'Clínica Odontológica DENT IA Ltda.', 'contato@dentai.com.br', 'Segunda a Sexta: 08h às 18h | Sábado: 08h às 13h', 'DENT IA', '#0b2845', '#00c9a7', 20, 1, '2026-04-10', '12345678000199', 1);
+INSERT INTO telefone (id_clinica, numero, finalidade) VALUES (1, '67992928122', 'principal');
+INSERT INTO especialidade (nome) VALUES ('Clínico Geral') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO sala (nome) VALUES ('Sala 1') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO dentistas (id, id_pessoa, cro_uf, cro_numero, titulacao, faculdade, ano_formatura, admissao, cor, status, id_especialidade, id_sala) VALUES (1, 2, 'MS', '12345', 'Especialista em Dentística', 'UFMS', 2002, '2020-03-01', '#00c9a7', 'ativo', (SELECT id FROM especialidade WHERE nome='Clínico Geral'), (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '08:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '08:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '11:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '16:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 1, '17:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '08:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '08:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '11:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '16:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 2, '17:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '08:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '08:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '11:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '16:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 3, '17:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '08:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '08:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '11:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '16:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 4, '17:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '08:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '08:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '11:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '16:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (1, 5, '17:00');
+INSERT INTO especialidade (nome) VALUES ('Ortodontia') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO sala (nome) VALUES ('Sala 2') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO dentistas (id, id_pessoa, cro_uf, cro_numero, titulacao, faculdade, ano_formatura, admissao, cor, status, id_especialidade, id_sala) VALUES (2, 5, 'MS', '23456', 'Mestre em Ortodontia - USP', 'USP', 2006, '2021-06-15', '#3182ce', 'ativo', (SELECT id FROM especialidade WHERE nome='Ortodontia'), (SELECT id FROM sala WHERE nome='Sala 2'));
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 1, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 1, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 1, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 1, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 1, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 1, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 1, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 1, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 1, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 1, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 1, '16:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 2, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 2, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 2, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 2, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 2, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 2, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 2, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 2, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 2, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 2, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 2, '16:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 3, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 3, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 3, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 3, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 3, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 3, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 3, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 3, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 3, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 3, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 3, '16:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 4, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 4, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 4, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 4, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 4, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 4, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 4, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 4, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 4, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 4, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 4, '16:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 5, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 5, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 5, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 5, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 5, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 5, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 5, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 5, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 5, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 5, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (2, 5, '16:30');
+INSERT INTO especialidade (nome) VALUES ('Cirurgia Oral') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO sala (nome) VALUES ('Sala 3') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO dentistas (id, id_pessoa, cro_uf, cro_numero, titulacao, faculdade, ano_formatura, admissao, cor, status, id_especialidade, id_sala) VALUES (3, 6, 'MS', '34567', 'Doutor em Cirurgia Oral - UNICAMP', 'UNICAMP', 1998, '2022-01-10', '#d97706', 'ativo', (SELECT id FROM especialidade WHERE nome='Cirurgia Oral'), (SELECT id FROM sala WHERE nome='Sala 3'));
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 2, '08:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 2, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 2, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 2, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 2, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 2, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 2, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 4, '08:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 4, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 4, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 4, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 4, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 4, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (3, 4, '16:00');
+INSERT INTO especialidade (nome) VALUES ('Endodontia') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO sala (nome) VALUES ('Sala 4') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO dentistas (id, id_pessoa, cro_uf, cro_numero, titulacao, faculdade, ano_formatura, admissao, cor, status, id_especialidade, id_sala) VALUES (4, 7, 'MS', '45678', 'Especialista em Endodontia', 'PUC-SP', 2004, '2019-09-20', '#805ad5', 'ativo', (SELECT id FROM especialidade WHERE nome='Endodontia'), (SELECT id FROM sala WHERE nome='Sala 4'));
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '08:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '08:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 1, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '08:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '08:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 3, '16:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '08:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '08:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '09:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '09:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '10:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '10:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '11:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '14:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '14:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '15:00');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '15:30');
+INSERT INTO disponibilidade_dentista (id_dentista, id_dia_semana, hora) VALUES (4, 5, '16:00');
+INSERT INTO categoria_procedimento (nome) VALUES ('Preventivo') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (1, 'Consulta de Rotina', 30, 90.0, (SELECT id FROM categoria_procedimento WHERE nome='Preventivo'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (2, 'Limpeza Dental', 60, 120.0, (SELECT id FROM categoria_procedimento WHERE nome='Preventivo'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (3, 'Selante', 30, 80.0, (SELECT id FROM categoria_procedimento WHERE nome='Preventivo'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (4, 'Flúor Tópico', 20, 50.0, (SELECT id FROM categoria_procedimento WHERE nome='Preventivo'));
+INSERT INTO categoria_procedimento (nome) VALUES ('Restaurador') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (5, 'Restauração', 60, 180.0, (SELECT id FROM categoria_procedimento WHERE nome='Restaurador'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (6, 'Restauração Ampla', 90, 280.0, (SELECT id FROM categoria_procedimento WHERE nome='Restaurador'));
+INSERT INTO categoria_procedimento (nome) VALUES ('Estético') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (7, 'Clareamento Dental', 90, 450.0, (SELECT id FROM categoria_procedimento WHERE nome='Estético'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (8, 'Faceta de Porcelana', 120, 1200.0, (SELECT id FROM categoria_procedimento WHERE nome='Estético'));
+INSERT INTO categoria_procedimento (nome) VALUES ('Endodontia') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (9, 'Canal Radicular', 120, 1200.0, (SELECT id FROM categoria_procedimento WHERE nome='Endodontia'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (10, 'Retratamento Endodôntico', 150, 1500.0, (SELECT id FROM categoria_procedimento WHERE nome='Endodontia'));
+INSERT INTO categoria_procedimento (nome) VALUES ('Cirurgia') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (11, 'Extração Simples', 45, 180.0, (SELECT id FROM categoria_procedimento WHERE nome='Cirurgia'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (12, 'Extração de Siso', 90, 350.0, (SELECT id FROM categoria_procedimento WHERE nome='Cirurgia'));
+INSERT INTO categoria_procedimento (nome) VALUES ('Implantodontia') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (13, 'Implante Dentário', 120, 2800.0, (SELECT id FROM categoria_procedimento WHERE nome='Implantodontia'));
+INSERT INTO categoria_procedimento (nome) VALUES ('Ortodontia') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (14, 'Ortodontia (Aparelho Metálico)', 60, 280.0, (SELECT id FROM categoria_procedimento WHERE nome='Ortodontia'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (15, 'Ortodontia (Aparelho Estético)', 60, 350.0, (SELECT id FROM categoria_procedimento WHERE nome='Ortodontia'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (16, 'Alinhadores Transparentes', 60, 400.0, (SELECT id FROM categoria_procedimento WHERE nome='Ortodontia'));
+INSERT INTO categoria_procedimento (nome) VALUES ('Prótese') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (17, 'Coroa de Porcelana', 90, 1800.0, (SELECT id FROM categoria_procedimento WHERE nome='Prótese'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (18, 'Prótese Total', 60, 2200.0, (SELECT id FROM categoria_procedimento WHERE nome='Prótese'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (19, 'Placa Miorrelaxante', 30, 600.0, (SELECT id FROM categoria_procedimento WHERE nome='Preventivo'));
+INSERT INTO categoria_procedimento (nome) VALUES ('Periodontia') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (20, 'Periodontia', 60, 250.0, (SELECT id FROM categoria_procedimento WHERE nome='Periodontia'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (21, 'Cirurgia de Gengiva', 90, 800.0, (SELECT id FROM categoria_procedimento WHERE nome='Periodontia'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (22, 'Enxerto Ósseo', 120, 2000.0, (SELECT id FROM categoria_procedimento WHERE nome='Implantodontia'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (23, 'Pulpotomia', 60, 500.0, (SELECT id FROM categoria_procedimento WHERE nome='Endodontia'));
+INSERT INTO procedimentos (id, nome, duracao_min, valor_base, id_categoria) VALUES (24, 'Contenção Ortodôntica', 30, 200.0, (SELECT id FROM categoria_procedimento WHERE nome='Ortodontia'));
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (1, 2);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (1, 5);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (1, 7);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (1, 1);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (1, 3);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (1, 20);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (2, 14);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (2, 15);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (2, 24);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (2, 16);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (3, 11);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (3, 12);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (3, 13);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (3, 21);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (3, 22);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (4, 9);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (4, 10);
+INSERT INTO dentista_procedimentos (id_dentista, id_procedimento) VALUES (4, 23);
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (1, 1, 1, '2026-04-10', '08:00', 'Confirmado', 120.0, 2, NULL, (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO forma_pagamento (nome) VALUES ('Pix') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (1, 120.0, '2026-04-10 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (2, 2, 2, '2026-04-10', '09:00', 'Em atendimento', 280.0, 14, 'Ajuste mensal — 3° mês', (SELECT id FROM sala WHERE nome='Sala 2'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (3, 3, 2, '2026-04-10', '10:00', 'Aguardando', 180.0, 14, 'Ajuste mensal de aparelho — 18° mês', (SELECT id FROM sala WHERE nome='Sala 2'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (4, 4, 3, '2026-04-10', '11:00', 'Aguardando', 350.0, 12, 'Extração do siso inferior esquerdo (38)', (SELECT id FROM sala WHERE nome='Sala 3'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (5, 5, 1, '2026-04-10', '14:00', 'Agendado', 90.0, 1, 'Retorno após inatividade', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (6, 6, 4, '2026-04-11', '09:00', 'Agendado', 1200.0, 9, 'Dente 46 — sessão inicial. Verificar sensibilidade.', (SELECT id FROM sala WHERE nome='Sala 4'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (7, 7, 1, '2026-04-11', '10:00', 'Agendado', 120.0, 2, 'Hipertensa — verificar PA antes do procedimento', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (8, 8, 1, '2026-04-11', '14:30', 'Agendado', 90.0, 1, 'Acompanhamento dentição mista — paciente pediátrico', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (9, 1, 1, '2026-03-15', '08:00', 'Concluída', 220.0, 5, 'Restauração dente 41 — concluída sem intercorrências', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO forma_pagamento (nome) VALUES ('Cartão Crédito') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (9, 220.0, '2026-03-15 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Cartão Crédito'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (10, 2, 1, '2026-03-10', '09:00', 'Concluída', 120.0, 2, 'Limpeza de rotina — sem intercorrências', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (10, 120.0, '2026-03-10 09:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (11, 1, 1, '2026-09-15', '08:00', 'Concluída', 90, 1, 'Avaliação preventiva concluída.', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (11, 90, '2026-09-15 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (12, 2, 1, '2026-09-16', '08:00', 'Concluída', 90, 1, 'Avaliação preventiva concluída.', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (12, 90, '2026-09-16 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (13, 3, 1, '2026-09-17', '08:00', 'Concluída', 90, 1, 'Avaliação preventiva concluída.', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (13, 90, '2026-09-17 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (14, 4, 1, '2026-09-18', '08:00', 'Concluída', 90, 1, 'Avaliação preventiva concluída.', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (14, 90, '2026-09-18 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (15, 5, 1, '2026-09-19', '08:00', 'Concluída', 90, 1, 'Avaliação preventiva concluída.', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (15, 90, '2026-09-19 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (16, 6, 1, '2026-09-20', '08:00', 'Concluída', 90, 1, 'Avaliação preventiva concluída.', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (16, 90, '2026-09-20 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (17, 7, 1, '2026-09-21', '08:00', 'Concluída', 90, 1, 'Avaliação preventiva concluída.', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (17, 90, '2026-09-21 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (18, 8, 1, '2026-09-22', '08:00', 'Concluída', 90, 1, 'Avaliação preventiva concluída.', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (18, 90, '2026-09-22 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (19, 9, 1, '2026-09-23', '08:00', 'Concluída', 90, 1, 'Avaliação preventiva concluída.', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (19, 90, '2026-09-23 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO agendamentos (id, id_paciente, id_dentista, data, hora, status, valor, id_procedimento, observacoes, id_sala) VALUES (20, 10, 1, '2026-09-24', '08:00', 'Concluída', 90, 1, 'Avaliação preventiva concluída.', (SELECT id FROM sala WHERE nome='Sala 1'));
+INSERT INTO pagamento (id_agendamento, valor, pago_em, id_forma_pagamento) VALUES (20, 90, '2026-09-24 08:00:00+00', (SELECT id FROM forma_pagamento WHERE nome='Pix'));
+INSERT INTO prontuarios (id, id_paciente) VALUES (1, 1);
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (1, 1, 11, 'tratado', 'Clareamento realizado');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (1, 'Clareamento - Jan/2026');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (2, 1, 15, 'tratado', 'Restauração composta classe I');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (2, 'Restauração - Mai/2025');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (3, 1, 16, 'precisaTratamento', 'Cárie Classe II face mesial');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (3, 'Restauração indicada');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (4, 1, 22, 'precisaTratamento', 'Trinca de esmalte visível');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (4, 'Avaliação necessária');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (5, 1, 26, 'tratado', 'Selante preventivo aplicado');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (5, 'Selante - Ago/2024');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (6, 1, 33, 'precisaTratamento', 'Cárie inicial face vestibular');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (6, 'Restauração preventiva');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (7, 1, 36, 'tratado', 'Canal e coroa concluídos com sucesso');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (7, 'Canal Radicular - Dez/2025');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (7, 'Coroa de Porcelana - Jan/2026');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (8, 1, 41, 'tratado', 'Restauração realizada');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (8, 'Restauração - Mar/2026');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (9, 1, 46, 'precisaTratamento', 'Cárie profunda, possível necessidade de canal');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (9, 'Avaliação urgente');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (9, 'Possível Canal Radicular');
+INSERT INTO prontuarios (id, id_paciente) VALUES (2, 2);
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (10, 2, 18, 'precisaTratamento', 'Siso incluso — avaliação cirúrgica indicada');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (10, 'Avaliação cirúrgica');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (11, 2, 28, 'precisaTratamento', 'Siso incluso — avaliação cirúrgica indicada');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (11, 'Avaliação cirúrgica');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (12, 2, 38, 'tratado', 'Extração realizada');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (12, 'Extração - Jun/2024');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (13, 2, 48, 'tratado', 'Extração realizada');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (13, 'Extração - Jun/2024');
+INSERT INTO prontuarios (id, id_paciente) VALUES (3, 6);
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (14, 3, 46, 'precisaTratamento', 'Cárie profunda com comprometimento pulpar — canal indicado');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (14, 'Canal Radicular indicado');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (15, 3, 16, 'tratado', 'Restauração ampla');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (15, 'Restauração - 2023');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (16, 3, 36, 'tratado', 'Restauração de resina');
+INSERT INTO odontograma_procedimentos (id_dente, descricao) VALUES (16, 'Restauração - 2024');
+INSERT INTO prontuarios (id, id_paciente) VALUES (4, 3);
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (17, 4, 11, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (18, 4, 12, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (19, 4, 13, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (20, 4, 14, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (21, 4, 15, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (22, 4, 16, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (23, 4, 17, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (24, 4, 18, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (25, 4, 21, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (26, 4, 22, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (27, 4, 23, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (28, 4, 24, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (29, 4, 25, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (30, 4, 26, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (31, 4, 27, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (32, 4, 28, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (33, 4, 31, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (34, 4, 32, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (35, 4, 33, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (36, 4, 34, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (37, 4, 35, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (38, 4, 36, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (39, 4, 37, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (40, 4, 38, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (41, 4, 41, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (42, 4, 42, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (43, 4, 43, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (44, 4, 44, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (45, 4, 45, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (46, 4, 46, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (47, 4, 47, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (48, 4, 48, 'saudavel', '');
+INSERT INTO prontuarios (id, id_paciente) VALUES (5, 4);
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (49, 5, 11, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (50, 5, 12, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (51, 5, 13, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (52, 5, 14, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (53, 5, 15, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (54, 5, 16, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (55, 5, 17, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (56, 5, 18, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (57, 5, 21, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (58, 5, 22, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (59, 5, 23, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (60, 5, 24, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (61, 5, 25, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (62, 5, 26, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (63, 5, 27, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (64, 5, 28, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (65, 5, 31, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (66, 5, 32, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (67, 5, 33, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (68, 5, 34, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (69, 5, 35, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (70, 5, 36, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (71, 5, 37, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (72, 5, 38, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (73, 5, 41, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (74, 5, 42, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (75, 5, 43, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (76, 5, 44, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (77, 5, 45, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (78, 5, 46, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (79, 5, 47, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (80, 5, 48, 'saudavel', '');
+INSERT INTO prontuarios (id, id_paciente) VALUES (6, 5);
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (81, 6, 11, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (82, 6, 12, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (83, 6, 13, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (84, 6, 14, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (85, 6, 15, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (86, 6, 16, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (87, 6, 17, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (88, 6, 18, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (89, 6, 21, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (90, 6, 22, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (91, 6, 23, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (92, 6, 24, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (93, 6, 25, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (94, 6, 26, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (95, 6, 27, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (96, 6, 28, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (97, 6, 31, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (98, 6, 32, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (99, 6, 33, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (100, 6, 34, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (101, 6, 35, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (102, 6, 36, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (103, 6, 37, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (104, 6, 38, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (105, 6, 41, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (106, 6, 42, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (107, 6, 43, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (108, 6, 44, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (109, 6, 45, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (110, 6, 46, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (111, 6, 47, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (112, 6, 48, 'saudavel', '');
+INSERT INTO prontuarios (id, id_paciente) VALUES (7, 7);
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (113, 7, 11, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (114, 7, 12, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (115, 7, 13, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (116, 7, 14, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (117, 7, 15, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (118, 7, 16, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (119, 7, 17, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (120, 7, 18, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (121, 7, 21, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (122, 7, 22, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (123, 7, 23, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (124, 7, 24, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (125, 7, 25, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (126, 7, 26, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (127, 7, 27, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (128, 7, 28, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (129, 7, 31, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (130, 7, 32, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (131, 7, 33, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (132, 7, 34, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (133, 7, 35, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (134, 7, 36, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (135, 7, 37, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (136, 7, 38, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (137, 7, 41, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (138, 7, 42, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (139, 7, 43, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (140, 7, 44, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (141, 7, 45, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (142, 7, 46, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (143, 7, 47, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (144, 7, 48, 'saudavel', '');
+INSERT INTO prontuarios (id, id_paciente) VALUES (8, 8);
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (145, 8, 11, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (146, 8, 12, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (147, 8, 13, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (148, 8, 14, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (149, 8, 15, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (150, 8, 16, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (151, 8, 17, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (152, 8, 18, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (153, 8, 21, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (154, 8, 22, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (155, 8, 23, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (156, 8, 24, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (157, 8, 25, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (158, 8, 26, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (159, 8, 27, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (160, 8, 28, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (161, 8, 31, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (162, 8, 32, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (163, 8, 33, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (164, 8, 34, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (165, 8, 35, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (166, 8, 36, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (167, 8, 37, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (168, 8, 38, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (169, 8, 41, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (170, 8, 42, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (171, 8, 43, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (172, 8, 44, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (173, 8, 45, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (174, 8, 46, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (175, 8, 47, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (176, 8, 48, 'saudavel', '');
+INSERT INTO prontuarios (id, id_paciente) VALUES (9, 9);
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (177, 9, 11, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (178, 9, 12, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (179, 9, 13, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (180, 9, 14, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (181, 9, 15, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (182, 9, 16, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (183, 9, 17, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (184, 9, 18, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (185, 9, 21, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (186, 9, 22, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (187, 9, 23, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (188, 9, 24, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (189, 9, 25, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (190, 9, 26, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (191, 9, 27, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (192, 9, 28, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (193, 9, 31, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (194, 9, 32, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (195, 9, 33, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (196, 9, 34, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (197, 9, 35, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (198, 9, 36, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (199, 9, 37, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (200, 9, 38, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (201, 9, 41, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (202, 9, 42, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (203, 9, 43, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (204, 9, 44, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (205, 9, 45, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (206, 9, 46, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (207, 9, 47, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (208, 9, 48, 'saudavel', '');
+INSERT INTO prontuarios (id, id_paciente) VALUES (10, 10);
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (209, 10, 11, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (210, 10, 12, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (211, 10, 13, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (212, 10, 14, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (213, 10, 15, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (214, 10, 16, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (215, 10, 17, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (216, 10, 18, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (217, 10, 21, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (218, 10, 22, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (219, 10, 23, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (220, 10, 24, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (221, 10, 25, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (222, 10, 26, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (223, 10, 27, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (224, 10, 28, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (225, 10, 31, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (226, 10, 32, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (227, 10, 33, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (228, 10, 34, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (229, 10, 35, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (230, 10, 36, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (231, 10, 37, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (232, 10, 38, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (233, 10, 41, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (234, 10, 42, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (235, 10, 43, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (236, 10, 44, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (237, 10, 45, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (238, 10, 46, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (239, 10, 47, 'saudavel', '');
+INSERT INTO odontograma_dentes (id, id_prontuario, numero_dente, status, notas) VALUES (240, 10, 48, 'saudavel', '');
+INSERT INTO faturamento_mensal (ano, mes_num, receita, despesas, qtd_procedimentos) VALUES (2025, 11, 22100.0, 8400.0, 112);
+INSERT INTO faturamento_mensal (ano, mes_num, receita, despesas, qtd_procedimentos) VALUES (2025, 12, 19800.0, 7600.0, 98);
+INSERT INTO faturamento_mensal (ano, mes_num, receita, despesas, qtd_procedimentos) VALUES (2026, 1, 24300.0, 9200.0, 128);
+INSERT INTO faturamento_mensal (ano, mes_num, receita, despesas, qtd_procedimentos) VALUES (2026, 2, 26100.0, 9800.0, 138);
+INSERT INTO faturamento_mensal (ano, mes_num, receita, despesas, qtd_procedimentos) VALUES (2026, 3, 27900.0, 10200.0, 148);
+INSERT INTO faturamento_mensal (ano, mes_num, receita, despesas, qtd_procedimentos) VALUES (2026, 4, 28750.0, 10600.0, 156);
+DO $$ DECLARE r RECORD; maior BIGINT; BEGIN
+    FOR r IN SELECT table_name, column_name FROM information_schema.columns
+             WHERE table_schema='public' AND is_identity='YES' LOOP
+        EXECUTE format('SELECT max(%I) FROM %I', r.column_name, r.table_name) INTO maior;
+        PERFORM setval(pg_get_serial_sequence(r.table_name, r.column_name), COALESCE(maior,1), maior IS NOT NULL);
+    END LOOP;
+END $$;
+COMMIT;

@@ -1,43 +1,23 @@
 <?php
-// Tela 1 de recuperação de senha — o usuário informa o Gmail cadastrado
+// Tela 1 de recuperação de senha — o usuário informa o e-mail cadastrado
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 
 $erro    = '';
 $sucesso = '';
 
-// Contas cadastradas no sistema (em produção viria do banco)
-$contasCadastradas = [
-    'cliente@gmail.com'   => ['nome' => 'Maria Oliveira',    'perfil' => 'Paciente'],
-    'recepcao@dentai.com' => ['nome' => 'João Recepção',     'perfil' => 'Recepção'],
-    'dentista@dentai.com' => ['nome' => 'Dr. Carlos Mendes', 'perfil' => 'Dentista'],
-    'dono@dentai.com'     => ['nome' => 'Arthur Sousa',      'perfil' => 'Dono'],
-];
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['recuperar'])) {
-    $emailInformado = trim(strtolower($_POST['email'] ?? ''));
-
-    $erros = [];
-
-    if ($emailInformado === '') {
-        $erros[] = 'Informe seu e-mail cadastrado.';
-    } elseif (!filter_var($emailInformado, FILTER_VALIDATE_EMAIL)) {
-        $erros[] = 'Formato de e-mail inválido. Ex: nome@gmail.com';
-    } elseif (!isset($contasCadastradas[$emailInformado])) {
-        $erros[] = 'Nenhuma conta encontrada com esse e-mail. Verifique e tente novamente.';
-    }
-
-    if (!empty($erros)) {
-        $erro = implode(' ', $erros);
-    } else {
-        // Salva o e-mail na sessão para validar na próxima tela
-        $_SESSION['recuperacao_email'] = $emailInformado;
-        $_SESSION['recuperacao_nome']  = $contasCadastradas[$emailInformado]['nome'];
-        header('Location: nova_senha.php');
-        exit;
+if (isset($_POST['recuperar'])) {
+    $email=strtolower(trim($_POST['email'] ?? ''));
+    if (!filter_var($email,FILTER_VALIDATE_EMAIL)) $erro='Informe um e-mail válido.';
+    else {
+        $pdo=\App\Config\Database::getConnection();
+        $stmt=$pdo->prepare("INSERT INTO recuperacao_senha (id_usuario)
+            SELECT id FROM usuarios WHERE email=:email AND NOT EXISTS
+            (SELECT 1 FROM recuperacao_senha r WHERE r.id_usuario=usuarios.id AND r.utilizado_em IS NULL AND r.token_hash IS NULL)");
+        $stmt->execute(['email'=>$email]);
+        $sucesso='Se a conta existir, a solicitação ficará disponível ao gestor. Peça a ele seu link de recuperação.';
     }
 }
-
 $tituloPagina = 'Esqueci minha senha';
 include 'includes/head.php';
 ?>
@@ -52,8 +32,8 @@ include 'includes/head.php';
       <div style="background:rgba(255,255,255,0.08);border-radius:16px;padding:24px;border:1px solid rgba(255,255,255,0.15);">
         <div style="font-size:2.5rem;text-align:center;margin-bottom:12px;"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i></div>
         <p style="font-size:0.85rem;line-height:1.6;opacity:0.85;text-align:center;">
-          Informe o <strong>Gmail</strong> que você usou no cadastro.<br><br>
-          Depois você poderá criar uma nova senha segura.
+          Informe o <strong>e-mail</strong> que você usou no cadastro.<br><br>
+          O gestor disponibilizará um link válido por 30 minutos.
         </p>
         <div style="margin-top:18px;padding:12px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.78rem;opacity:0.75;text-align:center;">
           <strong>Passo 1 de 2</strong><br>
@@ -67,7 +47,7 @@ include 'includes/head.php';
   <div class="login-direita">
     <div class="caixa-login">
       <h2>Esqueci minha senha <i class="bi bi-key-fill" aria-hidden="true"></i></h2>
-      <p>Informe o Gmail da sua conta para continuar</p>
+      <p>Informe o e-mail da sua conta para continuar</p>
 
       <?php if ($erro): ?>
         <div class="alerta alerta-perigo" role="alert" aria-live="assertive">
@@ -82,9 +62,10 @@ include 'includes/head.php';
       <?php endif; ?>
 
       <form method="POST" novalidate aria-label="Formulário de recuperação de senha" id="form-esqueci">
+          <?= csrfCampo() ?>
 
         <div class="grupo-campo">
-          <label for="rec-email">E-mail da conta (Gmail) <span style="color:var(--perigo)">*</span></label>
+          <label for="rec-email">E-mail da conta (e-mail) <span style="color:var(--perigo)">*</span></label>
           <input type="email" id="rec-email" name="email"
                  placeholder="exemplo@gmail.com"
                  required aria-required="true"

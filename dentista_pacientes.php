@@ -88,7 +88,7 @@ include 'includes/head.php';
                 <span style="font-size:0.85rem;"><?= limpar($paciente['telefone']) ?></span>
               </td>
               <td><?= limpar($paciente['ultimaConsulta']) ?></td>
-              <td style="color:var(--destaque);font-size:0.85rem;">10/04/2026</td>
+              <td style="color:var(--destaque);font-size:0.85rem;"><?= limpar($paciente['proximaConsulta']) ?></td>
               <td><?= emblema($paciente['status']) ?></td>
               <td>
                 <a href="dentista_prontuario.php?paciente=<?= urlencode($paciente['nome']) ?>"

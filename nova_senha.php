@@ -3,47 +3,17 @@
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 
-// Se não passou pela tela 1, redireciona
-if (empty($_SESSION['recuperacao_email'])) {
-    header('Location: esqueci_senha.php');
-    exit;
+$token=(string)($_POST['token'] ?? $_GET['token'] ?? '');
+$rec=consultarRecuperacao($token);
+$emailRecuperacao=$rec['email'] ?? '';$nomeUsuario=$rec['nome'] ?? 'Usuário';
+$erro='';$sucesso='';
+if (!$rec) $erro='Link inválido, expirado ou já utilizado. Solicite outro ao gestor.';
+if ($rec && isset($_POST['salvar_senha'])) {
+    try {
+        if (($_POST['nova_senha'] ?? '')!==($_POST['confirmar_senha'] ?? '')) throw new InvalidArgumentException('As senhas não coincidem.');
+        redefinirSenha($token,$_POST['nova_senha'] ?? '');$sucesso='Senha alterada. Faça login com a nova senha.';
+    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
-
-$emailRecuperacao = $_SESSION['recuperacao_email'];
-$nomeUsuario      = $_SESSION['recuperacao_nome'] ?? 'Usuário';
-$erro    = '';
-$sucesso = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['salvar_senha'])) {
-    $novaSenha     = $_POST['nova_senha']      ?? '';
-    $confirmaSenha = $_POST['confirmar_senha'] ?? '';
-
-    $erros = [];
-
-    // nova senha: obrigatória, mínimo 6 caracteres
-    if ($novaSenha === '') {
-        $erros[] = 'Informe a nova senha.';
-    } elseif (mb_strlen($novaSenha) < 6) {
-        $erros[] = 'A nova senha deve ter pelo menos 6 caracteres.';
-    }
-
-    // confirmação: obrigatória e deve coincidir
-    if ($confirmaSenha === '') {
-        $erros[] = 'Confirme a nova senha.';
-    } elseif ($novaSenha !== $confirmaSenha) {
-        $erros[] = 'As senhas não coincidem. Verifique e tente novamente.';
-    }
-
-    if (!empty($erros)) {
-        $erro = implode(' ', $erros);
-    } else {
-        // TODO: em produção, atualizar a senha no banco com password_hash()
-        // Limpa dados de recuperação da sessão
-        unset($_SESSION['recuperacao_email'], $_SESSION['recuperacao_nome']);
-        $sucesso = 'Senha alterada com sucesso! Faça login com sua nova senha.';
-    }
-}
-
 $tituloPagina = 'Nova Senha';
 include 'includes/head.php';
 ?>
@@ -105,6 +75,7 @@ include 'includes/head.php';
 
       <?php if (!$sucesso): ?>
       <form method="POST" novalidate aria-label="Formulário de nova senha" id="form-nova-senha">
+          <?= csrfCampo() ?><input type="hidden" name="token" value="<?= limpar($token) ?>">
 
         <!-- Nova senha -->
         <div class="grupo-campo">

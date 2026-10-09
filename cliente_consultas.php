@@ -5,32 +5,16 @@ verificarSessao('cliente');
 $tituloPagina = 'Minhas Consultas';
 $emailSessao  = strtolower($_SESSION['email'] ?? '');
 
-// Busca agendamentos do paciente logado filtrando pelo nome na sessão
-$nomeUsuario = $_SESSION['usuario'] ?? '';
-$todosAgend  = lerJson('agendamentos.json');
-
-// Normaliza chave servico → procedimento
-$todosAgend = array_map(function($a) {
-    $a['procedimento'] = $a['servico'] ?? $a['procedimento'] ?? '—';
-    return $a;
-}, $todosAgend);
-
-// Filtra apenas consultas do paciente logado (pelo nome ou id)
-$minhasConsultas = array_values(array_filter($todosAgend, function($a) use ($nomeUsuario) {
-    return stripos($a['paciente'] ?? '', $nomeUsuario) !== false;
-}));
-
-// Se não encontrar pelo nome, pega todas (modo demo)
-if (empty($minhasConsultas) && !empty($todosAgend)) {
-    $minhasConsultas = $todosAgend;
+$erro='';$sucesso='';
+if (isset($_POST['cancelar_consulta'])) {
+    try { alterarStatusAgenda((int)$_POST['id'],'Cancelado');$sucesso='Consulta cancelada.'; }
+    catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
-
-// Ordena por data e hora
-usort($minhasConsultas, fn($a,$b) => ($a['data'].$a['hora']) <=> ($b['data'].$b['hora']));
-
-// Separa próximas vs passadas
+$p=pacienteSessao();
+$minhasConsultas=array_values(array_filter(lerJson('agendamentos.json'),fn($a)=>$a['id_paciente']===($p['id'] ?? 0)));
+$minhasConsultas=array_map(function($a){$a['procedimento']=$a['servico'];return $a;},$minhasConsultas);
 $hoje   = date('Y-m-d');
-$futuras = array_values(array_filter($minhasConsultas, fn($a) => ($a['data']??'') >= $hoje));
+$futuras = array_values(array_filter($minhasConsultas, fn($a) => ($a['data']??'') >= $hoje && $a['status']!=='Cancelado'));
 $passadas = array_values(array_filter($minhasConsultas, fn($a) => ($a['data']??'') < $hoje));
 $proxima = $futuras[0] ?? null;
 
@@ -39,6 +23,8 @@ include 'includes/head.php';
 <div class="painel">
   <?php include 'includes/sidebar.php'; ?>
   <main class="conteudo-principal" id="conteudo-principal">
+    <?php if ($erro): ?><div class="alerta alerta-erro"><?= limpar($erro) ?></div><?php endif; ?>
+    <?php if ($sucesso): ?><div class="alerta alerta-sucesso"><?= limpar($sucesso) ?></div><?php endif; ?>
     <div class="cabecalho-pagina">
       <div><h1><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Minhas Consultas</h1><p>Histórico e próximas consultas agendadas</p></div>
       <a href="cliente_agendamento.php" class="btn btn-primario">+ Nova Consulta</a>

@@ -10,38 +10,19 @@ $usuarios = lerJson('usuarios.json');
 $uAtual   = buscarPorCampo($usuarios, 'email', $emailSessao) ?? [];
 $dados    = $uAtual;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['salvar_perfil'])) {
-    $novoNome = trim($_POST['nome'] ?? '');
-    if (empty($novoNome)) { $erro = 'O nome não pode ficar em branco.'; }
-    else {
-        foreach ($usuarios as &$u) {
-            if (strtolower($u['email']) === $emailSessao) {
-                $u['nome']      = $novoNome;
-                $u['telefone']  = trim($_POST['telefone']  ?? '');
-                $u['nascimento']= $_POST['nascimento']     ?? '';
-                break;
-            }
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+    try {
+        if (isset($_POST['salvar_perfil'])) {
+            salvarPerfilAtual($_POST);$sucesso='Perfil atualizado.';
+            $u=usuarioSessao();$dados=buscarPorCampo(lerJson('usuarios.json'),'id',$u['id']) ?? [];
+            if ($u['tipo']==='cliente') $dados=array_merge($dados,pacienteSessao() ?? []);
+            if ($u['tipo']==='dentista') $dados=array_merge($dados,dentistaSessao() ?? []);
+        } elseif (isset($_POST['alterar_senha'])) {
+            alterarSenhaAtual($_POST);$sucesso='Senha alterada.';
         }
-        salvarJson('usuarios.json', $usuarios);
-        $_SESSION['usuario'] = $novoNome;
-        $sucesso = 'Perfil atualizado em ' . data_pt('d/m/Y \à\s H:i') . '!';
-        $dados = array_merge($dados, ['nome'=>$novoNome,'telefone'=>trim($_POST['telefone']??''),'nascimento'=>$_POST['nascimento']??'']);
-    }
+    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['alterar_senha'])) {
-    $senhaAtual = $_POST['senha_atual'] ?? '';
-    $senhaNova  = $_POST['senha_nova']  ?? '';
-    $senhaConf  = $_POST['confirmar_senha_nova'] ?? '';
-    $uSenha = buscarPorCampo($usuarios, 'email', $emailSessao);
-    if (!$uSenha || !password_verify($senhaAtual, $uSenha['senha'])) $erro = 'Senha atual incorreta.';
-    elseif (strlen($senhaNova) < 6) $erro = 'Nova senha deve ter pelo menos 6 caracteres.';
-    elseif ($senhaNova !== $senhaConf) $erro = 'As senhas não coincidem.';
-    else {
-        foreach ($usuarios as &$u) { if (strtolower($u['email'])===$emailSessao) { $u['senha']=password_hash($senhaNova, PASSWORD_DEFAULT); break; } }
-        salvarJson('usuarios.json', $usuarios);
-        $sucesso = 'Senha alterada com sucesso!';
-    }
-}
+
 include 'includes/head.php';
 ?>
 <div class="painel">
@@ -76,6 +57,7 @@ include 'includes/head.php';
       <div class="cartao-cabecalho"><h3><i class="bi bi-pencil-fill" aria-hidden="true"></i> Editar Dados Pessoais</h3></div>
       <div class="cartao-corpo">
         <form method="POST" novalidate>
+          <?= csrfCampo() ?>
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="pf-nome">Nome completo</label>
@@ -109,6 +91,7 @@ include 'includes/head.php';
       <div class="cartao-cabecalho"><h3><i class="bi bi-lock-fill" aria-hidden="true"></i> Alterar Senha</h3></div>
       <div class="cartao-corpo">
         <form method="POST" novalidate id="frm-senha">
+          <?= csrfCampo() ?>
           <div class="linha-campos">
             <div class="grupo-campo"><label for="sa">Senha atual</label><input type="password" id="sa" name="senha_atual" placeholder="••••••••"></div>
             <div class="grupo-campo"><label for="sn">Nova senha</label><input type="password" id="sn" name="senha_nova" placeholder="••••••••"></div>

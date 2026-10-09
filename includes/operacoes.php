@@ -22,12 +22,14 @@ function transacaoOperacao(callable $operacao): mixed {
 
 function mensagemOperacao(Throwable $e): string {
     if ($e instanceof PDOException) {
-        error_log($e->getMessage());
+        $erroId = bin2hex(random_bytes(4));
+        error_log('[DENTIA]['.$erroId.'] SQLSTATE='.$e->getCode().' '.$e->getMessage());
+        if (getenv('APP_DEBUG') === 'true') return 'Erro SQLSTATE '.$e->getCode().' ('.$erroId.'): '.$e->getMessage();
         return match ($e->getCode()) {
             '23505'=>'Já existe um cadastro ou reserva para esses dados. Escolha outro horário.',
             '23503'=>'O registro possui vínculos ou o procedimento não é habilitado para esse dentista.',
             '23514','22001'=>'Confira CPF, telefone, datas e demais campos informados.',
-            default=>'Não foi possível salvar. Confira os dados e tente novamente.',
+            default=>'Não foi possível salvar no banco. Consulte os logs do Railway (erro '.$erroId.', SQLSTATE '.$e->getCode().').',
         };
     }
     return $e->getMessage();

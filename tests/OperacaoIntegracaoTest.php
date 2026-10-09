@@ -142,4 +142,40 @@ final class OperacaoIntegracaoTest extends TestCase
         $this->pdo->exec("UPDATE recuperacao_senha SET expira_em=now()-interval '1 minute' WHERE id_usuario={$this->usuarios['cliente']}");
         $this->assertNull(consultarRecuperacao($token));
     }
+    public function test_receitas_por_plano_e_avulsas_conciliam_o_total(): void
+    {
+        $id=$this->agendar();$this->sessao('dono');
+        $antes=resumoFinanceiro($this->pdo);
+        confirmarPagamento($id,referenciaPorNome($this->pdo,'forma_pagamento','Pix'));
+        registrarLancamento(['tipo'=>'Receita','descricao'=>'Kit teste','valor'=>'15,50']);
+        $depois=resumoFinanceiro($this->pdo);
+        $this->assertEqualsWithDelta(90,($depois['mes_atual']['por_plano']['Particular'] ?? 0)-($antes['mes_atual']['por_plano']['Particular'] ?? 0),0.001);
+        $this->assertEqualsWithDelta(105.50,$depois['mes_atual']['receita_total']-$antes['mes_atual']['receita_total'],0.001);
+        $this->assertEqualsWithDelta($depois['mes_atual']['receita_total'],array_sum($depois['mes_atual']['por_plano'])+$depois['mes_atual']['receitas_avulsas'],0.001);
+    }
+
+    public function test_lancamento_datado_aparece_apenas_no_mes_correto(): void
+    {
+        $this->sessao('dono');$antes=resumoFinanceiro($this->pdo)['mes_atual'];
+        registrarLancamento(['tipo'=>'Despesa','descricao'=>'Despesa histórica teste','valor'=>'123,45','data'=>'2000-02-17']);
+        $mes=resumoFinanceiro($this->pdo,'2000-02-01');
+        $this->assertEqualsWithDelta(123.45,$mes['mes_atual']['despesas_total'],0.001);
+        $this->assertCount(1,$mes['transacoes']);
+        $this->assertSame($antes['despesas_total'],resumoFinanceiro($this->pdo)['mes_atual']['despesas_total']);
+    }
+
+    public function test_categoria_financeira_precisa_corresponder_ao_tipo(): void
+    {
+        $this->sessao('dono');
+        $categoria=$this->pdo->query("SELECT id FROM categoria_lancamento WHERE tipo='Despesa' ORDER BY id LIMIT 1")->fetchColumn();
+        $this->expectException(\InvalidArgumentException::class);
+        registrarLancamento(['tipo'=>'Receita','descricao'=>'Tipo incompatível','valor'=>'10','id_categoria'=>$categoria]);
+    }
+
+    public function test_periodo_financeiro_invalido_e_rejeitado(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        resumoFinanceiro($this->pdo,'2026-02-30');
+    }
+
 }

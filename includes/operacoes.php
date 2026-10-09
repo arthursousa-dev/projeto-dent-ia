@@ -66,18 +66,18 @@ function pacientePermitido(int $id): void {
 function horariosDisponiveis(int $dentista, string $data): array {
     $pdo=\App\Config\Database::getConnection();
     $stmt=$pdo->prepare("SELECT to_char(dd.hora,'HH24:MI') FROM disponibilidade_dentista dd JOIN dentistas d ON d.id=dd.id_dentista
-        WHERE dd.id_dentista=:id AND dd.id_dia_semana=extract(dow FROM :data::date)
+        WHERE dd.id_dentista=:id AND dd.id_dia_semana=extract(dow FROM CAST(:data AS date))
         AND EXISTS(SELECT 1 FROM funcionamento_clinica f WHERE f.id_clinica=1 AND f.id_dia_semana=dd.id_dia_semana AND dd.hora>=f.abertura AND dd.hora<f.fechamento)
         AND NOT EXISTS (SELECT 1 FROM agendamentos a JOIN procedimentos p ON p.id=a.id_procedimento
             WHERE (a.id_dentista=d.id OR a.id_sala=d.id_sala) AND a.status<>'Cancelado'
-            AND :dia::date+dd.hora>=a.data+a.hora AND :dia2::date+dd.hora<a.data+a.hora+make_interval(mins=>p.duracao_min)) ORDER BY dd.hora");
+            AND CAST(:dia AS date)+dd.hora>=a.data+a.hora AND CAST(:dia2 AS date)+dd.hora<a.data+a.hora+make_interval(mins=>p.duracao_min)) ORDER BY dd.hora");
     $stmt->execute(['id'=>$dentista,'data'=>$data,'dia'=>$data,'dia2'=>$data]);
     return $stmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
 function criarAgendamento(array $dados): int {
     $u=exigirPerfil(['recepcionista','cliente']);
-    $paciente=$u['tipo']==='cliente' ? pacienteSessao() : localizarPaciente(trim($dados['paciente'] ?? ''));
+    $paciente=$u['tipo']==='cliente' ? pacienteSessao() : localizarPaciente(trim((string)($dados['paciente_id'] ?? $dados['paciente'] ?? '')));
     if (!$paciente || $paciente['status']!=='Ativo') throw new InvalidArgumentException('Paciente ativo não encontrado.');
     $data=$dados['data'] ?? ''; $hora=$dados['horario'] ?? '';
     $dt=DateTimeImmutable::createFromFormat('!Y-m-d',$data);
@@ -93,8 +93,8 @@ function criarAgendamento(array $dados): int {
         $stmt=$pdo->prepare('SELECT id,valor_base,duracao_min FROM procedimentos WHERE nome=:nome');
         $stmt->execute(['nome'=>$dados['procedimento'] ?? '']); $proc=$stmt->fetch();
         if (!$proc) throw new InvalidArgumentException('Procedimento inválido.');
-        $stmt=$pdo->prepare('SELECT 1 FROM funcionamento_clinica WHERE id_clinica=1 AND id_dia_semana=extract(dow FROM :dia::date)
-            AND abertura<=:hora::time AND fechamento>=:fim::time+make_interval(mins=>:duracao)');
+        $stmt=$pdo->prepare('SELECT 1 FROM funcionamento_clinica WHERE id_clinica=1 AND id_dia_semana=extract(dow FROM CAST(:dia AS date))
+            AND abertura<=CAST(:hora AS time) AND fechamento>=CAST(:fim AS time)+make_interval(mins=>CAST(:duracao AS integer))');
         $stmt->execute(['dia'=>$data,'hora'=>$hora,'fim'=>$hora,'duracao'=>$proc['duracao_min']]);
         if (!$stmt->fetchColumn()) throw new InvalidArgumentException('A consulta deve caber no horário de funcionamento da clínica.');
         $preferencia=explode(' — ',trim($dados['dentista'] ?? ''))[0];
@@ -103,7 +103,7 @@ function criarAgendamento(array $dados): int {
             WHERE d.status='ativo' AND dp.id_procedimento=:proc AND
             (:vazio='' OR d.id::text=:id OR p.nome=:nome)
             AND EXISTS (SELECT 1 FROM disponibilidade_dentista dd WHERE dd.id_dentista=d.id
-                AND dd.id_dia_semana=extract(dow FROM :data::date) AND dd.hora=:hora::time) ORDER BY d.id");
+                AND dd.id_dia_semana=extract(dow FROM CAST(:data AS date)) AND dd.hora=CAST(:hora AS time)) ORDER BY d.id");
         $stmt->execute(['proc'=>$proc['id'],'vazio'=>$preferencia,'id'=>$preferencia,'nome'=>$preferencia,'data'=>$data,'hora'=>$hora]);
         $dentistas=$stmt->fetchAll();
         if (!$dentistas) throw new InvalidArgumentException('Dentista sem disponibilidade ou não habilitado para este procedimento.');
@@ -137,9 +137,9 @@ function alterarStatusAgenda(int $id, string $status): void {
         if (!$a) throw new InvalidArgumentException('Consulta não encontrada.');
         if ($u['tipo']==='cliente') {
             $p=pacienteSessao();
-            if (!$p || $p['id']!==$a['id_paciente'] || $status!=='Cancelado' || $a['data']<date('Y-m-d')) throw new RuntimeException('Cancelamento não permitido.');
+            if (!$p || (int)$p['id']!==(int)$a['id_paciente'] || $status!=='Cancelado' || $a['data']<date('Y-m-d')) throw new RuntimeException('Cancelamento não permitido.');
         } elseif ($u['tipo']==='dentista') {
-            $d=dentistaSessao();if (!$d || $d['id']!==$a['id_dentista']) throw new RuntimeException('Consulta de outro dentista.');
+            $d=dentistaSessao();if (!$d || (int)$d['id']!==(int)$a['id_dentista']) throw new RuntimeException('Consulta de outro dentista.');
         }
         $transicoes=['Agendado'=>['Confirmado','Aguardando','Cancelado'],'Confirmado'=>['Aguardando','Cancelado'],
             'Aguardando'=>['Em atendimento','Cancelado'],'Em atendimento'=>['Concluída']];

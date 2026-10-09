@@ -11,7 +11,7 @@ $dataFiltro     = $_GET['data']     ?? date('Y-m-d');
 $dentistaFiltro = $_GET['dentista'] ?? '';
 
 // processa ações da tabela
-$sucesso='';$erro='';
+$sucesso=isset($_GET['criado']) && ctype_digit((string)$_GET['criado']) ? 'Agendamento #'.(int)$_GET['criado'].' criado e vinculado ao paciente com sucesso.' : ''; $erro='';
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     try {
         if (isset($_POST['receber'])) confirmarPagamento((int)$_POST['id'],(int)$_POST['forma']);
@@ -104,6 +104,7 @@ include 'includes/head.php';
             </tr>
           </thead>
           <tbody>
+            <?php if (!$listaAgendamentos): ?><tr><td colspan="7">Nenhuma consulta encontrada nesta data.</td></tr><?php endif; ?>
             <?php foreach ($listaAgendamentos as $agendamento): ?>
             <tr>
               <td><strong><?= limpar($agendamento['hora']) ?></strong></td>

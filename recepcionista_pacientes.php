@@ -148,7 +148,7 @@ include 'includes/head.php';
               <td><?= emblema($paciente['status']) ?></td>
               <td>
                 <div style="display:flex;gap:5px;">
-                  <a href="recepcionista_novo_agendamento.php?paciente=<?= urlencode($paciente['nome']) ?>"
+                  <a href="recepcionista_novo_agendamento.php?paciente_id=<?= (int)$paciente['id'] ?>"
                      class="btn btn-primario btn-pequeno"
                      aria-label="Agendar consulta para <?= limpar($paciente['nome']) ?>">
                     <i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Agendar

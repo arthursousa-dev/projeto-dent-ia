@@ -148,7 +148,7 @@ include 'includes/head.php';
               <td><?= emblema($dentista['status']) ?></td>
               <td>
                 <div style="display:flex;gap:6px;">
-                  
+
                   <a class="btn btn-fantasma btn-pequeno" href="dono_editar_dentista.php?id=<?= $dentista['id'] ?>">Editar</a>
                   <!-- inativar com confirmação -->
                   <form method="POST" style="display:inline;"

@@ -30,18 +30,18 @@ if (!$dtFiltro || $dtFiltro->format('Y-m-d') !== $dataFiltro) $dataFiltro = date
 $dentistaFiltro = (string) ($_GET['dentista'] ?? '');
 if ($dentistaFiltro !== '' && (!ctype_digit($dentistaFiltro) || (int)$dentistaFiltro < 1)) $dentistaFiltro = '';
 $pdo = \App\Config\Database::getConnection();
-$sqlAgenda = "SELECT v.*, v.servico AS procedimento FROM vw_agendamentos v
-    WHERE v.data = :data";
+$sqlAgenda = "SELECT a.*, to_char(a.hora,'HH24:MI') AS hora, p.nome AS paciente, d.nome AS dentista, pr.nome AS servico, pr.nome AS procedimento FROM agendamentos a JOIN pacientes p ON p.id=a.id_paciente JOIN dentistas d ON d.id=a.id_dentista LEFT JOIN procedimentos pr ON pr.id=a.id_procedimento
+    WHERE a.data = :data";
 $paramsAgenda = ['data' => $dataFiltro];
 if ($dentistaFiltro !== '') {
-    $sqlAgenda .= ' AND v.id_dentista = :dentista';
+    $sqlAgenda .= ' AND a.id_dentista = :dentista';
     $paramsAgenda['dentista'] = (int)$dentistaFiltro;
 }
-$sqlAgenda .= ' ORDER BY v.hora, v.id';
+$sqlAgenda .= ' ORDER BY a.hora, a.id';
 $stmtAgenda = $pdo->prepare($sqlAgenda);
 $stmtAgenda->execute($paramsAgenda);
 $listaAgendamentos = $stmtAgenda->fetchAll(PDO::FETCH_ASSOC);
-$formas=\App\Config\Database::getConnection()->query('SELECT * FROM forma_pagamento ORDER BY nome')->fetchAll();
+$formas=[['id'=>1,'nome'=>'Dinheiro'],['id'=>2,'nome'=>'Pix'],['id'=>3,'nome'=>'Cartão de crédito'],['id'=>4,'nome'=>'Cartão de débito'],['id'=>5,'nome'=>'Transferência']];
 include 'includes/head.php';
 ?>
 

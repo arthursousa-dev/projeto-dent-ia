@@ -18,8 +18,8 @@ if (isset($_POST['confirmar_agendamento'])) {
     catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
 $pdo=\App\Config\Database::getConnection();
-$salas=$pdo->query('SELECT * FROM sala ORDER BY nome')->fetchAll();
-$formas=$pdo->query('SELECT * FROM forma_pagamento ORDER BY nome')->fetchAll();
+$salas=[];
+$formas=[];
 include 'includes/head.php';
 ?>
 
@@ -85,7 +85,7 @@ include 'includes/head.php';
               <label for="ag-sala">Sala</label>
               <select id="ag-sala" name="sala">
                 <option value="">Sala padrão do dentista</option>
-                <?php foreach ($salas as $sala): ?><option><?= limpar($sala['nome']) ?></option><?php endforeach; ?>
+                <?php foreach ($listaDentistas as $dentista): if (!empty($dentista['sala'])): ?><option><?= limpar($dentista['sala']) ?></option><?php endif; endforeach; ?>
               </select>
             </div>
           </div>

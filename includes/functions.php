@@ -132,12 +132,14 @@ function verificarSessao(string $perfilNecessario): void {
 
 if (($_SESSION['perfil'] ?? '') === 'recepcionista') {
     $pdo=\App\Config\Database::getConnection();
-    $listaDentistas=$pdo->query("SELECT d.*, 0 AS atendimentos_mes, 0 AS atendimentos, initcap(d.status::text) AS status FROM dentistas d ORDER BY d.nome")->fetchAll();
-    $listaPacientes=$pdo->query("SELECT p.*, initcap(p.status::text) AS status FROM pacientes p ORDER BY p.nome")->fetchAll();
-    $listaProcedimentos=$pdo->query('SELECT nome FROM procedimentos ORDER BY nome')->fetchAll(PDO::FETCH_COLUMN);
+    $listaDentistas=lerJson('dentistas.json');
+    foreach ($listaDentistas as &$dentista) $dentista['atendimentos']=$dentista['atendimentos_mes'];
+    unset($dentista);
+    $listaPacientes=lerJson('pacientes.json');
+    $listaProcedimentos=array_column(lerJson('procedimentos.json'),'nome');
     $listaHorarios=[];
     for ($h=8;$h<=18;$h++) for ($m=0;$m<60;$m+=30) if ($h<18 || !$m) $listaHorarios[]=sprintf('%02d:%02d',$h,$m);
-    $listaAgendamentos=[];
+    $listaAgendamentos=lerJson('agendamentos.json');
 } else {
 $listaDentistas = array_map(function($d) {
     $d['atendimentos']=$d['atendimentos_mes']; return $d;

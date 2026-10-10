@@ -30,7 +30,7 @@ if (!$dtFiltro || $dtFiltro->format('Y-m-d') !== $dataFiltro) $dataFiltro = date
 $dentistaFiltro = (string) ($_GET['dentista'] ?? '');
 if ($dentistaFiltro !== '' && (!ctype_digit($dentistaFiltro) || (int)$dentistaFiltro < 1)) $dentistaFiltro = '';
 $pdo = \App\Config\Database::getConnection();
-$sqlAgenda = "SELECT a.*, to_char(a.hora,'HH24:MI') AS hora, p.nome AS paciente, d.nome AS dentista, pr.nome AS servico, pr.nome AS procedimento FROM agendamentos a JOIN pacientes p ON p.id=a.id_paciente JOIN dentistas d ON d.id=a.id_dentista LEFT JOIN procedimentos pr ON pr.id=a.id_procedimento
+$sqlAgenda = "SELECT a.id,a.id_paciente,a.id_dentista,to_char(a.data,'YYYY-MM-DD') AS data,to_char(a.hora,'HH24:MI') AS hora,a.status::text AS status,a.valor,a.observacoes,pp.nome AS paciente,pd.nome AS dentista,pr.nome AS servico,pr.nome AS procedimento, s.nome AS sala,(pg.pago_em IS NOT NULL) AS pago,COALESCE(fp.nome,'') AS forma_pagamento FROM agendamentos a JOIN pacientes pac ON pac.id=a.id_paciente JOIN pessoa pp ON pp.id=pac.id_pessoa JOIN dentistas d ON d.id=a.id_dentista JOIN pessoa pd ON pd.id=d.id_pessoa LEFT JOIN procedimentos pr ON pr.id=a.id_procedimento JOIN sala s ON s.id=a.id_sala LEFT JOIN pagamento pg ON pg.id_agendamento=a.id LEFT JOIN forma_pagamento fp ON fp.id=pg.id_forma_pagamento
     WHERE a.data = :data";
 $paramsAgenda = ['data' => $dataFiltro];
 if ($dentistaFiltro !== '') {
@@ -41,7 +41,7 @@ $sqlAgenda .= ' ORDER BY a.hora, a.id';
 $stmtAgenda = $pdo->prepare($sqlAgenda);
 $stmtAgenda->execute($paramsAgenda);
 $listaAgendamentos = $stmtAgenda->fetchAll(PDO::FETCH_ASSOC);
-$formas=[['id'=>1,'nome'=>'Dinheiro'],['id'=>2,'nome'=>'Pix'],['id'=>3,'nome'=>'Cartão de crédito'],['id'=>4,'nome'=>'Cartão de débito'],['id'=>5,'nome'=>'Transferência']];
+$formas=$pdo->query('SELECT id,nome FROM forma_pagamento ORDER BY id')->fetchAll();
 include 'includes/head.php';
 ?>
 

@@ -23,6 +23,10 @@ function lerJson(string $arquivo): array {
     if (isset($views[$arquivo])) {
         [$view, $ordem] = $views[$arquivo];
         $linhas = $pdo->query("SELECT * FROM {$view} ORDER BY {$ordem}")->fetchAll();
+        if ($arquivo === 'agendamentos.json') {
+            foreach ($linhas as &$a) $a['pago']=booleanoPg($a['pago']);
+            unset($a);
+        }
         if ($arquivo === 'dentistas.json') {
             foreach ($linhas as &$d) {
                 foreach (['horarios', 'dias_atendimento', 'procedimentos'] as $campo) {
@@ -91,6 +95,11 @@ function lerJsonObjeto(string $arquivo): array {
     }
 }
 
+/** Compatibiliza BOOLEAN recebido como bool ou 't'/'f' pelo PDO PostgreSQL. */
+function booleanoPg(mixed $valor): bool {
+    return in_array($valor, [true, 1, '1', 't', 'true'], true);
+}
+
 function soDigitos(?string $valor): string {
     return preg_replace('/\D/', '', $valor ?? '');
 }
@@ -124,7 +133,7 @@ function gravarCampos(PDO $pdo, string $tabela, array $campos, ?int $id = null):
         $stmt = $pdo->prepare("UPDATE {$tabela} SET " . implode(', ', $updates) . ' WHERE id=:id RETURNING id');
         $stmt->execute($campos + ['id' => $id]);
         if ($stmt->fetchColumn() !== false) return $id;
-        $campos['id'] = $id;
+        throw new InvalidArgumentException('Registro de destino não encontrado na tabela '.$tabela.'.');
     }
     $colunas = array_keys($campos);
     $sql = '';
@@ -132,11 +141,6 @@ function gravarCampos(PDO $pdo, string $tabela, array $campos, ?int $id = null):
     $stmt = $pdo->prepare("INSERT INTO {$tabela} (" . implode(', ', $colunas) . ') VALUES (' . implode(', ', $params) . ')' . $sql . ' RETURNING id');
     $stmt->execute($campos);
     $novoId = (int) $stmt->fetchColumn();
-    if ($id !== null) {
-        $stmt = $pdo->prepare("SELECT setval(pg_get_serial_sequence(:tabela, 'id'),
-            GREATEST((SELECT max(id) FROM {$tabela}), nextval(pg_get_serial_sequence(:sequencia, 'id'))))");
-        $stmt->execute(['tabela' => $tabela, 'sequencia' => $tabela]);
-    }
     return $novoId;
 }
 
@@ -254,7 +258,7 @@ function salvarJson(string $arquivo, array $dados): bool {
                         if (isset($registro['horarios'], $registro['dias_atendimento'])) {
                             $pdo->prepare('DELETE FROM disponibilidade_dentista WHERE id_dentista=:id')->execute(['id' => $id]);
                             $stmt = $pdo->prepare('INSERT INTO disponibilidade_dentista (id_dentista,id_dia_semana,hora)
-                                SELECT :id,id,:hora::time FROM dia_semana WHERE nome=:nome ON CONFLICT DO NOTHING');
+                                SELECT :id,id,CAST(:hora AS time) FROM dia_semana WHERE nome=:nome ON CONFLICT DO NOTHING');
                             foreach ($registro['dias_atendimento'] as $dia) {
                                 foreach ($registro['horarios'] as $hora) $stmt->execute(['id' => $id, 'nome' => $dia, 'hora' => $hora]);
                             }

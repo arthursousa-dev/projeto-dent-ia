@@ -7,7 +7,7 @@ verificarSessao('cliente');
 $tituloPagina = 'Agendar Consulta';
 $sucesso='';$erro='';
 if (isset($_POST['solicitar_consulta'])) {
-    try { $id=criarAgendamento($_POST); $sucesso='Agendamento registrado: #'.$id.'.'; }
+    try { $id=criarAgendamento($_POST); $sucesso='Agendamento #'.$id.' salvo no PostgreSQL. <a href="cliente_consultas.php">Ver minhas consultas</a>'; }
     catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
 $pdo=\App\Config\Database::getConnection();
@@ -31,14 +31,14 @@ include 'includes/head.php';
     <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
     <?php if ($sucesso): ?>
       <div class="alerta alerta-sucesso" role="status" aria-live="polite">
-        <i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?>
+        <i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= $sucesso ?>
       </div>
     <?php endif; ?>
 
     <div class="cartao">
       <div class="cartao-cabecalho"><h3><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Solicitar Nova Consulta</h3></div>
       <div class="cartao-corpo">
-        <form method="POST" aria-label="Formulário de agendamento de consulta">
+        <form method="POST" data-agendamento-dinamico aria-label="Formulário de agendamento de consulta">
           <?= csrfCampo() ?>
 
           <!-- tipo de procedimento -->
@@ -125,5 +125,6 @@ include 'includes/head.php';
 </div>
 
 <?php include 'includes/a11y_bar.php'; ?>
+<script src="js/agenda-horarios.js" defer></script>
 </body>
 </html>

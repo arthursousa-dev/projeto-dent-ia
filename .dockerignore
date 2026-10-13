@@ -1,0 +1,9 @@
+.git
+.env
+.env.*
+!.env.example
+*.zip
+*.log
+node_modules
+vendor
+__pycache__

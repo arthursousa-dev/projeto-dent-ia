@@ -41,6 +41,8 @@ $sqlAgenda .= ' ORDER BY a.hora, a.id';
 $stmtAgenda = $pdo->prepare($sqlAgenda);
 $stmtAgenda->execute($paramsAgenda);
 $listaAgendamentos = $stmtAgenda->fetchAll(PDO::FETCH_ASSOC);
+foreach ($listaAgendamentos as &$registroAgenda) $registroAgenda['pago']=booleanoPg($registroAgenda['pago']);
+unset($registroAgenda);
 $formas=$pdo->query('SELECT id,nome FROM forma_pagamento ORDER BY id')->fetchAll();
 include 'includes/head.php';
 ?>

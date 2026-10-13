@@ -15,9 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $senha = $_POST['senha'] ?? '';
         $usuario = autenticarUsuario($email, $senha, 'cliente');
         if ($usuario) {
+            session_regenerate_id(true);
             $_SESSION['usuario'] = $usuario['nome'];
             $_SESSION['perfil']  = 'cliente';
-            $_SESSION['email']   = $email;
+            $_SESSION['email']   = strtolower(trim($email));
             header('Location: ' . $usuario['redirecionar']); exit;
         }
         $erro = 'E-mail ou senha incorretos. Verifique e tente novamente.';

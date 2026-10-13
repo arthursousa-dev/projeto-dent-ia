@@ -1,3 +1,12 @@
+# DENT IA — Projeto integrado (Railway + PostgreSQL)
+
+**Para instalar no Railway, comece pelo guia [DEPLOY_RAILWAY_FINAL.md](docs/DEPLOY_RAILWAY_FINAL.md).**
+Ele contém o deploy seguro, o reset de dados fictícios mantendo o nome de **Arthur Sousa**, os comandos sem `git add .` e o teste de ponta a ponta com rollback.
+
+Os outros guias de correções e migrações na pasta `docs` são históricos e não devem ser executados por cima da reconstrução final.
+
+---
+
 # DENT IA
 
 Sistema de gestão para clínicas odontológicas, com quatro perfis de acesso (proprietário, dentista, recepcionista e paciente), agenda, prontuário eletrônico com odontograma e controle financeiro.

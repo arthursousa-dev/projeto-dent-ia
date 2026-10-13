@@ -1,3 +1,12 @@
+Options -Indexes
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule ^(database|scripts|tests|docs|includes|app|dados|vendor|deploy)(/|$) - [F,L,NC]
+RewriteRule (^|/)\.(?!well-known/) - [F,L]
+</IfModule>
+<FilesMatch "^(\.env|composer\.(json|lock)|phpunit\.xml|Dockerfile|README\.md)$">
+    Require all denied
+</FilesMatch>
 # .htaccess — cabeçalhos de segurança e bloqueio de arquivos sensíveis
 
 Options -Indexes

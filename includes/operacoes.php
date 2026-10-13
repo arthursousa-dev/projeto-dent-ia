@@ -8,16 +8,30 @@ function usuarioSessao(): array {
 }
 
 function exigirPerfil(array $perfis): array {
-    $u=in_array($_SESSION['perfil'] ?? '', ['recepcionista','dono'], true) ? ['tipo'=>$_SESSION['perfil'],'id'=>(int)($_SESSION['id'] ?? 0)] : usuarioSessao();
+    $u=usuarioSessao();
     if (!in_array($u['tipo'],$perfis,true)) throw new RuntimeException('Acesso não permitido.');
     return $u;
 }
 
 function transacaoOperacao(callable $operacao): mixed {
     $pdo=\App\Config\Database::getConnection();
-    $pdo->beginTransaction();
-    try { $resultado=$operacao($pdo); $pdo->commit(); return $resultado; }
-    catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
+    $aninhada=$pdo->inTransaction();
+    // Uma ação pode fazer outras operações transacionais (ex.: teste com rollback).
+    $savepoint='sp_dentia_'.bin2hex(random_bytes(5));
+    if ($aninhada) $pdo->exec('SAVEPOINT '.$savepoint);
+    else $pdo->beginTransaction();
+    try {
+        $resultado=$operacao($pdo);
+        if ($aninhada) $pdo->exec('RELEASE SAVEPOINT '.$savepoint);
+        else $pdo->commit();
+        return $resultado;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            if ($aninhada) $pdo->exec('ROLLBACK TO SAVEPOINT '.$savepoint);
+            else $pdo->rollBack();
+        }
+        throw $e;
+    }
 }
 
 function mensagemOperacao(Throwable $e): string {
@@ -66,56 +80,103 @@ function pacientePermitido(int $id): void {
     if (!$stmt->fetchColumn()) throw new RuntimeException('Paciente não vinculado a este dentista.');
 }
 
+/** Horários de um profissional no dia; reflete os turnos cadastrados no PostgreSQL. */
 function horariosDisponiveis(int $dentista, string $data): array {
     $pdo=\App\Config\Database::getConnection();
-    $stmt=$pdo->prepare("SELECT to_char(t.h,'HH24:MI') FROM generate_series(timestamp '2000-01-01 08:00', timestamp '2000-01-01 18:00', interval '30 minutes') AS t(h)
-        WHERE NOT EXISTS (SELECT 1 FROM agendamentos a WHERE a.id_dentista=:dentista AND a.data=CAST(:data AS date)
-        AND a.hora=t.h::time AND a.status::text <> 'Cancelado') ORDER BY t.h");
-    $stmt->execute(['dentista'=>$dentista,'data'=>$data]);
+    $stmt=$pdo->prepare("SELECT to_char(dd.hora,'HH24:MI') FROM disponibilidade_dentista dd
+        WHERE dd.id_dentista=:dentista AND dd.id_dia_semana=EXTRACT(DOW FROM CAST(:data AS date))
+        AND EXISTS (SELECT 1 FROM funcionamento_clinica fc WHERE fc.id_clinica=1
+            AND fc.id_dia_semana=dd.id_dia_semana AND dd.hora>=fc.abertura AND dd.hora<fc.fechamento)
+        AND NOT EXISTS (SELECT 1 FROM agendamentos a WHERE a.id_dentista=dd.id_dentista
+            AND a.data=CAST(:dia AS date) AND a.status <> 'Cancelado'
+            AND dd.hora >= a.hora AND dd.hora < a.hora +
+                (SELECT make_interval(mins=>p.duracao_min) FROM procedimentos p WHERE p.id=a.id_procedimento))
+        ORDER BY dd.hora");
+    $stmt->execute(['dentista'=>$dentista,'data'=>$data,'dia'=>$data]);
     return $stmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
+/** Cria de fato no PostgreSQL e devolve o ID confirmado pelo INSERT ... RETURNING. */
 function criarAgendamento(array $dados): int {
     $u=exigirPerfil(['recepcionista','cliente']);
-    $pdo=\App\Config\Database::getConnection();
-    $paciente=(int)($dados['paciente_id'] ?? 0);
-    $dentista=(int)($dados['dentista'] ?? 0);
     $data=(string)($dados['data'] ?? '');
     $hora=(string)($dados['horario'] ?? '');
     $dt=DateTimeImmutable::createFromFormat('!Y-m-d',$data);
     if (!$dt || $dt->format('Y-m-d')!==$data || $data<date('Y-m-d')) throw new InvalidArgumentException('Informe uma data atual ou futura.');
     if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/',$hora)) throw new InvalidArgumentException('Horário inválido.');
-    if (!$paciente || !$dentista) throw new InvalidArgumentException('Selecione paciente e dentista.');
+    if ($data===date('Y-m-d') && $hora<=date('H:i')) throw new InvalidArgumentException('Escolha um horário futuro.');
+    $paciente=(int)($dados['paciente_id'] ?? 0);
     if ($u['tipo']==='cliente') {
         $meuPaciente=pacienteSessao();
-        if (!$meuPaciente || (int)$meuPaciente['id']!==$paciente) throw new RuntimeException('Paciente não autorizado.');
+        if (!$meuPaciente) throw new InvalidArgumentException('Seu cadastro de paciente não foi encontrado.');
+        if ($paciente && $paciente!==(int)$meuPaciente['id']) throw new RuntimeException('Paciente não autorizado.');
+        $paciente=(int)$meuPaciente['id'];
     }
-    $stmt=$pdo->prepare("SELECT 1 FROM pacientes WHERE id=:id AND status='ativo'");
-    $stmt->execute(['id'=>$paciente]);
-    if (!$stmt->fetchColumn()) throw new InvalidArgumentException('Paciente ativo não encontrado.');
-    $stmt=$pdo->prepare("SELECT id_sala FROM dentistas WHERE id=:id AND status='ativo'");
-    $stmt->execute(['id'=>$dentista]);
-    $sala=$stmt->fetchColumn();
-    if ($sala===false) throw new InvalidArgumentException('Dentista ativo não encontrado.');
-    $stmt=$pdo->prepare('SELECT p.id,p.valor_base FROM procedimentos p
-        JOIN dentista_procedimentos dp ON dp.id_procedimento=p.id AND dp.id_dentista=:dentista
-        WHERE p.nome=:nome LIMIT 1');
-    $stmt->execute(['dentista'=>$dentista,'nome'=>(string)($dados['procedimento'] ?? '')]);
-    $proc=$stmt->fetch();
-    if (!$proc) throw new InvalidArgumentException('Procedimento não habilitado para este dentista.');
-    $valor=trim((string)($dados['valor'] ?? ''))!=='' ? valorMonetario((string)$dados['valor']) : $proc['valor_base'];
-    $salaNome=trim((string)($dados['sala'] ?? ''));
-    if ($salaNome!=='') {
-        $stmt=$pdo->prepare('SELECT id FROM sala WHERE nome=:nome');
-        $stmt->execute(['nome'=>$salaNome]);
-        $sala=$stmt->fetchColumn();
-    }
-    if (!$sala) throw new InvalidArgumentException('Escolha uma sala válida.');
-    $stmt=$pdo->prepare('INSERT INTO agendamentos (id_paciente,id_dentista,id_procedimento,id_sala,data,hora,valor,observacoes)
-       VALUES (:paciente,:dentista,:procedimento,:sala,:data,:hora,:valor,:obs) RETURNING id');
-    $stmt->execute(['paciente'=>$paciente,'dentista'=>$dentista,'procedimento'=>$proc['id'],
-        'sala'=>$sala,'data'=>$data,'hora'=>$hora,'valor'=>$valor,'obs'=>trim((string)($dados['obs'] ?? ''))]);
-    return (int)$stmt->fetchColumn();
+    if ($paciente<1) throw new InvalidArgumentException('Selecione um paciente.');
+    $nomeProc=trim((string)($dados['procedimento'] ?? ''));
+    if ($nomeProc==='') throw new InvalidArgumentException('Selecione um procedimento.');
+    $idDentista=(int)($dados['dentista'] ?? 0);
+    return transacaoOperacao(function (PDO $pdo) use($u,$paciente,$idDentista,$nomeProc,$data,$hora,$dados) {
+        $stmt=$pdo->prepare("SELECT id FROM pacientes WHERE id=:id AND status='ativo'");
+        $stmt->execute(['id'=>$paciente]);
+        if (!$stmt->fetchColumn()) throw new InvalidArgumentException('Paciente ativo não encontrado.');
+        $stmt=$pdo->prepare('SELECT id,duracao_min,valor_base FROM procedimentos WHERE nome=:nome');
+        $stmt->execute(['nome'=>$nomeProc]);
+        $proc=$stmt->fetch();
+        if (!$proc) throw new InvalidArgumentException('Procedimento não cadastrado.');
+
+        // Sem preferência de dentista: selecione profissional realmente habilitado e
+        // com horário cadastrado. Não escolha aleatoriamente um dentista incompatível.
+        $stmt=$pdo->prepare("SELECT d.id,d.id_sala FROM dentistas d
+            JOIN dentista_procedimentos dp ON dp.id_dentista=d.id AND dp.id_procedimento=:procedimento
+            JOIN disponibilidade_dentista dd ON dd.id_dentista=d.id
+              AND dd.id_dia_semana=EXTRACT(DOW FROM CAST(:data AS date)) AND dd.hora=CAST(:hora AS time)
+            JOIN funcionamento_clinica fc ON fc.id_clinica=1 AND fc.id_dia_semana=dd.id_dia_semana
+            WHERE d.status='ativo' AND d.id_sala IS NOT NULL
+              AND dd.hora>=fc.abertura
+              AND dd.hora+make_interval(mins=>:duracao) <= fc.fechamento
+              AND (:dentista=0 OR d.id=:dentista_escolhido)
+            ORDER BY d.id");
+        $stmt->execute(['procedimento'=>$proc['id'],'data'=>$data,'hora'=>$hora,
+            'duracao'=>(int)$proc['duracao_min'],'dentista'=>$idDentista,'dentista_escolhido'=>$idDentista]);
+        $possiveis=$stmt->fetchAll();
+        if (!$possiveis) throw new InvalidArgumentException('Esse dentista não atende esse procedimento/horário. Escolha um horário disponível.');
+        $valor=$proc['valor_base'];
+        if ($u['tipo']==='recepcionista' && trim((string)($dados['valor'] ?? ''))!=='') {
+            $valor=valorMonetario((string)$dados['valor']);
+        }
+        $salaNome=$u['tipo']==='recepcionista' ? trim((string)($dados['sala'] ?? '')) : '';
+        if ($salaNome!=='') {
+            $stmt=$pdo->prepare('SELECT id FROM sala WHERE nome=:nome');
+            $stmt->execute(['nome'=>$salaNome]);
+            $salaEscolhida=$stmt->fetchColumn();
+            if (!$salaEscolhida) throw new InvalidArgumentException('Sala inválida.');
+        }
+        foreach ($possiveis as $d) {
+            $sala=$salaNome!=='' ? (int)$salaEscolhida : (int)$d['id_sala'];
+            // Detecta sobreposição para tentar outro profissional se for "sem preferência";
+            // a trigger do banco repete a checagem de forma segura contra concorrência.
+            $livre=$pdo->prepare("SELECT NOT EXISTS (
+                SELECT 1 FROM agendamentos a JOIN procedimentos p ON p.id=a.id_procedimento
+                WHERE a.data=CAST(:data AS date) AND a.status<>'Cancelado'
+                  AND (a.id_dentista=:dentista OR a.id_paciente=:paciente OR a.id_sala=:sala)
+                  AND tsrange(a.data+a.hora,a.data+a.hora+make_interval(mins=>p.duracao_min),'[)') &&
+                      tsrange(CAST(:dt AS date)+CAST(:hr AS time),
+                        CAST(:dtfim AS date)+CAST(:hrfim AS time)+make_interval(mins=>:duracao),'[)')
+            )");
+            $livre->execute(['data'=>$data,'dentista'=>$d['id'],'paciente'=>$paciente,'sala'=>$sala,
+                'dt'=>$data,'hr'=>$hora,'dtfim'=>$data,'hrfim'=>$hora,'duracao'=>(int)$proc['duracao_min']]);
+            if (!$livre->fetchColumn()) continue;
+            $stmt=$pdo->prepare('INSERT INTO agendamentos (id_paciente,id_dentista,id_procedimento,id_sala,data,hora,valor,observacoes)
+                VALUES (:paciente,:dentista,:procedimento,:sala,:data,:hora,:valor,:obs) RETURNING id');
+            $stmt->execute(['paciente'=>$paciente,'dentista'=>$d['id'],'procedimento'=>$proc['id'],
+                'sala'=>$sala,'data'=>$data,'hora'=>$hora,'valor'=>$valor,'obs'=>trim((string)($dados['obs'] ?? ''))]);
+            $id=(int)$stmt->fetchColumn();
+            if ($id<1) throw new RuntimeException('Banco não retornou o número do agendamento.');
+            return $id;
+        }
+        throw new InvalidArgumentException('Horário ocupado por outro paciente, dentista ou sala. Escolha outro.');
+    });
 }
 
 function alterarStatusAgenda(int $id, string $status): void {
@@ -209,8 +270,21 @@ function registrarEvolucao(array $dados): int {
         $stmt->execute(['id'=>$p['id']]);$pr=$stmt->fetchColumn();
         $retorno=trim($dados['retorno'] ?? '') ?: null;
         if ($retorno && (!preg_match('/^\d{4}-\d{2}-\d{2}$/',$retorno) || $retorno<date('Y-m-d'))) throw new InvalidArgumentException('Retorno inválido.');
-        $stmt=$pdo->prepare('INSERT INTO evolucao_clinica (id_prontuario,id_dentista,id_procedimento,observacoes,retorno)
-            VALUES (:pr,:dent,:proc,:obs,:retorno) RETURNING id');$stmt->execute(['pr'=>$pr,'dent'=>$d['id'],'proc'=>$proc,'obs'=>$obs,'retorno'=>$retorno]);$id=(int)$stmt->fetchColumn();
+        // Vincula a evolução à consulta mais recente compatível, quando ela existe.
+        // Atendimentos avulsos continuam permitidos sem agendamento.
+        $stmt=$pdo->prepare("SELECT a.id FROM agendamentos a WHERE a.id_paciente=:paciente
+            AND a.id_dentista=:dentista AND a.id_procedimento=:procedimento
+            AND a.data<=CURRENT_DATE AND a.status<>'Cancelado'
+            AND NOT EXISTS (SELECT 1 FROM evolucao_clinica e WHERE e.id_agendamento=a.id)
+            ORDER BY a.data DESC,a.hora DESC LIMIT 1 FOR UPDATE OF a");
+        $stmt->execute(['paciente'=>$p['id'],'dentista'=>$d['id'],'procedimento'=>$proc]);
+        $consulta=$stmt->fetchColumn() ?: null;
+        $stmt=$pdo->prepare('INSERT INTO evolucao_clinica (id_prontuario,id_dentista,id_procedimento,id_agendamento,observacoes,retorno)
+            VALUES (:pr,:dent,:proc,:ag,:obs,:retorno) RETURNING id');
+        $stmt->execute(['pr'=>$pr,'dent'=>$d['id'],'proc'=>$proc,'ag'=>$consulta,'obs'=>$obs,'retorno'=>$retorno]);
+        $id=(int)$stmt->fetchColumn();
+        if ($consulta) $pdo->prepare("UPDATE agendamentos SET status='Concluída' WHERE id=:id AND status<>'Concluída'")
+            ->execute(['id'=>$consulta]);
         foreach (array_unique(preg_split('/[\s,;]+/',trim($dados['dentes'] ?? ''),-1,PREG_SPLIT_NO_EMPTY)) as $numero) {
             if (!ctype_digit($numero)) throw new InvalidArgumentException('Use números FDI nos dentes.');
             $stmt=$pdo->prepare("INSERT INTO odontograma_dentes (id_prontuario,numero_dente,status,notas) VALUES (:pr,:num,'tratado',:obs)
@@ -278,9 +352,12 @@ function cadastrarDentista(array $dados): int {
         if (empty($dados['procedimentos'])) throw new InvalidArgumentException('Selecione os procedimentos habilitados.');
         $stmt=$pdo->prepare('INSERT INTO dentista_procedimentos (id_dentista,id_procedimento) SELECT :id,id FROM procedimentos WHERE nome=:nome');
         foreach (array_unique($dados['procedimentos']) as $proc) $stmt->execute(['id'=>$id,'nome'=>$proc]);
-        for ($dia=1;$dia<=5;$dia++) foreach (['09:00','14:00'] as $hora) {
-            $pdo->prepare('INSERT INTO disponibilidade_dentista VALUES (:id,:dia,:hora)')->execute(['id'=>$id,'dia'=>$dia,'hora'=>$hora]);
-        }
+        $stmt=$pdo->prepare("INSERT INTO disponibilidade_dentista (id_dentista,id_dia_semana,hora)
+            SELECT :id,fc.id_dia_semana,slots.hora::time FROM funcionamento_clinica fc
+            CROSS JOIN LATERAL generate_series(date '2000-01-01'+fc.abertura,
+                date '2000-01-01'+fc.fechamento-interval '30 minutes', interval '30 minutes') AS slots(hora)
+            WHERE fc.id_clinica=1 ON CONFLICT DO NOTHING");
+        $stmt->execute(['id'=>$id]);
         return $id;
     });
 }

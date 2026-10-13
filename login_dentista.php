@@ -11,7 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
     $usuario = autenticarUsuario(trim($_POST['email']??''), $_POST['senha']??'', 'dentista');
     if ($usuario) {
-        $_SESSION['usuario'] = $usuario['nome'];
+        session_regenerate_id(true);
+            $_SESSION['usuario'] = $usuario['nome'];
         $_SESSION['perfil']  = 'dentista';
         $_SESSION['email']   = strtolower(trim($_POST['email']));
         header('Location: '.$usuario['redirecionar']); exit;

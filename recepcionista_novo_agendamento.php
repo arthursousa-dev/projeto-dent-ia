@@ -7,7 +7,7 @@ verificarSessao('recepcionista');
 $tituloPagina = 'Novo Agendamento';
 
 // pré-preenche o nome do paciente se veio da lista de pacientes
-$pacientePreenchido = (int)($_GET['paciente_id'] ?? 0);
+$pacientePreenchido = (int)($_POST['paciente_id'] ?? $_GET['paciente_id'] ?? 0);
 $dataPreenchida = (string)($_POST['data'] ?? $_GET['data'] ?? date('Y-m-d'));
 $validacaoData = DateTimeImmutable::createFromFormat('!Y-m-d', $dataPreenchida);
 if (!$validacaoData || $validacaoData->format('Y-m-d') !== $dataPreenchida || $dataPreenchida < date('Y-m-d')) $dataPreenchida = date('Y-m-d');
@@ -46,7 +46,7 @@ include 'includes/head.php';
     <div class="cartao">
       <div class="cartao-cabecalho"><h3><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Dados do Agendamento</h3></div>
       <div class="cartao-corpo">
-        <form method="POST" aria-label="Formulário completo de agendamento">
+        <form method="POST" data-agendamento-dinamico aria-label="Formulário completo de agendamento">
           <?= csrfCampo() ?>
 
           <div class="linha-campos">
@@ -65,7 +65,7 @@ include 'includes/head.php';
               <select id="ag-procedimento" name="procedimento" required>
                 <option value="">Selecione o procedimento...</option>
                 <?php foreach ($listaProcedimentos as $procedimento): ?>
-                  <option><?= limpar($procedimento) ?></option>
+                  <option <?= ($_POST['procedimento'] ?? '')===$procedimento ? 'selected' : '' ?>><?= limpar($procedimento) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -77,7 +77,7 @@ include 'includes/head.php';
               <select id="ag-dentista" name="dentista" required>
                 <option value="">Selecione o dentista...</option>
                 <?php foreach ($listaDentistas as $dentista): ?>
-                  <option value="<?= $dentista['id'] ?>"><?= limpar($dentista['nome']) ?> — <?= limpar($dentista['especialidade']) ?></option>
+                  <option value="<?= $dentista['id'] ?>" <?= (int)($_POST['dentista'] ?? 0)===(int)$dentista['id'] ? 'selected' : '' ?>><?= limpar($dentista['nome']) ?> — <?= limpar($dentista['especialidade']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -165,5 +165,6 @@ include 'includes/head.php';
 </div>
 
 <?php include 'includes/a11y_bar.php'; ?>
+<script src="js/agenda-horarios.js" defer></script>
 </body>
 </html>

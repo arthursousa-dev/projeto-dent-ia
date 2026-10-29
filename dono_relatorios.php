@@ -17,23 +17,40 @@ $pacientes  = lerJson('pacientes.json');
 $dentistas  = lerJson('dentistas.json');
 $procedimentos = lerJson('procedimentos.json');
 
-// Resumo gerado
-$sucesso = '';
+$erro='';
 if (isset($_POST['gerar'])) {
-    $tipo = limpar($_POST['tipo'] ?? 'geral');
-    $sucesso = 'Relatório de ' . $tipo . ' compilado com dados do sistema em ' . data_pt('d/m/Y \à\s H:i') . '.';
+    $tipo=(string)($_POST['tipo'] ?? '');
+    $linhas=match($tipo) {
+        'Financeiro Mensal'=>$historico,
+        'Produção por Dentista'=>$mesAtual['por_dentista'] ?? [],
+        'Pacientes Ativos'=>array_values(array_filter($pacientes,fn($p)=>$p['status']==='Ativo')),
+        'Agendamentos do Período'=>array_values(array_filter($agendamentos,fn($a)=>substr($a['data'],0,7)===date('Y-m'))),
+        'Procedimentos Realizados'=>array_values(array_filter($agendamentos,fn($a)=>$a['status']==='Concluída')),
+        default=>null,
+    };
+    if ($linhas===null) $erro='Tipo de relatório inválido. Escolha uma das opções da lista.';
+    else {
+        header('Content-Type: text/csv; charset=UTF-8');header('Content-Disposition: attachment; filename="relatorio-dentia.csv"');
+        $out=fopen('php://output','w');fwrite($out,"\xEF\xBB\xBF");
+        // Texto começando com = + - @ TAB ou CR vira fórmula na planilha; o apóstrofo o mantém como texto.
+        $celula=fn($v)=>is_string($v) && !is_numeric($v) && preg_match('/^[=+\-@\t\r]/',$v) ? "'".$v : $v;
+        // Planilha em pt-BR lê "1230.50" como texto ou data; decimal com vírgula vira número.
+        $decimal=fn($v)=>is_float($v) || (is_string($v) && preg_match('/^-?\d+\.\d+$/',$v)) ? number_format((float)$v,2,',','') : $celula($v);
+        if ($linhas) { fputcsv($out,array_keys($linhas[0]),';',escape:'');foreach ($linhas as $l) fputcsv($out,array_map($decimal,$l),';',escape:''); }
+        fclose($out);exit;
+    }
 }
-
 // Cálculos para o relatório geral
 $totalPacientes = count($pacientes);
 $pacAtivos      = count(array_filter($pacientes, fn($p) => strtolower($p['status']??'') === 'ativo'));
-$totalDentistas = count($dentistas);
+$totalDentistas = count(array_filter($dentistas,fn($d)=>$d['status']==='Ativo'));
 $totalAgend     = count($agendamentos);
-$agConcluidos   = count(array_filter($agendamentos, fn($a) => in_array($a['status']??'', ['Concluída','Confirmado'])));
+$agConcluidos   = count(array_filter($agendamentos, fn($a) => ($a['status']??'')==='Concluída'));
 
 // Contagem de procedimentos
 $contProc = [];
 foreach ($agendamentos as $a) {
+    if ($a['status']!=='Concluída') continue;
     $proc = $a['procedimento'] ?? '—';
     $contProc[$proc] = ($contProc[$proc] ?? 0) + 1;
 }
@@ -54,7 +71,7 @@ include 'includes/head.php';
       <a href="dono_faturamento.php" class="btn btn-fantasma"><i class="bi bi-cash-coin" aria-hidden="true"></i> Faturamento</a>
     </div>
 
-    <?php if ($sucesso): ?><div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div><?php endif; ?>
+    <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?= limpar($erro) ?></div><?php endif; ?>
 
     <!-- KPIs Resumo -->
     <div class="grade-estatisticas" style="margin-bottom:20px;">
@@ -66,7 +83,7 @@ include 'includes/head.php';
         </div>
       </div>
       <div class="cartao-estatistica">
-        <div class="icone-estatistica"><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i></div>
+        <div class="icone-estatistica"><i class="bi bi-person-badge-fill" aria-hidden="true"></i></div>
         <div class="info-estatistica">
           <strong><?= $totalDentistas ?></strong>
           <span>Dentistas ativos</span>
@@ -82,35 +99,19 @@ include 'includes/head.php';
       <div class="cartao-estatistica">
         <div class="icone-estatistica"><i class="bi bi-cash-coin" aria-hidden="true"></i></div>
         <div class="info-estatistica">
-          <strong>R$ <?= number_format($receitaTotal, 0, ',', '.') ?></strong>
-          <span>Receita acumulada (6 meses)</span>
+          <strong><?= moeda($receitaTotal) ?></strong>
+          <span>Receita acumulada (<?= count($historico) ?> meses)</span>
         </div>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+    <div class="grade-financeiro">
 
       <!-- Evolução mensal -->
       <div class="cartao">
-        <div class="cartao-cabecalho"><h3><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Evolução de Receita</h3></div>
+        <div class="cartao-cabecalho"><h3><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Receita x despesas — últimos <?= count($historico) ?> meses</h3></div>
         <div class="cartao-corpo">
-          <?php if (!empty($historico)):
-            $maxH = max(array_column($historico,'receita')) ?: 1; ?>
-          <div class="grafico-barras">
-            <?php foreach ($historico as $m): ?>
-            <?php $pct = round(($m['receita'] / $maxH) * 100); ?>
-            <div class="coluna-grafico">
-              <span class="valor-barra">R$<?= number_format($m['receita']/1000,0,',','.') ?>k</span>
-              <div class="barra-grafico <?= $m === end($historico) ? 'atual' : '' ?>"
-                   style="height:<?= max(8,$pct) ?>%"
-                   title="<?= limpar($m['mes']) ?>: R$ <?= number_format($m['receita'],2,',','.') ?>"></div>
-              <span class="rotulo-barra"><?= limpar(explode('/',$m['mes'])[0]) ?></span>
-            </div>
-            <?php endforeach; ?>
-          </div>
-          <?php else: ?>
-          <p style="color:var(--texto-fraco);text-align:center;padding:20px;">Sem histórico disponível.</p>
-          <?php endif; ?>
+          <?php include 'includes/grafico_financeiro.php'; ?>
         </div>
       </div>
 
@@ -142,7 +143,7 @@ include 'includes/head.php';
 
     <!-- Produção por dentista -->
     <div class="cartao" style="margin-bottom:20px;">
-      <div class="cartao-cabecalho"><h3><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i> Produção por Dentista — <?= limpar($mesAtual['mes'] ?? date('Y')) ?></h3></div>
+      <div class="cartao-cabecalho"><h3><i class="bi bi-person-badge-fill" aria-hidden="true"></i> Produção por Dentista — <?= limpar($mesAtual['mes'] ?? date('Y')) ?></h3></div>
       <div class="cartao-corpo" style="padding:0;">
         <table class="tabela-dados" style="width:100%">
           <thead><tr><th>Dentista</th><th>Especialidade</th><th>Atend./mês</th><th>Receita</th><th>Status</th></tr></thead>
@@ -163,7 +164,7 @@ include 'includes/head.php';
             <td><?= limpar($d['especialidade'] ?? '—') ?></td>
             <td><strong><?= $fat_d ? $fat_d['procedimentos'] : ($d['atendimentos_mes'] ?? $d['atendimentos'] ?? 0) ?></strong></td>
             <td style="color:var(--sucesso);font-weight:700;">
-              <?= $fat_d ? 'R$ '.number_format($fat_d['receita'],0,',','.') : '—' ?>
+              <?= $fat_d ? moeda((float)$fat_d['receita']) : '—' ?>
             </td>
             <td><?= emblema($d['status'] ?? 'Ativo') ?></td>
           </tr>
@@ -182,13 +183,13 @@ include 'includes/head.php';
     }
     arsort($porPlano);
     ?>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+    <div class="grade-financeiro">
       <div class="cartao">
         <div class="cartao-cabecalho"><h3><i class="bi bi-hospital-fill" aria-hidden="true"></i> Pacientes por Convênio</h3></div>
         <div class="cartao-corpo">
           <?php $maxPl = !empty($porPlano) ? max($porPlano) : 1; ?>
           <?php foreach ($porPlano as $plano => $qtd): ?>
-          <?php $pct = round(($qtd / $totalPacientes) * 100); ?>
+          <?php $pct = $totalPacientes ? round(($qtd / $totalPacientes) * 100) : 0; ?>
           <div style="margin-bottom:12px;">
             <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;">
               <span style="font-weight:600;"><?= limpar($plano) ?></span>
@@ -216,7 +217,7 @@ include 'includes/head.php';
         <div class="cartao-corpo">
           <?php $maxSt = !empty($porStatus) ? max($porStatus) : 1; ?>
           <?php foreach ($porStatus as $status => $qtd): ?>
-          <?php $pct = round(($qtd / $totalAgend) * 100); ?>
+          <?php $pct = $totalAgend ? round(($qtd / $totalAgend) * 100) : 0; ?>
           <div style="margin-bottom:12px;">
             <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;">
               <span><?= emblema($status) ?></span>
@@ -235,7 +236,8 @@ include 'includes/head.php';
     <div class="cartao">
       <div class="cartao-cabecalho"><h3><i class="bi bi-file-earmark-text-fill" aria-hidden="true"></i> Gerar Relatório</h3></div>
       <div class="cartao-corpo">
-        <form method="POST" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+        <form method="POST" data-download style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+          <?= csrfCampo(false) ?>
           <div class="grupo-campo" style="flex:1;min-width:200px;">
             <label for="rel-tipo">Tipo de relatório</label>
             <select id="rel-tipo" name="tipo"

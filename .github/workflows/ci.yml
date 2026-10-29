@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: app_test
+      DB_USER: postgres
+      DB_PASS: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_pgsql, mbstring, fileinfo
+          coverage: none
+
+      - name: Lint de sintaxe PHP
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l > /dev/null
+
+      - name: Cria o schema e os dados de demonstração
+        run: |
+          psql -h localhost -U postgres -d app_test -v ON_ERROR_STOP=1 -q -f database/schema.sql -f database/seed.sql
+          psql -h localhost -U postgres -d app_test -q -c "TRUNCATE auditoria_banco"
+
+      - name: Instala dependências
+        run: composer install --no-interaction --no-progress
+
+      - name: Testes
+        run: vendor/bin/phpunit

@@ -121,8 +121,8 @@ dentia/
 - [x] Migrar as páginas mais acessadas pra query direta (`dono_pacientes.php`)
 - [x] Testes automatizados para autenticação e para o adaptador de persistência
 - [x] Odontograma extraído para um componente reutilizável (`includes/odontograma_svg.php`)
-- [ ] Migrar as demais páginas de listagem (dentistas, agendamentos) pro mesmo padrão de query direta
-- [ ] Paginação nas listagens grandes
+- [x] Cada página consulta só as listas que exibe (`carregarListas(['dentistas', ...])`), em vez de carregar pacientes e agendamentos da clínica inteira a cada acesso
+- [x] Paginação nas listagens de pacientes (gestor e recepção), preservando a busca
 
 ## Testes
 

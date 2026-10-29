@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__.'/includes/bootstrap_sessao.php';
 require_once __DIR__.'/includes/functions.php';
-verificarSessao('dono');carregarListas();
+verificarSessao('dono');carregarListas(['procedimentos']);
 $tituloPagina='Editar dentista';$erro='';
 $id=idParametro($_POST['id'] ?? $_GET['id'] ?? 0);
 $d=buscarPorCampo(lerJson('dentistas.json'),'id',$id);

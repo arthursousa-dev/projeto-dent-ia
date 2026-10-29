@@ -2,7 +2,7 @@
 // gerenciamento da equipe de dentistas
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('dono');carregarListas();
+verificarSessao('dono');carregarListas(['dentistas', 'procedimentos']);
 
 $tituloPagina = 'Dentistas';
 $erro='';

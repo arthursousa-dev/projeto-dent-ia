@@ -2,7 +2,7 @@
 // agenda do dia com filtros por data e dentista
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('recepcionista');carregarListas();
+verificarSessao('recepcionista');carregarListas(['dentistas']);
 
 $tituloPagina = 'Agenda do Dia';
 

@@ -181,11 +181,22 @@ function verificarSessao(string $perfilNecessario): void {
     marcarUsuarioNoBanco($perfilNecessario . ':' . ($_SESSION['email'] ?? ''));
 }
 
-/** Listas usadas pelas telas de agenda/pacientes; chamada só pelas páginas que precisam delas. */
-function carregarListas(): void {
+/**
+ * Listas usadas pelas telas de agenda/pacientes. $quais limita o que é consultado
+ * ('dentistas', 'pacientes', 'agendamentos', 'procedimentos', 'horarios'); sem argumento carrega tudo.
+ * Cada página pede só o que exibe: antes a agenda da recepção carregava todos os pacientes e
+ * agendamentos da clínica para usar apenas a lista de dentistas.
+ */
+function carregarListas(?array $quais = null): void {
     global $listaDentistas, $listaPacientes, $listaProcedimentos, $listaHorarios, $listaAgendamentos;
+    $quer = fn(string $lista): bool => $quais === null || in_array($lista, $quais, true);
     $pdo = \App\Config\Database::getConnection();
-    $listaDentistas = array_map(function ($d) {
+    $listaDentistas = $listaPacientes = $listaProcedimentos = $listaHorarios = $listaAgendamentos = [];
+    $perfil = $_SESSION['perfil'] ?? '';
+    // O filtro de dentista/cliente depende da lista de dentistas e da agenda; carrega o mínimo para aplicá-lo.
+    $precisaDentistas = $quer('dentistas') || ($perfil === 'dentista' && ($quer('agendamentos') || $quer('pacientes')));
+    $precisaAgenda = $quer('agendamentos') || ($perfil === 'dentista' && $quer('pacientes'));
+    if ($precisaDentistas) $listaDentistas = array_map(function ($d) {
         $d['atendimentos'] = $d['atendimentos_mes']; return $d;
     }, lerJson('dentistas.json'));
     // Cliente e dentista recebem só os próprios registros, filtrados no SQL.
@@ -202,11 +213,17 @@ function carregarListas(): void {
             $filtroAgenda = ['id_dentista' => $dent['id'] ?? 0];
         }
     }
-    $listaAgendamentos = array_map(function ($a) {
+    if ($precisaAgenda) $listaAgendamentos = array_map(function ($a) {
         $a['procedimento'] = $a['servico']; return $a;
     }, lerJson('agendamentos.json', $filtroAgenda));
+    if ($quer('procedimentos')) $listaProcedimentos = array_column(lerJson('procedimentos.json'), 'nome');
+    if ($quer('horarios')) $listaHorarios = $pdo->query("SELECT DISTINCT to_char(hora,'HH24:MI') FROM disponibilidade_dentista ORDER BY 1")->fetchAll(PDO::FETCH_COLUMN);
+    if (!$quer('pacientes')) {
+        if (!$quer('agendamentos')) $listaAgendamentos = [];
+        return;
+    }
     // Dentista vê só os pacientes da própria agenda (sem cadastro de dentista: nenhum, nunca todos).
-    if (($_SESSION['perfil'] ?? '') === 'dentista') $filtroPacientes = ['id' => array_values(array_unique(array_column($listaAgendamentos, 'id_paciente')))];
+    if ($perfil === 'dentista') $filtroPacientes = ['id' => array_values(array_unique(array_column($listaAgendamentos, 'id_paciente')))];
     $listaPacientes = isset($pac) ? ($pac ? [$pac] : []) : lerJson('pacientes.json', $filtroPacientes);
     // "Última" e "próxima" consulta de cada paciente, com as mesmas regras de status em todas as telas.
     $visitas = $pdo->prepare("SELECT id_paciente,
@@ -220,6 +237,32 @@ function carregarListas(): void {
         $p['proximaConsulta'] = !empty($visitas[$p['id']]['proxima']) ? date('d/m/Y', strtotime($visitas[$p['id']]['proxima'])) : '—';
     }
     unset($p);
-    $listaProcedimentos = array_column(lerJson('procedimentos.json'), 'nome');
-    $listaHorarios = $pdo->query("SELECT DISTINCT to_char(hora,'HH24:MI') FROM disponibilidade_dentista ORDER BY 1")->fetchAll(PDO::FETCH_COLUMN);
+    if (!$quer('agendamentos')) $listaAgendamentos = [];
+}
+
+/**
+ * Fatia uma lista já filtrada na página pedida em ?pagina= (fora do intervalo vira a
+ * primeira ou a última). Devolve os itens da página e os dados para os controles.
+ */
+function paginarLista(array $itens, int $porPagina = 20): array {
+    $total = count($itens);
+    $totalPaginas = max(1, (int) ceil($total / $porPagina));
+    $pagina = max(1, min($totalPaginas, (int) ($_GET['pagina'] ?? 1)));
+    return ['itens' => array_slice($itens, ($pagina - 1) * $porPagina, $porPagina),
+            'pagina' => $pagina, 'total_paginas' => $totalPaginas, 'total' => $total];
+}
+
+/** Links "Anterior / páginas / Próxima" preservando os demais filtros da URL (busca etc.). */
+function controlesPaginacao(array $pag): string {
+    if ($pag['total_paginas'] <= 1) return '';
+    $base = $_GET;
+    unset($base['pagina']);
+    $link = fn(int $p): string => limpar('?' . http_build_query($base + ['pagina' => $p]));
+    $html = '<nav class="paginacao" aria-label="Páginas da lista">';
+    if ($pag['pagina'] > 1) $html .= '<a href="' . $link($pag['pagina'] - 1) . '">‹ Anterior</a>';
+    for ($p = 1; $p <= $pag['total_paginas']; $p++) {
+        $html .= $p === $pag['pagina'] ? '<span aria-current="page">' . $p . '</span>' : '<a href="' . $link($p) . '">' . $p . '</a>';
+    }
+    if ($pag['pagina'] < $pag['total_paginas']) $html .= '<a href="' . $link($pag['pagina'] + 1) . '">Próxima ›</a>';
+    return $html . '</nav>';
 }

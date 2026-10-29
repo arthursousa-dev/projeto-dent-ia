@@ -2,7 +2,7 @@
 // formulário completo para criar um novo agendamento
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('recepcionista');carregarListas();
+verificarSessao('recepcionista');carregarListas(['dentistas', 'horarios', 'pacientes', 'procedimentos']);
 
 $tituloPagina = 'Novo Agendamento';
 

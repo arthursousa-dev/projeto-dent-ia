@@ -2,7 +2,7 @@
 // lista de pacientes do dentista logado
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('dentista');carregarListas();
+verificarSessao('dentista');carregarListas(['pacientes']);
 
 $tituloPagina = 'Meus Pacientes';
 $termoBusca   = trim($_GET['busca'] ?? '');

@@ -2,7 +2,7 @@
 // agenda pessoal do dentista — filtra por data
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('dentista');carregarListas();
+verificarSessao('dentista');carregarListas(['agendamentos']);
 
 $tituloPagina = 'Minha Agenda';
 $avisoData='';

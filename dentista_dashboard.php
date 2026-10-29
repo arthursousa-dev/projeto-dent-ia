@@ -2,7 +2,7 @@
 // painel principal do dentista — visão do dia de trabalho
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('dentista');carregarListas();
+verificarSessao('dentista');carregarListas(['agendamentos', 'pacientes', 'procedimentos']);
 
 $tituloPagina = 'Painel do Dentista';
 

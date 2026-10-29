@@ -2,7 +2,7 @@
 // tela onde o paciente agenda sua própria consulta
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('cliente');carregarListas();
+verificarSessao('cliente');carregarListas(['dentistas', 'procedimentos', 'horarios']);
 
 $tituloPagina = 'Agendar Consulta';
 $erro='';

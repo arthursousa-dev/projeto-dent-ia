@@ -2,7 +2,7 @@
 // painel principal do dono — visão geral da clínica
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('dono');carregarListas(); // redireciona pro login se não for o dono
+verificarSessao('dono');carregarListas(['agendamentos', 'dentistas']); // redireciona pro login se não for o dono
 
 $tituloPagina = 'Painel do Gestor';
 include 'includes/head.php';

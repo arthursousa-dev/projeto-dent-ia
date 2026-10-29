@@ -2,7 +2,7 @@
 // painel da recepcionista — controle do dia a dia da recepção
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('recepcionista');carregarListas();
+verificarSessao('recepcionista');carregarListas(['agendamentos', 'dentistas', 'horarios', 'pacientes', 'procedimentos']);
 
 $tituloPagina = 'Painel da Recepção';
 

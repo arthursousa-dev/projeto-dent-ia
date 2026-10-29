@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('dentista');carregarListas();
+verificarSessao('dentista');carregarListas(['pacientes', 'procedimentos']);
 
 $tituloPagina = 'Prontuários';
 $pacienteSelecionado = (string)($_GET['paciente'] ?? '');

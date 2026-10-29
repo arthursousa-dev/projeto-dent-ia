@@ -124,7 +124,8 @@ final class NormalizacaoTest extends TestCase
         $proc = $this->pdo->query("INSERT INTO procedimentos (nome,id_categoria,duracao_min,valor_base)
             VALUES ('Não habilitado',$categoria,30,90) RETURNING id")->fetchColumn();
         $this->rejeitar("UPDATE agendamentos SET id_procedimento=$proc WHERE id={$a['id']}", '23503');
-        $this->rejeitar("DELETE FROM pacientes WHERE id={$a['paciente']}", '23503');
+        // ON DELETE RESTRICT responde com restrict_violation (23001), não foreign_key_violation (23503).
+        $this->rejeitar("DELETE FROM pacientes WHERE id={$a['paciente']}", '23001');
         $pr = $this->pdo->query("INSERT INTO prontuarios (id_paciente) VALUES ({$a['paciente']}) RETURNING id")->fetchColumn();
         foreach ([10,19,49,56,89,99] as $n) $this->rejeitar("INSERT INTO odontograma_dentes (id_prontuario,numero_dente) VALUES ($pr,$n)", '23514');
         $this->assertSame(1,$this->pdo->exec("INSERT INTO odontograma_dentes (id_prontuario,numero_dente) VALUES ($pr,55)"));

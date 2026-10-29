@@ -6,27 +6,22 @@ $nomeUsuario     = $_SESSION['usuario'] ?? '';
 $iniciaisUsuario = iniciais($nomeUsuario);
 $paginaAtual     = basename($_SERVER['PHP_SELF']);
 
-// link da página de perfil de cada role
-$linkPerfil = [
-    'dono'          => 'dono_perfil.php',
-    'recepcionista' => 'recepcionista_perfil.php',
-    'dentista'      => 'dentista_perfil.php',
-    'cliente'       => 'cliente_perfil.php',
-][$perfilAtual] ?? '#';
+// link da página de perfil de cada perfil de acesso (mapa único em includes/functions.php)
+$linkPerfil = PERFIS[$perfilAtual]['perfil'] ?? '#';
 
 $menusPorPerfil = [
     'dono' => [
         'Gestão' => [
             ['dono_dashboard.php',     '<i class="bi bi-bar-chart-fill" aria-hidden="true"></i>', 'Painel Geral'],
             ['dono_faturamento.php',   '<i class="bi bi-cash-coin" aria-hidden="true"></i>', 'Faturamento'],
-            ['dono_dentistas.php',     '<i class="bi bi-emoji-smile-fill" aria-hidden="true"></i>', 'Dentistas'],
+            ['dono_dentistas.php',     '<i class="bi bi-person-badge-fill" aria-hidden="true"></i>', 'Dentistas'],
             ['dono_pacientes.php',     '<i class="bi bi-people-fill" aria-hidden="true"></i>', 'Pacientes'],
             ['dono_relatorios.php',    '<i class="bi bi-graph-up-arrow" aria-hidden="true"></i>', 'Relatórios'],
         ],
         'Sistema' => [
+            ['dono_usuarios.php', '<i class="bi bi-people-fill" aria-hidden="true"></i>', 'Usuários'],
             ['dono_perfil.php',        '<i class="bi bi-person-fill" aria-hidden="true"></i>', 'Meu Perfil'],
             ['dono_configuracoes.php', '<i class="bi bi-gear-fill" aria-hidden="true"></i>', 'Configurações'],
-            ['logout.php',             '<i class="bi bi-box-arrow-right" aria-hidden="true"></i>', 'Sair'],
         ],
     ],
     'recepcionista' => [
@@ -38,7 +33,6 @@ $menusPorPerfil = [
         ],
         'Sistema' => [
             ['recepcionista_perfil.php', '<i class="bi bi-person-fill" aria-hidden="true"></i>', 'Meu Perfil'],
-            ['logout.php',               '<i class="bi bi-box-arrow-right" aria-hidden="true"></i>', 'Sair'],
         ],
     ],
     'dentista' => [
@@ -50,7 +44,6 @@ $menusPorPerfil = [
         ],
         'Sistema' => [
             ['dentista_perfil.php', '<i class="bi bi-person-fill" aria-hidden="true"></i>', 'Meu Perfil'],
-            ['logout.php',          '<i class="bi bi-box-arrow-right" aria-hidden="true"></i>', 'Sair'],
         ],
     ],
     'cliente' => [
@@ -61,29 +54,39 @@ $menusPorPerfil = [
             ['cliente_perfil.php',      '<i class="bi bi-person-fill" aria-hidden="true"></i>', 'Meu Perfil'],
         ],
         'Sistema' => [
-            ['logout.php', '<i class="bi bi-box-arrow-right" aria-hidden="true"></i>', 'Sair'],
         ],
     ],
 ];
 
+// "Banco de dados" só aparece para o gestor e só onde a tela abre (este computador, ou a rede se liberada no .env).
+if ($perfilAtual === 'dono' && monitorPermitido()) {
+    $menusPorPerfil['dono']['Sistema'][] = ['dono_banco.php', '<i class="bi bi-database-fill" aria-hidden="true"></i>', 'Banco de dados'];
+}
+
 $nomesPerfis = [
     'dono'          => 'Proprietário <i class="bi bi-award-fill" aria-hidden="true"></i>',
     'recepcionista' => 'Recepcionista',
-    'dentista'      => 'Dentista <i class="bi bi-emoji-smile-fill" aria-hidden="true"></i>',
+    'dentista'      => 'Dentista',
     'cliente'       => 'Paciente',
 ];
 
-$estiloAvatarDono = $perfilAtual === 'dono'
-    ? 'style="background:linear-gradient(135deg,#f5a623,#e08c00);color:#0b2845;"'
-    : '';
+$estiloAvatarDono = $perfilAtual === 'dono' ? 'style="background:var(--destaque2);color:#0e2a3f;"' : '';
 ?>
+<!-- barra superior: só aparece em telas pequenas, onde o menu vira gaveta -->
+<div class="barra-movel">
+  <button type="button" class="botao-menu" aria-controls="menu-lateral" aria-expanded="false" aria-label="Abrir menu">
+    <i class="bi bi-list" aria-hidden="true"></i>
+  </button>
+  <a href="index.php" class="menu-logo" aria-label="DENT IA — início">DENT<span>IA</span></a>
+</div>
+<div class="fundo-menu" hidden></div>
 <aside class="menu-lateral" id="menu-lateral" role="navigation" aria-label="Menu principal">
 
   <a href="index.php" class="menu-logo" aria-label="DENT IA — início">
     DENT<span>IA</span>
   </a>
 
-  <?php foreach (($menusPorPerfil[$perfilAtual] ?? []) as $nomeSecao => $itensSecao): ?>
+  <?php foreach (array_filter($menusPorPerfil[$perfilAtual] ?? []) as $nomeSecao => $itensSecao): ?>
   <p class="menu-secao" aria-hidden="true"><?= $nomeSecao ?></p>
   <ul class="menu-nav" role="list">
     <?php foreach ($itensSecao as [$arquivo, $icone, $rotulo]): ?>
@@ -98,6 +101,11 @@ $estiloAvatarDono = $perfilAtual === 'dono'
     <?php endforeach; ?>
   </ul>
   <?php endforeach; ?>
+
+  <form method="POST" action="logout.php" class="menu-sair">
+    <?= csrfCampo(false) ?>
+    <button type="submit"><span class="icone-nav" aria-hidden="true"><i class="bi bi-box-arrow-right" aria-hidden="true"></i></span> Sair</button>
+  </form>
 
   <div class="menu-espacador" aria-hidden="true"></div>
 
@@ -118,38 +126,7 @@ $estiloAvatarDono = $perfilAtual === 'dono'
   </a>
 
 </aside>
+<?php $flash = exibirFlash(); if ($flash !== ''): ?>
+<div class="area-flash"><?= $flash ?></div>
+<?php endif; ?>
 
-<style>
-.menu-usuario-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  text-decoration: none;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  margin: 0 -20px;
-  transition: background var(--transicao, 0.2s);
-  cursor: pointer;
-}
-.menu-usuario-link:hover,
-.menu-usuario-link.ativo {
-  background: rgba(0,201,167,0.12);
-}
-.menu-usuario-link .info-usuario strong {
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  display: block;
-}
-.menu-usuario-link .info-usuario span {
-  color: rgba(255,255,255,0.5);
-  font-size: 11px;
-}
-.perfil-seta {
-  margin-left: auto;
-  color: rgba(255,255,255,0.3);
-  font-size: 18px;
-  line-height: 1;
-}
-.menu-usuario-link:hover .perfil-seta { color: var(--destaque, #00c9a7); }
-</style>

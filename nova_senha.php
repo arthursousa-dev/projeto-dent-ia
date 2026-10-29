@@ -3,47 +3,16 @@
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 
-// Se não passou pela tela 1, redireciona
-if (empty($_SESSION['recuperacao_email'])) {
-    header('Location: esqueci_senha.php');
-    exit;
+$token=(string)($_POST['token'] ?? $_GET['token'] ?? '');
+$rec=consultarRecuperacao($token);
+$emailRecuperacao=$rec['email'] ?? '';$nomeUsuario=$rec['nome'] ?? 'Usuário';
+$erro='';$sucesso='';
+if (!$rec) $erro='Link inválido, expirado ou já utilizado. Solicite outro ao gestor.';
+if ($rec && isset($_POST['salvar_senha'])) {
+    try {
+        redefinirSenha($token,(string)($_POST['nova_senha'] ?? ''),(string)($_POST['confirmar_senha'] ?? ''));$sucesso='Senha alterada. Faça login com a nova senha.';
+    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
-
-$emailRecuperacao = $_SESSION['recuperacao_email'];
-$nomeUsuario      = $_SESSION['recuperacao_nome'] ?? 'Usuário';
-$erro    = '';
-$sucesso = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['salvar_senha'])) {
-    $novaSenha     = $_POST['nova_senha']      ?? '';
-    $confirmaSenha = $_POST['confirmar_senha'] ?? '';
-
-    $erros = [];
-
-    // nova senha: obrigatória, mínimo 6 caracteres
-    if ($novaSenha === '') {
-        $erros[] = 'Informe a nova senha.';
-    } elseif (mb_strlen($novaSenha) < 6) {
-        $erros[] = 'A nova senha deve ter pelo menos 6 caracteres.';
-    }
-
-    // confirmação: obrigatória e deve coincidir
-    if ($confirmaSenha === '') {
-        $erros[] = 'Confirme a nova senha.';
-    } elseif ($novaSenha !== $confirmaSenha) {
-        $erros[] = 'As senhas não coincidem. Verifique e tente novamente.';
-    }
-
-    if (!empty($erros)) {
-        $erro = implode(' ', $erros);
-    } else {
-        // TODO: em produção, atualizar a senha no banco com password_hash()
-        // Limpa dados de recuperação da sessão
-        unset($_SESSION['recuperacao_email'], $_SESSION['recuperacao_nome']);
-        $sucesso = 'Senha alterada com sucesso! Faça login com sua nova senha.';
-    }
-}
-
 $tituloPagina = 'Nova Senha';
 include 'includes/head.php';
 ?>
@@ -64,7 +33,7 @@ include 'includes/head.php';
         <div style="margin-top:18px;padding:12px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.78rem;opacity:0.75;">
           <strong>Dicas para uma senha segura:</strong>
           <ul style="margin:8px 0 0 16px;line-height:1.7;">
-            <li>Mínimo de 6 caracteres</li>
+            <li>Mínimo de <?= SENHA_MINIMA ?> caracteres</li>
             <li>Misture letras e números</li>
             <li>Use pelo menos um caractere especial</li>
             <li>Evite sequências óbvias (123456, abcdef)</li>
@@ -86,6 +55,7 @@ include 'includes/head.php';
         Conta: <strong style="color:var(--primario);"><?= limpar($emailRecuperacao) ?></strong>
       </p>
 
+      <?= exibirFlash() ?>
       <?php if ($erro): ?>
         <div class="alerta alerta-perigo" role="alert" aria-live="assertive">
           <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?= limpar($erro) ?>
@@ -97,14 +67,15 @@ include 'includes/head.php';
           <i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?>
           <div style="margin-top:12px;">
             <a href="login.php" class="btn btn-primario" style="display:inline-flex;padding:10px 22px;font-size:0.9rem;text-decoration:none;">
-              Ir para o login →
+              Ir para o login
             </a>
           </div>
         </div>
       <?php endif; ?>
 
-      <?php if (!$sucesso): ?>
+      <?php if ($rec && !$sucesso): ?>
       <form method="POST" novalidate aria-label="Formulário de nova senha" id="form-nova-senha">
+          <?= csrfCampo() ?><input type="hidden" name="token" value="<?= limpar($token) ?>">
 
         <!-- Nova senha -->
         <div class="grupo-campo">
@@ -239,7 +210,7 @@ if (formNovaSenha) {
     if (!nEl.value) {
       nErr.textContent = 'Informe a nova senha.';
       nEl.setAttribute('aria-invalid','true'); ok = false;
-    } else if (nEl.value.length < 6) {
+    } else if (nEl.value.length < <?= SENHA_MINIMA ?>) {
       nErr.textContent = 'Mínimo de 6 caracteres.';
       nEl.setAttribute('aria-invalid','true'); ok = false;
     } else {

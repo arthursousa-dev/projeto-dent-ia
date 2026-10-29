@@ -2,17 +2,10 @@
 // Portal DENT IA — escolha o tipo de acesso
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 // se já logado, redireciona para o dashboard correto
-if (isset($_SESSION['perfil'])) {
-    $destinos = [
-        'cliente'       => 'cliente_dashboard.php',
-        'recepcionista' => 'recepcionista_dashboard.php',
-        'dentista'      => 'dentista_dashboard.php',
-        'dono'          => 'dono_dashboard.php',
-    ];
-    if (isset($destinos[$_SESSION['perfil']])) {
-        header('Location: ' . $destinos[$_SESSION['perfil']]);
-        exit;
-    }
+require_once __DIR__ . '/includes/functions.php';
+if (isset(PERFIS[$_SESSION['perfil'] ?? '']['painel'])) {
+    header('Location: ' . PERFIS[$_SESSION['perfil']]['painel']);
+    exit;
 }
 ?><!DOCTYPE html>
 <html lang="pt-br">
@@ -21,8 +14,9 @@ if (isset($_SESSION['perfil'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DENT IA — Portal de Acesso</title>
   <script src="js/accessibility.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="css/style.css">
+  <script src="js/app.js?v=<?= filemtime(__DIR__ . "/js/app.js") ?>" defer></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" integrity="sha384-CK2SzKma4jA5H/MXDUU7i1TqZlCFaD4T01vtyDFvPlD97JQyS+IsSh1nI2EFbpyk" crossorigin="anonymous">
+  <link rel="stylesheet" href="css/style.css?v=<?= filemtime(__DIR__ . "/css/style.css") ?>">
   <style>
     .portal-wrapper {
       min-height: 100vh;
@@ -35,8 +29,8 @@ if (isset($_SESSION['perfil'])) {
     }
     .portal-logo {
       font-family: var(--fonte-titulo);
-      font-size: 42px;
-      font-weight: 900;
+      font-size: 40px;
+      font-weight: 700;
       color: var(--primario);
       margin-bottom: 6px;
       letter-spacing: -1px;
@@ -57,34 +51,29 @@ if (isset($_SESSION['perfil'])) {
     }
     .portal-card {
       background: var(--fundo-cartao);
-      border: 2px solid var(--borda);
+      border: 1px solid var(--borda);
+      border-left: 4px solid var(--cor-card);
       border-radius: var(--raio);
-      padding: 32px 24px;
-      text-align: center;
+      padding: 20px 22px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      column-gap: 16px;
+      align-items: start;
       text-decoration: none;
       color: var(--texto-principal);
-      transition: transform var(--transicao), box-shadow var(--transicao), border-color var(--transicao);
-      cursor: pointer;
-      box-shadow: var(--sombra-pequena);
+      transition: background var(--transicao), border-color var(--transicao);
     }
-    .portal-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--sombra-grande);
-      border-color: var(--destaque);
-    }
-    .portal-card:focus-visible {
-      outline: none;
-      box-shadow: var(--anel-foco), var(--sombra);
-    }
+    .portal-card:hover { background: var(--fundo-tabela-cabeca); border-color: var(--cor-card); color: var(--texto-principal); }
+    .portal-card:focus-visible { outline: none; box-shadow: var(--anel-foco); }
     .portal-icon {
-      font-size: 48px;
-      margin-bottom: 14px;
-      display: block;
+      font-size: 26px;
+      color: var(--cor-card);
+      grid-row: span 2;
       line-height: 1;
     }
     .portal-card-titulo {
-      font-size: 18px;
-      font-weight: 700;
+      font-size: 1.05rem;
+      font-weight: 600;
       color: var(--texto-principal);
       margin-bottom: 6px;
     }
@@ -93,14 +82,12 @@ if (isset($_SESSION['perfil'])) {
       color: var(--texto-secundario);
       line-height: 1.5;
     }
-    .portal-card-paciente  { border-top: 4px solid #3182ce; }
-    .portal-card-recepcao  { border-top: 4px solid #f5a623; }
-    .portal-card-dentista  { border-top: 4px solid var(--destaque); }
-    .portal-card-dono      { border-top: 4px solid var(--primario); }
-    .portal-card-paciente:hover  { border-color: #3182ce; }
-    .portal-card-recepcao:hover  { border-color: #f5a623; }
-    .portal-card-dentista:hover  { border-color: var(--destaque); }
-    .portal-card-dono:hover      { border-color: var(--primario); }
+    /* mesmas cores de cada perfil nas telas de login */
+    .portal-card-paciente { --cor-card: #2b6cb0; }
+    .portal-card-recepcao { --cor-card: #a85410; }
+    .portal-card-dentista { --cor-card: #08806f; }
+    .portal-card-dono     { --cor-card: #0e2a3f; }
+    [data-tema="dark"] .portal-card-dono { --cor-card: #9fb4c7; }
     .portal-footer {
       margin-top: 36px;
       font-size: 12px;
@@ -133,7 +120,7 @@ if (isset($_SESSION['perfil'])) {
     </a>
 
     <a href="login_dentista.php" class="portal-card portal-card-dentista" aria-label="Área do Dentista">
-      <span class="portal-icon" aria-hidden="true"><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i></span>
+      <span class="portal-icon" aria-hidden="true"><i class="bi bi-person-badge-fill" aria-hidden="true"></i></span>
       <div class="portal-card-titulo">Dentista</div>
       <div class="portal-card-desc">Acesse sua agenda, prontuários e histórico clínico</div>
     </a>

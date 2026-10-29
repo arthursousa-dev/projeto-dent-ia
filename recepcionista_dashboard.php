@@ -2,16 +2,27 @@
 // painel da recepcionista — controle do dia a dia da recepção
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('recepcionista');
+verificarSessao('recepcionista');carregarListas();
 
 $tituloPagina = 'Painel da Recepção';
 
 // processa as ações rápidas da tabela de agenda
-$sucesso = '';
-if (isset($_POST['fazer_checkin']))   $sucesso = 'Check-in realizado com sucesso!';
-if (isset($_POST['cancelar_consulta'])) $sucesso = 'Consulta cancelada.';
-if (isset($_POST['agendar_rapido']))  $sucesso = 'Agendamento realizado com sucesso!';
-
+$erro='';
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+    try {
+        if (isset($_POST['agendar_rapido'])) { $novoId=criarAgendamento($_POST); redirecionar('recepcionista_agenda.php?data='.urlencode((string)($_POST['data'] ?? '')), 'Agendamento #'.$novoId.' criado e vinculado ao paciente.'); }
+        elseif (isset($_POST['receber'])) { confirmarPagamento(idParametro($_POST['id'] ?? 0),(int)($_POST['forma'] ?? 0)); redirecionar(paginaAtual(),'Pagamento registrado.'); }
+        else {
+            $status=isset($_POST['fazer_checkin']) ? 'Aguardando' : (isset($_POST['cancelar_consulta']) ? 'Cancelado' : (string)($_POST['status'] ?? ''));
+            alterarStatusAgenda(idParametro($_POST['id'] ?? 0),$status);
+            redirecionar(paginaAtual(),$status==='Cancelado' ? 'Consulta cancelada.' : ($status==='Aguardando' ? 'Check-in feito.' : 'Consulta atualizada.'));
+        }
+    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
+}
+// Dashboard mostra somente consultas de hoje e consulta o banco a cada acesso.
+$pdo = \App\Config\Database::getConnection();
+$listaAgendamentos = agendaRecepcao('ag.data = CAST(:data AS date)', ['data'=>date('Y-m-d')]);
+$formas=$pdo->query('SELECT id,nome FROM forma_pagamento ORDER BY id')->fetchAll();
 include 'includes/head.php';
 ?>
 
@@ -30,27 +41,25 @@ include 'includes/head.php';
       </a>
     </div>
 
-    <?php if ($sucesso): ?>
-      <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
-    <?php endif; ?>
+    <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
 
     <!-- estatísticas do dia -->
     <div class="grade-estatisticas">
       <div class="cartao-estatistica">
         <div class="icone-estatistica verde" aria-hidden="true"><i class="bi bi-check-circle-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>8</strong><span>Atendidos hoje</span></div>
+        <div class="info-estatistica"><strong><?= count(array_filter($listaAgendamentos,fn($a)=>$a['status']==='Concluída')) ?></strong><span>Atendidos hoje</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica amarelo" aria-hidden="true">⏳</div>
-        <div class="info-estatistica"><strong>4</strong><span>Aguardando</span></div>
+        <div class="info-estatistica"><strong><?= count(array_filter($listaAgendamentos,fn($a)=>$a['status']==='Aguardando')) ?></strong><span>Aguardando</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica azul" aria-hidden="true"><i class="bi bi-calendar-event-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>12</strong><span>Total hoje</span></div>
+        <div class="info-estatistica"><strong><?= count($listaAgendamentos) ?></strong><span>Total hoje</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica vermelho" aria-hidden="true"><i class="bi bi-x-circle-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>2</strong><span>Cancelados</span></div>
+        <div class="info-estatistica"><strong><?= count(array_filter($listaAgendamentos,fn($a)=>$a['status']==='Cancelado')) ?></strong><span>Cancelados</span></div>
       </div>
     </div>
 
@@ -58,7 +67,7 @@ include 'includes/head.php';
     <div class="cartao">
       <div class="cartao-cabecalho">
         <h3><i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Agenda de Hoje — <?= data_pt('d/m/Y') ?></h3>
-        <a href="recepcionista_agenda.php" class="cartao-link">Ver agenda completa →</a>
+        <a href="recepcionista_agenda.php" class="cartao-link">Ver agenda completa</a>
       </div>
       <div class="tabela-wrapper">
         <table aria-label="Agenda de consultas de hoje">
@@ -82,9 +91,10 @@ include 'includes/head.php';
               <td><?= emblema($agendamento['status']) ?></td>
               <td>
                 <div style="display:flex;gap:5px;">
-                  <?php if (in_array($agendamento['status'], ['Aguardando', 'Agendado', 'Confirmado'])): ?>
+                  <?php if (in_array($agendamento['status'], ['Agendado', 'Confirmado'])): ?>
                   <!-- botão de check-in -->
                   <form method="POST" style="display:inline;">
+          <?= csrfCampo() ?>
                     <input type="hidden" name="id" value="<?= $agendamento['id'] ?>">
                     <button type="submit" name="fazer_checkin"
                             class="btn btn-primario btn-pequeno"
@@ -94,7 +104,8 @@ include 'includes/head.php';
                   </form>
                   <!-- botão de cancelar -->
                   <form method="POST" style="display:inline;"
-                        onsubmit="return confirm('Cancelar consulta de <?= limpar($agendamento['paciente']) ?>?')">
+                        data-confirmar="Cancelar consulta de <?= limpar($agendamento['paciente']) ?>?">
+                    <?= csrfCampo() ?>
                     <input type="hidden" name="id" value="<?= $agendamento['id'] ?>">
                     <button type="submit" name="cancelar_consulta"
                             class="btn btn-perigo btn-pequeno"
@@ -118,15 +129,20 @@ include 'includes/head.php';
     <div class="cartao">
       <div class="cartao-cabecalho">
         <h3><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i> Agendamento Rápido</h3>
-        <a href="recepcionista_novo_agendamento.php" class="cartao-link">Formulário completo →</a>
+        <a href="recepcionista_novo_agendamento.php" class="cartao-link">Formulário completo</a>
       </div>
       <div class="cartao-corpo">
-        <form method="POST" aria-label="Formulário de agendamento rápido">
+        <form method="POST" data-agendamento-dinamico aria-label="Formulário de agendamento rápido">
+          <?= csrfCampo() ?>
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="rapido-paciente">Paciente</label>
-              <input type="text" id="rapido-paciente" name="paciente"
-                     placeholder="Nome ou CPF do paciente..." required>
+              <select id="rapido-paciente" name="paciente_id" required>
+                <option value="">Selecione um paciente...</option>
+                <?php foreach ($listaPacientes as $p): if ($p['status'] !== 'Ativo') continue; ?>
+                <option value="<?= (int)$p['id'] ?>"><?= limpar($p['nome']) ?> — <?= limpar($p['cpf']) ?></option>
+                <?php endforeach; ?>
+              </select>
             </div>
             <div class="grupo-campo">
               <label for="rapido-procedimento">Procedimento</label>
@@ -142,7 +158,7 @@ include 'includes/head.php';
               <label for="rapido-dentista">Dentista</label>
               <select id="rapido-dentista" name="dentista">
                 <?php foreach ($listaDentistas as $dentista): ?>
-                  <option><?= limpar($dentista['nome']) ?></option>
+                  <option value="<?= (int)$dentista['id'] ?>"><?= limpar($dentista['nome']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -161,7 +177,7 @@ include 'includes/head.php';
             </div>
           </div>
           <button type="submit" name="agendar_rapido" class="btn btn-primario">
-            Confirmar agendamento →
+            Confirmar agendamento
           </button>
         </form>
       </div>
@@ -171,5 +187,6 @@ include 'includes/head.php';
 </div>
 
 <?php include 'includes/a11y_bar.php'; ?>
+<script src="js/agenda-horarios.js?v=<?= filemtime(__DIR__ . "/js/agenda-horarios.js") ?>" defer></script>
 </body>
 </html>

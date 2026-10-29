@@ -3,35 +3,19 @@ require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 verificarSessao('cliente');
 $tituloPagina = 'Minhas Consultas';
-$emailSessao  = strtolower($_SESSION['email'] ?? '');
 
-// Busca agendamentos do paciente logado filtrando pelo nome na sessão
-$nomeUsuario = $_SESSION['usuario'] ?? '';
-$todosAgend  = lerJson('agendamentos.json');
-
-// Normaliza chave servico → procedimento
-$todosAgend = array_map(function($a) {
-    $a['procedimento'] = $a['servico'] ?? $a['procedimento'] ?? '—';
-    return $a;
-}, $todosAgend);
-
-// Filtra apenas consultas do paciente logado (pelo nome ou id)
-$minhasConsultas = array_values(array_filter($todosAgend, function($a) use ($nomeUsuario) {
-    return stripos($a['paciente'] ?? '', $nomeUsuario) !== false;
-}));
-
-// Se não encontrar pelo nome, pega todas (modo demo)
-if (empty($minhasConsultas) && !empty($todosAgend)) {
-    $minhasConsultas = $todosAgend;
+$erro='';
+if (isset($_POST['cancelar_consulta'])) {
+    try { alterarStatusAgenda(idParametro($_POST['id'] ?? 0),'Cancelado');redirecionar(paginaAtual(),'Consulta cancelada.'); }
+    catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
-
-// Ordena por data e hora
-usort($minhasConsultas, fn($a,$b) => ($a['data'].$a['hora']) <=> ($b['data'].$b['hora']));
-
-// Separa próximas vs passadas
+$p=pacienteSessao();
+$minhasConsultas=lerJson('agendamentos.json',['id_paciente'=>$p['id'] ?? 0]);
+$minhasConsultas=array_map(function($a){$a['procedimento']=$a['servico'];return $a;},$minhasConsultas);
 $hoje   = date('Y-m-d');
-$futuras = array_values(array_filter($minhasConsultas, fn($a) => ($a['data']??'') >= $hoje));
-$passadas = array_values(array_filter($minhasConsultas, fn($a) => ($a['data']??'') < $hoje));
+$futuras = array_values(array_filter($minhasConsultas, 'consultaFutura'));
+// Tudo o que não é futura vai para o histórico (concluídas, canceladas, faltas e as de hoje já iniciadas).
+$passadas = array_values(array_filter($minhasConsultas, fn($a) => !consultaFutura($a)));
 $proxima = $futuras[0] ?? null;
 
 include 'includes/head.php';
@@ -39,6 +23,7 @@ include 'includes/head.php';
 <div class="painel">
   <?php include 'includes/sidebar.php'; ?>
   <main class="conteudo-principal" id="conteudo-principal">
+    <?php if ($erro): ?><div class="alerta alerta-erro"><?= limpar($erro) ?></div><?php endif; ?>
     <div class="cabecalho-pagina">
       <div><h1><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Minhas Consultas</h1><p>Histórico e próximas consultas agendadas</p></div>
       <a href="cliente_agendamento.php" class="btn btn-primario">+ Nova Consulta</a>
@@ -52,12 +37,12 @@ include 'includes/head.php';
         <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;">
           <div style="background:var(--destaque);color:#0b2845;border-radius:var(--raio);padding:16px 22px;text-align:center;min-width:70px;flex-shrink:0;">
             <div style="font-size:28px;font-weight:900;line-height:1;"><?= date('d', strtotime($proxima['data'])) ?></div>
-            <div style="font-size:12px;font-weight:600;text-transform:uppercase;"><?= data_pt('M', strtotime($proxima['data'])) ?></div>
+            <div style="font-size:12px;font-weight:600;"><?= data_pt('M', strtotime($proxima['data'])) ?></div>
           </div>
           <div style="flex:1;">
             <div style="font-size:18px;font-weight:700;color:var(--texto-principal);margin-bottom:4px;"><?= limpar($proxima['procedimento']) ?></div>
             <div style="font-size:14px;color:var(--texto-secundario);">
-              <i class="bi bi-emoji-smile-fill" aria-hidden="true"></i> <?= limpar($proxima['dentista'] ?? '—') ?> &nbsp;·&nbsp;
+              <i class="bi bi-person-badge-fill" aria-hidden="true"></i> <?= limpar($proxima['dentista'] ?? '—') ?> &nbsp;·&nbsp;
               <i class="bi bi-clock-fill" aria-hidden="true"></i> <?= limpar($proxima['hora'] ?? '—') ?> &nbsp;·&nbsp;
               <i class="bi bi-geo-alt-fill" aria-hidden="true"></i> <?= limpar($proxima['sala'] ?? '—') ?>
             </div>
@@ -80,7 +65,7 @@ include 'includes/head.php';
       </div>
       <div class="cartao-corpo" style="padding:0;">
         <table class="tabela-dados" style="width:100%">
-          <thead><tr><th>Data</th><th>Hora</th><th>Procedimento</th><th>Dentista</th><th>Status</th></tr></thead>
+          <thead><tr><th>Data</th><th>Hora</th><th>Procedimento</th><th>Dentista</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
           <?php foreach ($futuras as $c): ?>
           <tr>
@@ -89,6 +74,15 @@ include 'includes/head.php';
             <td><?= limpar($c['procedimento']) ?></td>
             <td><?= limpar($c['dentista'] ?? '—') ?></td>
             <td><?= emblema($c['status'] ?? '—') ?></td>
+            <td>
+              <?php if (in_array($c['status'], ['Agendado','Confirmado'], true) && !$c['pago']): ?>
+              <form method="POST" data-confirmar="Cancelar a consulta de <?= limpar(date('d/m/Y', strtotime($c['data'])).' às '.$c['hora']) ?>?">
+                <?= csrfCampo() ?>
+                <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
+                <button class="btn btn-perigo btn-pequeno" name="cancelar_consulta">Cancelar</button>
+              </form>
+              <?php elseif ($c['pago']): ?><span class="dica-campo">Paga: para cancelar, fale com a recepção.</span><?php endif; ?>
+            </td>
           </tr>
           <?php endforeach; ?>
           </tbody>

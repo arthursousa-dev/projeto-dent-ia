@@ -2,10 +2,13 @@
 // agenda pessoal do dentista — filtra por data
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('dentista');
+verificarSessao('dentista');carregarListas();
 
 $tituloPagina = 'Minha Agenda';
-$dataFiltro   = $_GET['data'] ?? date('Y-m-d');
+$avisoData='';
+try { $dataFiltro=dataValida((string)($_GET['data'] ?? ''),'data da agenda','2000-01-01','2100-12-31',false) ?? date('Y-m-d'); }
+catch (InvalidArgumentException $e) { $avisoData=mensagemOperacao($e).' Mostrando a agenda de hoje.';$dataFiltro=date('Y-m-d'); }
+$listaAgendamentos=array_values(array_filter($listaAgendamentos,fn($a)=>$a['data']===$dataFiltro));
 
 include 'includes/head.php';
 ?>
@@ -21,6 +24,8 @@ include 'includes/head.php';
         <p><?= data_pt('l, d \d\e F \d\e Y', strtotime($dataFiltro)) ?></p>
       </div>
     </div>
+
+    <?php if ($avisoData): ?><div class="alerta alerta-aviso" role="alert"><?= limpar($avisoData) ?></div><?php endif; ?>
 
     <!-- seletor de data para navegar na agenda -->
     <div class="cartao">
@@ -47,19 +52,19 @@ include 'includes/head.php';
         $classeCartao = '';
         if (in_array($agendamento['status'], ['Aguardando', 'Agendado'])) {
             $classeCartao = 'pendente';
-        } elseif ($agendamento['status'] === 'Cancelado') {
+        } elseif (in_array($agendamento['status'], STATUS_SEM_COBRANCA, true)) {
             $classeCartao = 'cancelado';
         }
       ?>
       <article class="cartao-agenda <?= $classeCartao ?>" role="listitem">
         <div class="hora-agenda"><i class="bi bi-clock-fill" aria-hidden="true"></i> <?= limpar($agendamento['hora']) ?> — <?= limpar($agendamento['sala']) ?></div>
         <h4><?= limpar($agendamento['paciente']) ?></h4>
-        <div class="procedimento-agenda"><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i> <?= limpar($agendamento['procedimento']) ?></div>
+        <div class="procedimento-agenda"><i class="bi bi-person-badge-fill" aria-hidden="true"></i> <?= limpar($agendamento['procedimento']) ?></div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
           <?= emblema($agendamento['status']) ?>
-          <a href="dentista_prontuario.php?paciente=<?= urlencode($agendamento['paciente']) ?>"
+          <a href="dentista_prontuario.php?paciente=<?= (int)$agendamento['id_paciente'] ?>"
              class="cartao-link" style="font-size:0.8rem;">
-            Ver prontuário →
+            Ver prontuário
           </a>
         </div>
       </article>

@@ -16,8 +16,9 @@
     porque o JS aplica o tema antes da página terminar de carregar.
   -->
   <script src="js/accessibility.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="css/style.css">
+  <script src="js/app.js?v=<?= filemtime(dirname(__DIR__) . "/js/app.js") ?>" defer></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" integrity="sha384-CK2SzKma4jA5H/MXDUU7i1TqZlCFaD4T01vtyDFvPlD97JQyS+IsSh1nI2EFbpyk" crossorigin="anonymous">
+  <link rel="stylesheet" href="css/style.css?v=<?= filemtime(dirname(__DIR__) . "/css/style.css") ?>">
 </head>
 <body>
 <!-- link pra pular pro conteúdo — aparece apenas quando navegando por teclado -->

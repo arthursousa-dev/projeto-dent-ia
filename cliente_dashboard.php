@@ -6,26 +6,22 @@ verificarSessao('cliente');
 
 $tituloPagina = 'Minha Área';
 $nomeExibido   = $_SESSION['usuario'] ?? 'Paciente';
-$emailSessao   = strtolower($_SESSION['email'] ?? '');
 
-// Carrega agendamentos e filtra pelo paciente logado
-$todosAgend = lerJson('agendamentos.json');
-$todosAgend = array_map(function($a) {
-    $a['procedimento'] = $a['servico'] ?? $a['procedimento'] ?? '—';
-    return $a;
-}, $todosAgend);
-$meusAgend = array_values(array_filter($todosAgend, function($a) use ($nomeExibido) {
-    return stripos($a['paciente'] ?? '', $nomeExibido) !== false;
-}));
-if (empty($meusAgend)) $meusAgend = array_slice($todosAgend, 0, 3);
-
+$erro='';
+if (isset($_POST['cancelar_consulta'])) {
+    try { alterarStatusAgenda(idParametro($_POST['id'] ?? 0),'Cancelado');redirecionar(paginaAtual(),'Consulta cancelada.'); }
+    catch (Throwable $e) { $erro=mensagemOperacao($e); }
+}
+$p=pacienteSessao();
+$meusAgend=lerJson('agendamentos.json',['id_paciente'=>$p['id'] ?? 0]);
+$meusAgend=array_map(function($a){$a['procedimento']=$a['servico'];return $a;},$meusAgend);
 $hoje    = date('Y-m-d');
 $proxima = null;
 foreach ($meusAgend as $a) {
-    if (($a['data'] ?? '') >= $hoje) { $proxima = $a; break; }
+    if (consultaFutura($a)) { $proxima = $a; break; }
 }
 $totalConsultas = count($meusAgend);
-$concluidas     = count(array_filter($meusAgend, fn($a) => in_array($a['status'] ?? '', ['Concluída','Confirmado'])));
+$concluidas     = count(array_filter($meusAgend, fn($a) => ($a['status'] ?? '')==='Concluída'));
 
 include 'includes/head.php';
 ?>
@@ -35,51 +31,50 @@ include 'includes/head.php';
 
   <main class="conteudo-principal" id="conteudo-principal">
 
+    <?php if ($erro): ?><div class="alerta alerta-erro"><?= limpar($erro) ?></div><?php endif; ?>
     <div class="cabecalho-pagina">
       <div>
-        <h1>Olá, <?= limpar(explode(" ", $nomeExibido)[0]) ?>! <i class="bi bi-emoji-smile" aria-hidden="true"></i></h1>
+        <h1>Olá, <?= limpar(explode(" ", $nomeExibido)[0]) ?>! <i class="bi bi-person-badge" aria-hidden="true"></i></h1>
         <p><?= data_pt('l, d \d\e F \d\e Y') ?></p>
       </div>
       <a href="cliente_agendamento.php" class="btn btn-primario"><i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Agendar Consulta</a>
     </div>
 
     <!-- resumo rápido do paciente -->
-    <div class="grade-estatisticas" style="grid-template-columns:repeat(3,1fr);">
+    <div class="grade-estatisticas">
       <div class="cartao-estatistica">
         <div class="icone-estatistica azul" aria-hidden="true"><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>8</strong><span>Consultas realizadas</span></div>
+        <div class="info-estatistica"><strong><?= $concluidas ?></strong><span>Consultas realizadas</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica verde" aria-hidden="true"><i class="bi bi-calendar-event-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>1</strong><span>Próxima consulta</span></div>
+        <div class="info-estatistica"><strong><?= count(array_filter($meusAgend,'consultaFutura')) ?></strong><span>Consultas futuras</span></div>
       </div>
       <div class="cartao-estatistica">
         <div class="icone-estatistica amarelo" aria-hidden="true"><i class="bi bi-star-fill" aria-hidden="true"></i></div>
-        <div class="info-estatistica"><strong>2 anos</strong><span>Paciente DENT IA</span></div>
+        <div class="info-estatistica"><strong><?= !empty($p['criado_em']) ? (new DateTime($p['criado_em']))->diff(new DateTime())->y.' anos' : '—' ?></strong><span>Paciente DENT IA</span></div>
       </div>
     </div>
 
     <!-- destaque da próxima consulta -->
-    <div style="background:linear-gradient(135deg,var(--primario),var(--primario-claro));border-radius:var(--raio);padding:26px 30px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;color:#fff;"
+    <div style="background:var(--primario);border-radius:var(--raio);padding:26px 30px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;color:#fff;"
          role="region" aria-label="Sua próxima consulta agendada">
       <div>
-        <p style="color:rgba(255,255,255,0.55);font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;">
+        <p style="color:rgba(255,255,255,0.55);font-size:0.78rem;margin-bottom:7px;">
           <i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Sua Próxima Consulta
         </p>
         <h2 style="font-family:var(--fonte-titulo);font-size:1.4rem;margin-bottom:5px;">
-          Limpeza Dental
+          <?= limpar($proxima['procedimento'] ?? 'Nenhuma consulta futura') ?>
         </h2>
-        <p style="color:rgba(255,255,255,0.7);font-size:0.9rem;">Dr. Carlos Mendes — Clínico Geral</p>
+        <p style="color:rgba(255,255,255,0.7);font-size:0.9rem;"><?= limpar($proxima['dentista'] ?? 'Agende sua próxima consulta') ?></p>
         <p style="color:var(--destaque);font-weight:700;margin-top:6px;">
-          10 de Abril de 2026 às 08:00
+          <?= $proxima ? limpar(date('d/m/Y',strtotime($proxima['data'])).' às '.$proxima['hora']) : '—' ?>
         </p>
       </div>
       <div style="display:flex;gap:10px;">
         <a href="cliente_consultas.php" class="btn btn-primario">Ver detalhes</a>
-        <button class="btn btn-contorno"
-                onclick="if(confirm('Deseja cancelar esta consulta?')) alert('Cancelamento enviado à recepção.')">
-          Cancelar
-        </button>
+        <?php if ($proxima && in_array($proxima['status'],['Agendado','Confirmado'],true) && !$proxima['pago']): ?>
+        <form method="POST" data-confirmar="Cancelar esta consulta?"><?= csrfCampo() ?><input type="hidden" name="id" value="<?= $proxima['id'] ?>"><button class="btn btn-perigo" name="cancelar_consulta">Cancelar consulta</button></form><?php endif; ?>
       </div>
     </div>
 
@@ -87,7 +82,7 @@ include 'includes/head.php';
     <div class="cartao">
       <div class="cartao-cabecalho">
         <h3><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Histórico Recente</h3>
-        <a href="cliente_consultas.php" class="cartao-link">Ver tudo →</a>
+        <a href="cliente_consultas.php" class="cartao-link">Ver tudo</a>
       </div>
       <div class="tabela-wrapper">
         <table aria-label="Histórico recente de consultas">
@@ -100,24 +95,9 @@ include 'includes/head.php';
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>10/02/2026</td>
-              <td>Clareamento</td>
-              <td>Dr. Carlos Mendes</td>
-              <td><?= emblema('Concluída') ?></td>
-            </tr>
-            <tr>
-              <td>05/01/2026</td>
-              <td>Limpeza Dental</td>
-              <td>Dr. Carlos Mendes</td>
-              <td><?= emblema('Concluída') ?></td>
-            </tr>
-            <tr>
-              <td>20/11/2024</td>
-              <td>Consulta de Rotina</td>
-              <td>Dra. Ana Silva</td>
-              <td><?= emblema('Concluída') ?></td>
-            </tr>
+            <?php $passadas=array_values(array_filter($meusAgend,fn($a)=>$a['status']==='Concluída'));usort($passadas,fn($a,$b)=>strcmp($b['data'],$a['data']));foreach (array_slice($passadas,0,5) as $a): ?>
+            <tr><td><?= limpar(date('d/m/Y',strtotime($a['data']))) ?></td><td><?= limpar($a['procedimento']) ?></td><td><?= limpar($a['dentista']) ?></td><td><?= emblema($a['status']) ?></td></tr>
+            <?php endforeach; ?>
           </tbody>
         </table>
       </div>
@@ -131,9 +111,10 @@ include 'includes/head.php';
 
           <?php
           // atalhos de contato — organizado em array pra facilitar manutenção
+          $cl=lerJsonObjeto('clinica.json');
           $atalhos = [
-              ['<i class="bi bi-telephone-fill" aria-hidden="true"></i>', 'Ligar',    '(67) 3000-0000',     'tel:+556730000000'],
-              ['<i class="bi bi-envelope-fill" aria-hidden="true"></i>', 'E-mail',   'contato@dentai.com', 'mailto:contato@dentai.com'],
+              ['<i class="bi bi-telephone-fill" aria-hidden="true"></i>', 'Ligar',    $cl['telefone'], 'tel:+55'.soDigitos($cl['telefone'])],
+              ['<i class="bi bi-envelope-fill" aria-hidden="true"></i>', 'E-mail',   $cl['email'], 'mailto:'.$cl['email']],
               ['<i class="bi bi-calendar-event-fill" aria-hidden="true"></i>', 'Agendar',  'Marcar consulta',    'cliente_agendamento.php'],
           ];
           foreach ($atalhos as [$icone, $titulo, $descricao, $href]): ?>

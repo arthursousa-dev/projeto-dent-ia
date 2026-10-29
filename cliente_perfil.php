@@ -4,67 +4,16 @@ require_once 'includes/functions.php';
 verificarSessao('cliente');
 $tituloPagina = 'Meu Perfil';
 $emailSessao  = strtolower($_SESSION['email'] ?? '');
-$erro = ''; $sucesso = '';
+$erro = '';
 
-$usuarios  = lerJson('usuarios.json');
-$pacientes = lerJson('pacientes.json');
-$usuarioAtual  = buscarPorCampo($usuarios,  'email', $emailSessao) ?? [];
-$pacienteAtual = buscarPorCampo($pacientes, 'email', $emailSessao) ?? [];
+$usuarioAtual  = lerJson('usuarios.json',['email'=>$emailSessao])[0] ?? [];
+$pacienteAtual = lerJson('pacientes.json',['id_usuario'=>$usuarioAtual['id'] ?? 0])[0] ?? [];
 $dados = array_merge($usuarioAtual, $pacienteAtual);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['salvar_perfil'])) {
-    $novoNome = trim($_POST['nome'] ?? '');
-    if (empty($novoNome)) { $erro = 'O nome não pode ficar em branco.'; }
-    else {
-        foreach ($usuarios as &$u) {
-            if (strtolower($u['email']) === $emailSessao) {
-                $u['nome'] = $novoNome;
-                $u['telefone'] = trim($_POST['telefone'] ?? '');
-                break;
-            }
-        }
-        salvarJson('usuarios.json', $usuarios);
-        $atualizado = false;
-        foreach ($pacientes as &$p) {
-            if (strtolower($p['email']) === $emailSessao) {
-                $p['nome']        = $novoNome;
-                $p['telefone']    = trim($_POST['telefone']    ?? '');
-                $p['nascimento']  = $_POST['nascimento']       ?? '';
-                $p['plano']       = trim($_POST['plano']       ?? '');
-                $p['alergias']    = trim($_POST['alergias']    ?? '');
-                $p['observacoes'] = trim($_POST['observacoes'] ?? '');
-                $atualizado = true; break;
-            }
-        }
-        if (!$atualizado) {
-            $pacientes[] = ['id'=>proximoId($pacientes),'id_usuario'=>$usuarioAtual['id']??null,
-                'nome'=>$novoNome,'email'=>$emailSessao,'telefone'=>trim($_POST['telefone']??''),
-                'nascimento'=>$_POST['nascimento']??'','plano'=>trim($_POST['plano']??''),
-                'alergias'=>trim($_POST['alergias']??''),'observacoes'=>trim($_POST['observacoes']??''),
-                'ultima_consulta'=>'—','status'=>'Ativo','criado_em'=>date('Y-m-d')];
-        }
-        salvarJson('pacientes.json', $pacientes);
-        $_SESSION['usuario'] = $novoNome;
-        $sucesso = 'Perfil atualizado com sucesso em ' . data_pt('d/m/Y \à\s H:i') . '!';
-        $dados = array_merge($dados, ['nome'=>$novoNome,'telefone'=>trim($_POST['telefone']??''),
-            'nascimento'=>$_POST['nascimento']??'','plano'=>trim($_POST['plano']??''),
-            'alergias'=>trim($_POST['alergias']??''),'observacoes'=>trim($_POST['observacoes']??'')]);
-    }
-}
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['alterar_senha'])) {
-    $senhaAtual = $_POST['senha_atual'] ?? '';
-    $senhaNova  = $_POST['senha_nova']  ?? '';
-    $senhaConf  = $_POST['confirmar_senha_nova'] ?? '';
-    $uSenha = buscarPorCampo($usuarios, 'email', $emailSessao);
-    if (!$uSenha || !password_verify($senhaAtual, $uSenha['senha'])) $erro = 'Senha atual incorreta.';
-    elseif (strlen($senhaNova) < 6) $erro = 'Nova senha deve ter pelo menos 6 caracteres.';
-    elseif ($senhaNova !== $senhaConf) $erro = 'As senhas não coincidem.';
-    else {
-        foreach ($usuarios as &$u) { if (strtolower($u['email'])===$emailSessao) { $u['senha']=password_hash($senhaNova, PASSWORD_DEFAULT); break; } }
-        salvarJson('usuarios.json', $usuarios);
-        $sucesso = 'Senha alterada com sucesso!';
-    }
-}
+// Salvar perfil e trocar senha: regra única em tratarFormularioPerfil() (includes/operacoes.php).
+[$erro,$dados]=tratarFormularioPerfil($dados);
+$planos=\App\Config\Database::getConnection()->query('SELECT nome FROM plano_saude ORDER BY nome')->fetchAll(PDO::FETCH_COLUMN);
+
 include 'includes/head.php';
 ?>
 <div class="painel">
@@ -73,13 +22,12 @@ include 'includes/head.php';
     <div class="cabecalho-pagina">
       <div><h1><i class="bi bi-person-fill" aria-hidden="true"></i> Meu Perfil</h1><p>Dados pessoais e preferências</p></div>
     </div>
-    <?php if ($sucesso): ?><div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?=limpar($sucesso)?></div><?php endif; ?>
     <?php if ($erro):    ?><div class="alerta alerta-erro"   role="alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?=limpar($erro)?></div><?php endif; ?>
 
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-corpo">
         <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-          <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--destaque),#3182ce);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;flex-shrink:0;">
+          <div style="width:72px;height:72px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;flex-shrink:0;">
             <?=iniciais($dados['nome']??'PA')?>
           </div>
           <div style="flex:1;">
@@ -99,6 +47,7 @@ include 'includes/head.php';
       <div class="cartao-cabecalho"><h3><i class="bi bi-pencil-fill" aria-hidden="true"></i> Editar Dados Pessoais</h3></div>
       <div class="cartao-corpo">
         <form method="POST" novalidate>
+          <?= csrfCampo() ?>
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="pf-nome">Nome completo</label>
@@ -122,7 +71,7 @@ include 'includes/head.php';
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="pf-plano">Convênio / Plano</label>
-              <input type="text" id="pf-plano" name="plano" value="<?=limpar($dados['plano']??'Particular')?>">
+              <select id="pf-plano" name="plano"><?php foreach ($planos as $plano): ?><option <?= $plano===($dados['plano']??'Particular')?'selected':'' ?>><?=limpar($plano)?></option><?php endforeach; ?></select>
             </div>
             <div class="grupo-campo">
               <label for="pf-alergias">Alergias / Condições relevantes</label>
@@ -142,6 +91,7 @@ include 'includes/head.php';
       <div class="cartao-cabecalho"><h3><i class="bi bi-lock-fill" aria-hidden="true"></i> Alterar Senha</h3></div>
       <div class="cartao-corpo">
         <form method="POST" novalidate id="frm-senha">
+          <?= csrfCampo() ?>
           <div class="linha-campos">
             <div class="grupo-campo"><label for="sa">Senha atual</label><input type="password" id="sa" name="senha_atual" placeholder="••••••••"></div>
             <div class="grupo-campo"><label for="sn">Nova senha</label><input type="password" id="sn" name="senha_nova" placeholder="••••••••"></div>

@@ -8,7 +8,7 @@ $tituloPagina = 'Pacientes';
 $pdo = \App\Config\Database::getConnection();
 
 // pega o termo de busca da URL (se existir)
-$termoBusca = trim($_GET['busca'] ?? '');
+$termoBusca = trim((string)($_GET['busca'] ?? ''));
 
 // consulta direta (em vez de carregar todos os pacientes via lerJson()
 // a cada visita), com a data da última consulta concluída via subquery
@@ -16,12 +16,15 @@ $sqlBase = "
     SELECT p.*,
            (SELECT MAX(a.data) FROM agendamentos a
              WHERE a.id_paciente = p.id AND a.status = 'Concluída') AS ultima_consulta_data
-    FROM pacientes p
+    FROM vw_pacientes p
 ";
 
-if ($termoBusca) {
-    $stmt = $pdo->prepare($sqlBase . " WHERE p.nome ILIKE :termo OR p.cpf ILIKE :termo ORDER BY p.nome");
-    $stmt->execute([':termo' => '%' . $termoBusca . '%']);
+if ($termoBusca !== '') {
+    $stmt = $pdo->prepare($sqlBase . " WHERE lower(translate(p.nome, '".SQL_SEM_ACENTO_DE."', '".SQL_SEM_ACENTO_PARA."')) LIKE :nome_sem_acento OR p.cpf ILIKE :termo
+        OR (:digitos <> '' AND regexp_replace(p.cpf, '\D', '', 'g') LIKE :digitos_busca) ORDER BY p.nome");
+    $digitos = soDigitos($termoBusca);
+    $literal = fn(string $t): string => addcslashes($t, '%_\\'); // % e _ digitados são texto, não curinga
+    $stmt->execute([':nome_sem_acento' => '%' . $literal(semAcento($termoBusca)) . '%', ':termo' => '%' . $literal($termoBusca) . '%', ':digitos' => $digitos, ':digitos_busca' => '%' . $digitos . '%']);
 } else {
     $stmt = $pdo->query($sqlBase . " ORDER BY p.nome");
 }
@@ -53,7 +56,7 @@ include 'includes/head.php';
     </div>
 
     <!-- resumo rápido -->
-    <div class="grade-estatisticas" style="grid-template-columns:repeat(3,1fr);">
+    <div class="grade-estatisticas">
       <div class="cartao-estatistica">
         <div class="icone-estatistica azul" aria-hidden="true"><i class="bi bi-people-fill" aria-hidden="true"></i></div>
         <div class="info-estatistica"><strong><?= $totalPacientes ?></strong><span>Total de pacientes</span></div>
@@ -63,7 +66,7 @@ include 'includes/head.php';
         <div class="info-estatistica"><strong><?= $totalAtivos ?></strong><span>Ativos</span></div>
       </div>
       <div class="cartao-estatistica">
-        <div class="icone-estatistica amarelo" aria-hidden="true">🆕</div>
+        <div class="icone-estatistica amarelo" aria-hidden="true"><i class="bi bi-person-plus-fill" aria-hidden="true"></i></div>
         <div class="info-estatistica"><strong><?= $novosNoMes ?></strong><span>Novos este mês</span></div>
       </div>
     </div>
@@ -78,7 +81,7 @@ include 'includes/head.php';
                  placeholder="Buscar por nome ou CPF..."
                  style="flex:1;padding:11px 14px;border:2px solid var(--borda);border-radius:var(--raio-pilula);font-family:var(--fonte);font-size:0.92rem;color:var(--texto-principal);background:var(--fundo-campo);outline:none;">
           <button type="submit" class="btn btn-primario">Buscar</button>
-          <?php if ($termoBusca): ?>
+          <?php if ($termoBusca !== ''): ?>
             <a href="dono_pacientes.php" class="btn btn-fantasma">Limpar</a>
           <?php endif; ?>
         </form>
@@ -111,7 +114,7 @@ include 'includes/head.php';
               <td>
                 <div style="display:flex;align-items:center;gap:9px;">
                   <div class="avatar avatar-pequeno"
-                       style="background:linear-gradient(135deg,var(--informacao),#2563b0);"
+                       style="background:var(--informacao);"
                        aria-hidden="true">
                     <?= iniciais($paciente['nome']) ?>
                   </div>

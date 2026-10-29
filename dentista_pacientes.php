@@ -2,15 +2,17 @@
 // lista de pacientes do dentista logado
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('dentista');
+verificarSessao('dentista');carregarListas();
 
 $tituloPagina = 'Meus Pacientes';
 $termoBusca   = trim($_GET['busca'] ?? '');
 
 // filtra pacientes pelo nome se houver busca ativa
-if ($termoBusca) {
+if ($termoBusca !== '') {
     $listaBuscada = array_filter($listaPacientes, function ($paciente) use ($termoBusca) {
-        return stripos($paciente['nome'], $termoBusca) !== false;
+        $digitos = soDigitos($termoBusca);
+        return str_contains(semAcento($paciente['nome']), semAcento($termoBusca))
+            || ($digitos !== '' && str_contains(soDigitos((string)($paciente['cpf'] ?? '')), $digitos));
     });
 } else {
     $listaBuscada = $listaPacientes;
@@ -41,7 +43,7 @@ include 'includes/head.php';
                  placeholder="Buscar pelo nome do paciente..."
                  style="flex:1;padding:11px 14px;border:2px solid var(--borda);border-radius:var(--raio-pilula);font-family:var(--fonte);font-size:0.92rem;color:var(--texto-principal);background:var(--fundo-campo);outline:none;">
           <button type="submit" class="btn btn-primario">Buscar</button>
-          <?php if ($termoBusca): ?>
+          <?php if ($termoBusca !== ''): ?>
             <a href="dentista_pacientes.php" class="btn btn-fantasma">Limpar</a>
           <?php endif; ?>
         </form>
@@ -88,10 +90,10 @@ include 'includes/head.php';
                 <span style="font-size:0.85rem;"><?= limpar($paciente['telefone']) ?></span>
               </td>
               <td><?= limpar($paciente['ultimaConsulta']) ?></td>
-              <td style="color:var(--destaque);font-size:0.85rem;">10/04/2026</td>
+              <td style="color:var(--destaque);font-size:0.85rem;"><?= limpar($paciente['proximaConsulta']) ?></td>
               <td><?= emblema($paciente['status']) ?></td>
               <td>
-                <a href="dentista_prontuario.php?paciente=<?= urlencode($paciente['nome']) ?>"
+                <a href="dentista_prontuario.php?paciente=<?= (int)$paciente['id'] ?>"
                    class="btn btn-primario btn-pequeno"
                    aria-label="Ver prontuário de <?= limpar($paciente['nome']) ?>">
                   <i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Prontuário

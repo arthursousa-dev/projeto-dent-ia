@@ -1159,3 +1159,9 @@ tbody td {
   .hud-grafo canvas { height:58vh; }
 }
 @media (prefers-reduced-motion:reduce) { .hud-nucleo, .ponto-vivo, .hud .chegou-agora { animation:none; } }
+
+/* paginação das listagens (controlesPaginacao em includes/functions.php) */
+.paginacao { display:flex; flex-wrap:wrap; justify-content:center; gap:6px; padding:14px 16px; }
+.paginacao a, .paginacao span { min-width:36px; padding:6px 12px; border:1px solid var(--borda); border-radius:var(--raio-pequeno); text-align:center; text-decoration:none; color:var(--texto-principal); font-size:0.85rem; }
+.paginacao a:hover { border-color:var(--destaque); color:var(--destaque); }
+.paginacao span[aria-current] { background:var(--destaque); border-color:var(--destaque); color:#fff; font-weight:700; }

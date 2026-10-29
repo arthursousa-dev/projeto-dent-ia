@@ -40,6 +40,7 @@ $totalPacientes = (int) $pdo->query("SELECT COUNT(*) FROM pacientes")->fetchColu
 $totalAtivos    = (int) $pdo->query("SELECT COUNT(*) FROM pacientes WHERE status = 'ativo'")->fetchColumn();
 $novosNoMes     = (int) $pdo->query("SELECT COUNT(*) FROM pacientes WHERE date_trunc('month', criado_em) = date_trunc('month', CURRENT_DATE)")->fetchColumn();
 
+$paginaPacientes = paginarLista($listaBuscada);
 include 'includes/head.php';
 ?>
 
@@ -109,7 +110,7 @@ include 'includes/head.php';
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($listaBuscada as $paciente): ?>
+            <?php foreach ($paginaPacientes['itens'] as $paciente): ?>
             <tr>
               <td>
                 <div style="display:flex;align-items:center;gap:9px;">
@@ -136,6 +137,7 @@ include 'includes/head.php';
           </tbody>
         </table>
       </div>
+      <?= controlesPaginacao($paginaPacientes) ?>
     </div>
 
   </main>

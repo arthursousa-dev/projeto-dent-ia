@@ -2,7 +2,7 @@
 // gerenciamento de pacientes pela recepcionista
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('recepcionista');carregarListas();
+verificarSessao('recepcionista');carregarListas(['pacientes']);
 
 $tituloPagina = 'Pacientes';
 
@@ -17,6 +17,7 @@ $termoBusca=trim((string)($_GET['busca'] ?? ''));
 $digitosBusca=soDigitos($termoBusca);
 $listaBuscada=array_values(array_filter($listaPacientes,fn($p)=>$termoBusca==='' || str_contains(semAcento($p['nome']),semAcento($termoBusca)) || stripos((string)$p['cpf'],$termoBusca)!==false
     || ($digitosBusca!=='' && str_contains(soDigitos($p['cpf']),$digitosBusca))));
+$paginaPacientes = paginarLista($listaBuscada);
 include 'includes/head.php';
 ?>
 
@@ -129,7 +130,7 @@ include 'includes/head.php';
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($listaBuscada as $paciente): ?>
+            <?php foreach ($paginaPacientes['itens'] as $paciente): ?>
             <tr>
               <td>
                 <div style="display:flex;align-items:center;gap:9px;">
@@ -160,6 +161,7 @@ include 'includes/head.php';
           </tbody>
         </table>
       </div>
+      <?= controlesPaginacao($paginaPacientes) ?>
     </div>
 
   </main>

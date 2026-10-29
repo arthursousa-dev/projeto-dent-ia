@@ -1,0 +1,17 @@
+.git
+.env
+.env.*
+!.env.example
+*.zip
+*.log
+node_modules
+vendor
+__pycache__
+# Dados e ferramentas locais nunca vão para a imagem (dump do banco tem dados de pacientes).
+backups
+*.dump
+*.bat
+*.ps1
+docs
+tests
+database/dados_legado

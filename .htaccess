@@ -1,24 +1,38 @@
-# .htaccess — cabeçalhos de segurança e bloqueio de arquivos sensíveis
+# .htaccess — mesma política do router.php (usado pelo php -S), para Apache/Docker:
+# só as páginas PHP da raiz, css/ e js/ são públicas; todo o resto é bloqueado.
 
 Options -Indexes
 
-<FilesMatch "(^\.env|\.sql|\.log|composer\.(json|lock))$">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order allow,deny
-        Deny from all
-    </IfModule>
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Barra invertida e caracteres de controle nunca são caminhos válidos.
+    RewriteCond %{THE_REQUEST} (\\|%5c|%00) [NC]
+    RewriteRule ^ - [F,L]
+    # Página inicial.
+    RewriteRule ^$ - [L]
+    # Permitido: páginas PHP da raiz (menos o roteador), css/*.css, js/*.js e imagens na raiz.
+    RewriteCond %{REQUEST_URI} !^/router\.php$ [NC]
+    RewriteRule ^[a-z0-9_]+\.php$ - [L,NC]
+    RewriteRule ^(css|js)/[a-z0-9_\-]+\.(css|js)$ - [L,NC]
+    RewriteRule ^[a-z0-9_\-]+\.(ico|png|svg|webp)$ - [L,NC]
+    # Qualquer outra coisa (.env, backups/, database/, includes/, scripts/, docs/, *.bat, *.md…) → 404.
+    RewriteRule ^ - [R=404,L]
+</IfModule>
+
+# Sem mod_rewrite, ainda bloqueia o que é sensível.
+<FilesMatch "(^\.|\.(env|sql|dump|log|md|lock|sh|bat|ps1|xml|zip|json)$|^(Dockerfile|router\.php)$)">
+    Require all denied
 </FilesMatch>
 
-# Bloqueia acesso direto às pastas de código/dados que não devem
-# ser servidas como páginas.
-RewriteEngine On
-RewriteRule ^(app|database|includes)/ - [F,L]
-
 <IfModule mod_headers.c>
+    Header always unset X-Powered-By
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "SAMEORIGIN"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'"
+</IfModule>
+
+<IfModule mod_php.c>
+    php_flag display_errors off
+    php_flag expose_php off
 </IfModule>

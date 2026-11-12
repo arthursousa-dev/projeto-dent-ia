@@ -34,7 +34,13 @@ function listaSql(array $valores): string {
     return implode(',', array_map(fn($v) => "'" . str_replace("'", "''", $v) . "'", $valores));
 }
 
-/** Identifica, na conexão com o banco, quem está agindo. O registro de alterações (auditoria_banco) grava esse nome. */
+/**
+ * Identifica, na conexão com o banco, quem está agindo. O registro de alterações (auditoria_banco) grava esse nome.
+ * Vale para a conexão inteira (set_config com false), e cada requisição PHP abre e fecha a sua: não vaza entre usuários.
+ * Restrição: NÃO ponha um pool em modo transação (PgBouncer "transaction") na frente do banco, senão o nome de um
+ * usuário pode aparecer na alteração de outro. Com pool, use modo sessão. (Valer só por transação não serve aqui:
+ * várias gravações, como a contagem de tentativas de login, acontecem fora de transação e ficariam sem autor.)
+ */
 function marcarUsuarioNoBanco(string $quem): void {
     \App\Config\Database::getConnection()->prepare("SELECT set_config('dentia.usuario', :quem, false)")
         ->execute(['quem' => cortarTexto($quem, 0, 200)]);
@@ -560,7 +566,7 @@ function consultaFutura(array $a): bool {
 }
 const SQL_CONSULTA_FUTURA = "((status='Aguardando' AND data=CURRENT_DATE) OR (status IN ('Agendado','Confirmado') AND data+hora > LOCALTIMESTAMP))";
 
-/** Regra única (tela e servidor): a falta vale a partir do minuto marcado, no relógio da clínica (America/Cuiaba). */
+/** Regra única (tela e servidor): a falta vale a partir do minuto marcado, no relógio da clínica (fuso escolhido em Configurações). */
 function faltaPermitida(string $data, string $hora, ?DateTimeImmutable $agora=null): bool {
     return $data.' '.substr($hora,0,5) <= ($agora ?? new DateTimeImmutable())->format('Y-m-d H:i');
 }
@@ -1044,7 +1050,7 @@ function definirStatusDentista(int $id, bool $ativo): string {
 function salvarConfiguracoes(array $dados): void {
     exigirPerfil(['dono']);
     $clinica=lerJsonObjeto('clinica.json');
-    $novo=camposPresentes($dados,['nome','razao_social','cnpj','telefone','email','endereco','bairro','cidade','estado','cep','limite_agendamentos_dia','antecedencia_min_dias']);
+    $novo=camposPresentes($dados,['nome','razao_social','cnpj','telefone','email','endereco','bairro','cidade','estado','cep','limite_agendamentos_dia','antecedencia_min_dias','fuso_horario']);
     $novo['nome']=textoValido($novo['nome'] ?? '','o nome da clínica',150);
     $novo['razao_social']=textoValido($novo['razao_social'] ?? '','a razão social',200);
     $novo['email']=strtolower(trim((string)($novo['email'] ?? '')));
@@ -1066,7 +1072,17 @@ function salvarConfiguracoes(array $dados): void {
         if (!ctype_digit($valor) || (int)$valor<$min || (int)$valor>$max) throw new InvalidArgumentException($rotulo.' deve ser um número entre '.$min.' e '.$max.'.');
         $novo[$campo]=(int)$valor;
     }
+    // Fuso: só os do Brasil. Formulário que não manda o campo mantém o que está gravado.
+    if (array_key_exists('fuso_horario',$novo) && !in_array($novo['fuso_horario'],fusosDoBrasil(),true)) {
+        throw new InvalidArgumentException('Fuso horário inválido. Escolha um da lista.');
+    }
     salvarJson('clinica.json',array_merge($clinica,$novo));
+    if (isset($novo['fuso_horario'])) \App\Config\Database::aplicarFuso($novo['fuso_horario']);
+}
+
+/** Fusos horários do Brasil (nomes IANA, os mesmos que o PHP e o PostgreSQL entendem). */
+function fusosDoBrasil(): array {
+    return DateTimeZone::listIdentifiers(DateTimeZone::PER_COUNTRY,'BR');
 }
 
 /** Horário de funcionamento: dias com abertura e fechamento; dia vazio = fechado. */

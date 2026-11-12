@@ -8,7 +8,7 @@ require_once __DIR__ . '/seguranca.php';
 require_once __DIR__ . '/operacoes.php';
 require_once __DIR__ . '/monitor_banco.php';
 require_once __DIR__ . '/privacidade.php';
-date_default_timezone_set('America/Cuiaba');
+date_default_timezone_set(\App\Config\Database::FUSO_PADRAO); // só até a conexão: Database::getConnection() aplica o fuso da clínica
 
 /** Login, painel e perfil de cada tipo de acesso: fonte única para redirecionamentos e menus. */
 const PERFIS = [

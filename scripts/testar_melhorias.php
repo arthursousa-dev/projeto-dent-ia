@@ -112,7 +112,7 @@ try {
     ok(faltaPermitida('2026-10-27','09:00:00',new DateTimeImmutable('2026-10-27 09:00:00',$tz)),'exatamente no horário: falta disponível');
     ok(faltaPermitida('2026-10-27','09:00',new DateTimeImmutable('2026-10-27 09:01',$tz)),'depois do horário: falta disponível');
     ok(!faltaPermitida('2026-10-28','00:00',new DateTimeImmutable('2026-10-27 23:59',$tz)),'virada do dia respeitada');
-    ok(date_default_timezone_get()==='America/Cuiaba' && $pdo->query('SHOW TIME ZONE')->fetchColumn()==='America/Cuiaba'
+    ok(date_default_timezone_get()===$pdo->query('SHOW TIME ZONE')->fetchColumn()
         && $pdo->query('SELECT CURRENT_DATE::text')->fetchColumn()===date('Y-m-d'),'PHP e PostgreSQL usam o mesmo fuso e a mesma data');
 
     // ---- desfazer falta ----

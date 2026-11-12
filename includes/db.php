@@ -319,7 +319,7 @@ function salvarJson(string $arquivo, array $dados): bool {
                 break;
             case 'clinica.json':
                 $base = $pdo->query('SELECT * FROM clinica WHERE id=1 FOR UPDATE')->fetch() ?: [];
-                $campos = camposPresentes($dados, ['nome', 'razao_social', 'email', 'logo_texto', 'cor_primaria', 'cor_destaque', 'limite_agendamentos_dia', 'antecedencia_min_dias']);
+                $campos = camposPresentes($dados, ['nome', 'razao_social', 'email', 'logo_texto', 'cor_primaria', 'cor_destaque', 'limite_agendamentos_dia', 'antecedencia_min_dias', 'fuso_horario']);
                 if (isset($dados['cnpj'])) $campos['cnpj'] = cnpjNormalizado($dados['cnpj']);
                 $campos['id_endereco'] = gravarEndereco($pdo, $dados, $base['id_endereco'] ?? null);
                 gravarCampos($pdo, 'clinica', $campos, 1);

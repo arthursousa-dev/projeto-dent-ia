@@ -14,6 +14,19 @@ class Database
 {
     private static ?PDO $instancia = null;
 
+    /** Usado até a clínica escolher outro em Configurações. */
+    public const FUSO_PADRAO = 'America/Cuiaba';
+
+    /**
+     * Põe o PHP e a sessão do banco no mesmo fuso: date() e CURRENT_DATE/now() passam a concordar,
+     * inclusive na virada do dia, mesmo se o servidor estiver em UTC.
+     */
+    public static function aplicarFuso(string $fuso): void
+    {
+        self::getConnection()->prepare("SELECT set_config('TimeZone', :fuso, false)")->execute(['fuso' => $fuso]);
+        date_default_timezone_set($fuso);
+    }
+
     /** Lê .env local sem dependências externas; variáveis já definidas têm precedência. */
     public static function carregarAmbiente(): void
     {
@@ -78,8 +91,13 @@ class Database
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES   => false,
                 ]);
-                // CURRENT_DATE/now() no mesmo fuso do PHP (includes/functions.php), mesmo se o servidor estiver em UTC.
-                self::$instancia->exec("SET TIME ZONE 'America/Cuiaba'");
+                // Fuso da clínica (Configurações, migração 015). Banco sem a coluna ou sem clínica cadastrada: padrão.
+                try {
+                    $fuso = self::$instancia->query('SELECT fuso_horario FROM clinica WHERE id = 1')->fetchColumn() ?: self::FUSO_PADRAO;
+                    self::aplicarFuso($fuso);
+                } catch (PDOException) {
+                    self::aplicarFuso(self::FUSO_PADRAO);
+                }
             } catch (PDOException $e) {
                 throw new \RuntimeException('Não foi possível conectar ao PostgreSQL. Confira o arquivo .env e se o serviço do banco está ativo.', 0, $e);
             }

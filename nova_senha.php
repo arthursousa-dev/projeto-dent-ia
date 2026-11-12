@@ -3,14 +3,22 @@
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
 
-$token=(string)($_POST['token'] ?? $_GET['token'] ?? '');
+// O token chega no link como nova_senha.php#t=<token>. O que vem depois do # não é enviado ao servidor: não aparece
+// no registro de acessos nem no cabeçalho Referer. Um script desta página o entrega por POST e ele fica só na sessão.
+// (?token= é o formato antigo, aceito para os links já emitidos; eles vencem em 30 minutos.)
+$entregue=$_POST['token_do_link'] ?? $_GET['token'] ?? null;
+if ($entregue!==null) {
+    if (preg_match('/^[a-f0-9]{64}$/',(string)$entregue)) $_SESSION['recuperacao_token']=(string)$entregue;
+    redirecionar('nova_senha.php');
+}
+$token=(string)($_SESSION['recuperacao_token'] ?? '');
 $rec=consultarRecuperacao($token);
 $emailRecuperacao=$rec['email'] ?? '';$nomeUsuario=$rec['nome'] ?? 'Usuário';
 $erro='';$sucesso='';
-if (!$rec) $erro='Link inválido, expirado ou já utilizado. Solicite outro ao gestor.';
+if ($token!=='' && !$rec) $erro='Link inválido, expirado ou já utilizado. Solicite outro ao gestor.';
 if ($rec && isset($_POST['salvar_senha'])) {
     try {
-        redefinirSenha($token,(string)($_POST['nova_senha'] ?? ''),(string)($_POST['confirmar_senha'] ?? ''));$sucesso='Senha alterada. Faça login com a nova senha.';
+        redefinirSenha($token,(string)($_POST['nova_senha'] ?? ''),(string)($_POST['confirmar_senha'] ?? ''));$sucesso='Senha alterada. Faça login com a nova senha.';unset($_SESSION['recuperacao_token']);
     } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
 $tituloPagina = 'Nova Senha';
@@ -73,16 +81,20 @@ include 'includes/head.php';
         </div>
       <?php endif; ?>
 
+      <?php if ($token === '' && !$sucesso): ?><p id="aviso-link" role="status">Abrindo o link de acesso…</p><?php endif; ?>
+      <noscript><div class="alerta alerta-perigo" role="alert">Este link precisa do JavaScript ativado no navegador.</div></noscript>
+      <form method="POST" id="form-link" hidden><?= csrfCampo() ?><input type="hidden" name="token_do_link"></form>
+
       <?php if ($rec && !$sucesso): ?>
       <form method="POST" novalidate aria-label="Formulário de nova senha" id="form-nova-senha">
-          <?= csrfCampo() ?><input type="hidden" name="token" value="<?= limpar($token) ?>">
+          <?= csrfCampo() ?>
 
         <!-- Nova senha -->
         <div class="grupo-campo">
           <label for="nova-senha">Nova senha <span style="color:var(--perigo)">*</span></label>
           <div class="campo-senha-wrapper">
             <input type="password" id="nova-senha" name="nova_senha"
-                   placeholder="Mínimo 6 caracteres"
+                   placeholder="Mínimo <?= SENHA_MINIMA ?> caracteres"
                    required aria-required="true"
                    autocomplete="new-password">
             <button type="button" class="btn-olhinho" aria-label="Mostrar nova senha"
@@ -158,6 +170,23 @@ input[aria-invalid="true"] { border-color:var(--perigo,#ef4444) !important;box-s
 </style>
 
 <script nonce="<?= cspNonce() ?>">
+// Entrega ao servidor, por POST, o token que veio depois do # no link, e tira-o da barra de endereço.
+function entregarTokenDoLink() {
+  var form = document.getElementById('form-link');
+  if (!form) return;
+  var m = location.hash.match(/^#t=([a-f0-9]{64})$/);
+  if (!m) {
+    var aviso = document.getElementById('aviso-link');
+    if (aviso) aviso.textContent = 'Link inválido, expirado ou já utilizado. Solicite outro ao gestor.';
+    return;
+  }
+  history.replaceState(null, '', location.pathname);
+  form.elements.token_do_link.value = m[1];
+  form.submit();
+}
+entregarTokenDoLink();
+// Link novo aberto nesta mesma aba: só o trecho depois do # muda e a página não recarrega.
+window.addEventListener('hashchange', entregarTokenDoLink);
 function alternarSenha(id, btn) {
   var c=document.getElementById(id), f=btn.querySelector('.icone-olho'), a=btn.querySelector('.icone-olho-aberto');
   if (c.type==='password'){c.type='text';f.style.display='none';a.style.display='inline';btn.setAttribute('aria-label','Ocultar senha');}
@@ -211,7 +240,7 @@ if (formNovaSenha) {
       nErr.textContent = 'Informe a nova senha.';
       nEl.setAttribute('aria-invalid','true'); ok = false;
     } else if (nEl.value.length < <?= SENHA_MINIMA ?>) {
-      nErr.textContent = 'Mínimo de 6 caracteres.';
+      nErr.textContent = 'Mínimo de <?= SENHA_MINIMA ?> caracteres.';
       nEl.setAttribute('aria-invalid','true'); ok = false;
     } else {
       nErr.textContent = ''; nEl.removeAttribute('aria-invalid');

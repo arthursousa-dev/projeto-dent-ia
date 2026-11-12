@@ -27,6 +27,11 @@ include 'includes/head.php';
 <div class="cartao"><div class="cartao-cabecalho"><h3>Clínica e regras de agendamento</h3></div><div class="cartao-corpo"><form method="POST"><?= csrfCampo() ?>
 <?php foreach (['nome'=>'Nome','razao_social'=>'Razão social','cnpj'=>'CNPJ','telefone'=>'Telefone','email'=>'E-mail','endereco'=>'Logradouro e número','bairro'=>'Bairro','cidade'=>'Cidade','estado'=>'UF','cep'=>'CEP','limite_agendamentos_dia'=>'Limite de consultas por dia','antecedencia_min_dias'=>'Antecedência mínima para o paciente (dias)'] as $campo=>$rotulo): ?>
 <div class="grupo-campo"><label><?= $rotulo ?></label><input name="<?= $campo ?>" value="<?= limpar((string)($clinica[$campo] ?? '')) ?>" required></div><?php endforeach; ?>
+<div class="grupo-campo"><label for="fuso-horario">Fuso horário da clínica</label>
+<select id="fuso-horario" name="fuso_horario" aria-describedby="dica-fuso"><?php foreach (fusosDoBrasil() as $fuso): ?>
+<option value="<?= limpar($fuso) ?>" <?= $fuso === ($clinica['fuso_horario'] ?? date_default_timezone_get()) ? 'selected' : '' ?>><?= limpar(str_replace('_', ' ', substr($fuso, 8))) ?> (agora <?= (new DateTimeImmutable('now', new DateTimeZone($fuso)))->format('H:i') ?>)</option>
+<?php endforeach; ?></select>
+<span class="dica-campo" id="dica-fuso">Define o "hoje" e a hora usados na agenda, nas faltas e no financeiro. Escolha a cidade com a mesma hora da clínica.</span></div>
 <button name="salvar" class="btn btn-primario">Salvar</button></form></div></div>
 <div class="cartao"><div class="cartao-cabecalho"><h3>Horário de funcionamento</h3></div><div class="cartao-corpo"><p>Deixe os dois horários vazios nos dias fechados.</p><form method="POST"><?= csrfCampo() ?><input type="hidden" name="horarios" value="1">
 <?php foreach ($dias as $d): ?><div class="linha-campos"><label><?= limpar($d['nome']) ?></label><input type="time" name="abertura[<?= $d['id'] ?>]" value="<?= limpar($d['abertura']) ?>"><input type="time" name="fechamento[<?= $d['id'] ?>]" value="<?= limpar($d['fechamento']) ?>"></div><?php endforeach; ?>

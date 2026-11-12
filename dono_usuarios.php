@@ -6,7 +6,7 @@ if (isset($_POST['emitir'])) {
     try {
         $id=filter_var($_POST['id_usuario'] ?? '',FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
         if ($id===false) throw new InvalidArgumentException('Escolha um usuário da lista para gerar o link.');
-        $link='nova_senha.php?token='.emitirRecuperacao($id);
+        $link='nova_senha.php#t='.emitirRecuperacao($id);
     }
     catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }

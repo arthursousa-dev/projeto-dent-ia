@@ -82,7 +82,7 @@ DB_NAME=dentia_teste php scripts/testar_fluxos_railway.php
 DB_NAME=dentia_teste php scripts/testar_melhorias.php
 DB_NAME=dentia_teste php scripts/testar_seguranca.php
 ```
-Em 12/11/2026: PHPUnit com 77 testes (1 pulado de propósito: só o dono do schema consegue apagá-lo) e os três scripts verdes, conectando como `dentia_app`.
+Em 12/11/2026: PHPUnit com 81 testes (1 pulado de propósito: só o dono do schema consegue apagá-lo) e os três scripts verdes, conectando como `dentia_app`.
 
 **Atenção:** `testar_seguranca.php` precisa de consultas de hoje que já começaram. Na primeira hora do dia (00:00 a 01:00) ele não roda: avisa `[NÃO RODOU]` e sai com código 2. Confira sempre a linha final `TODOS OS TESTES DE SEGURANÇA E CADASTRO PASSARAM` ou o código de saída.
 O primeiro script faz agendamento, check-in, pagamento, prontuário e despesa. O segundo testa remarcação, limite diário, antecedência mínima, registro de faltas, contas novas sem senha padrão e expiração da sessão. O terceiro testa os itens da banca de revisão (dados de outra pessoa, datas e valores absurdos, pagamento repetido, dentista inativo, mensagens sem detalhe técnico, bloqueio de login) e o **Cadastre-se** do paciente. Os três rodam dentro de uma transação e desfazem tudo no final (ROLLBACK); o terceiro confere no fim que pessoas, usuários e consultas ficaram idênticos.
@@ -166,5 +166,13 @@ Segurança da tela:
 **Limite de tentativas de login** (P2.13). Conta por computador+conta: 20 erros em 15 minutos travam só aquela conta naquele computador, e 100 erros do mesmo computador travam o login dali (`LOGIN_MAX_POR_CONTA`, `LOGIN_MAX_POR_ORIGEM`). Continua valendo o bloqueio da conta após 5 senhas erradas.
 
 **Tela do banco atrás de proxy** (P2.2). Com `APP_PROXY_CONFIAVEL=true`, a tela "Banco de dados" usa o endereço que o proxy informa (`X-Forwarded-For`); proxy que não informa o endereço deixa a tela fechada. Antes, com um proxy na mesma máquina, qualquer visitante parecia local.
+
+**Link de nova senha** (P2.6). O link que o gestor gera em Usuários tem a forma `nova_senha.php#t=...`. O trecho depois do `#` não é enviado ao servidor: não entra em registro de acessos (Apache, proxy) nem no cabeçalho `Referer`. A página entrega o token por POST, guarda só na sessão e limpa a barra de endereço. Precisa de JavaScript ligado.
+- Como entregar o link: pessoalmente ou por um canal que só o titular lê (mensagem direta para o próprio número ou e-mail dele). Nunca em grupo. Vale 30 minutos e uma única vez.
+- O servidor embutido (`php -S` com `router.php`) não grava as URLs pedidas, só conexões abertas e fechadas (conferido em 12/11/2026). O cuidado vale para Apache/Docker e proxies.
+
+**Fuso horário** (P2.9, migração 015). O gestor escolhe o fuso da clínica em Configurações (lista dos fusos do Brasil). O PHP e o banco usam o mesmo: "hoje" e a hora da agenda, das faltas e do financeiro seguem esse fuso. Padrão: `America/Cuiaba`.
+
+**Autor das alterações e pool de conexões** (P2.8). O nome gravado na auditoria vale para a conexão inteira, e cada requisição abre e fecha a sua. Não ponha um pool em modo transação (PgBouncer `transaction`) na frente do banco: o nome de um usuário poderia aparecer na alteração de outro. Com pool, use modo sessão.
 
 **Script perigoso.** `database\RECONSTRUIR_RAILWAY.sql` aborta em qualquer banco que não termine em `_demo`, a menos que a mesma sessão rode antes `SET dentia.permitir_reset = 'SIM';`. No banco `dentia` ele aborta sempre.

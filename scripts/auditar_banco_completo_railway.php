@@ -1,4 +1,5 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; } // só pelo terminal: nunca pela web
 /** Diagnóstico SOMENTE LEITURA de todos os objetos do PostgreSQL Railway.
  * Uso: php scripts/auditar_banco_completo_railway.php
  * Gera relatório em JSON SEM registros de pacientes, senhas ou credenciais.

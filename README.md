@@ -1,5 +1,13 @@
 # DENT IA — Projeto integrado (Railway + PostgreSQL)
 
+**Para rodar de graça neste computador e na rede local (sem Railway), siga [EXECUCAO_LOCAL.md](docs/EXECUCAO_LOCAL.md).**
+Resultado da auditoria de outubro de 2026 e o que ainda não existe: [AUDITORIA.md](docs/AUDITORIA.md).
+Banca de revisão (segurança, uso errado, manutenção e testes), lista de correções e veredito: [BANCA_REVISAO.md](docs/BANCA_REVISAO.md).
+
+**Banco de dados ao vivo (gestor):** menu **Banco de dados** mostra as tabelas, o registro de cada alteração (quem, quando, o quê) e o conteúdo, só neste computador. Detalhes em [EXECUCAO_LOCAL.md](docs/EXECUCAO_LOCAL.md#8-ver-o-banco-de-dados-ao-vivo-só-o-gestor).
+
+**Novo paciente:** na tela de login do paciente, o link **Cadastre-se** cria o acesso ao portal (nome, CPF, nascimento, celular, e-mail e senha, com aceite de uso dos dados).
+
 **Para instalar no Railway, comece pelo guia [DEPLOY_RAILWAY_FINAL.md](docs/DEPLOY_RAILWAY_FINAL.md).**
 Ele contém o deploy seguro, o reset de dados fictícios mantendo o nome de **Arthur Sousa**, os comandos sem `git add .` e o teste de ponta a ponta com rollback.
 
@@ -50,6 +58,10 @@ Para regenerar o seed: `python3 scripts/gerar_seed_do_json_legado.py`. Inicializ
 - `.htaccess` bloqueando acesso direto a `.env`/`.sql`/`.log` e às pastas `app/`, `database/`, `includes/`
 - Cabeçalhos HTTP: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`
 - Saída sempre escapada com `htmlspecialchars()` antes de ir pro HTML
+- `router.php` (servidor local) e `.htaccess` (Apache/Docker) servem **só** as páginas PHP da raiz, `css/` e `js/`: `.env`, `backups/`, `includes/`, `database/`, `scripts/` e `docs/` respondem 404
+- Envio único de formulário: F5, "voltar" ou duplo clique não repetem uma operação
+- Limite de tentativas por origem: 20 logins errados ou 5 cadastros por hora; a senha trocada encerra as outras sessões; sair só por POST
+- Erros nunca vão para a tela (sem caminho de arquivo nem SQL): a pessoa vê uma mensagem clara e um código para o suporte; o detalhe fica no log
 
 **Instalação e roteiro de teste integrados:** [docs/INSTALACAO_INTEGRADA.md](docs/INSTALACAO_INTEGRADA.md).
 
@@ -65,8 +77,10 @@ set -a
 . ./.env
 set +a
 
-php -S localhost:8000
+php -S localhost:8000 router.php
 ```
+
+No Windows, use `instalar_banco.bat` e `iniciar_dentia.bat` (veja [EXECUCAO_LOCAL.md](docs/EXECUCAO_LOCAL.md)). Sem o `router.php`, o `php -S` ignora o `.htaccess` e expõe `.env` e `database/`.
 
 Acesse `http://localhost:8000`.
 
@@ -79,6 +93,8 @@ Acesse `http://localhost:8000`.
 | Recepcionista | recepcao@dentai.com | 123456 |
 | Paciente | cliente@gmail.com | 123456 |
 
+> **Só para demonstração.** Em produção, troque essas senhas (Usuários → gerar link de acesso) antes de liberar o sistema na rede. O quadro com as credenciais só aparece nas telas de login com `APP_DEMO=true` no `.env`.
+>
 > O seed tem 1 dono, 4 dentistas legados, 2 recepcionistas, 10 pacientes e 159 agendamentos. Todos os logins de demonstração usam `123456`. Inclui seis meses de receitas e despesas, histórico clínico, consultas atuais e futuras. A versão entregue usa 09/10/2026 como data base; `python3 scripts/gerar_seed_do_json_legado.py --data AAAA-MM-DD` permite regenerar outra data.
 
 ## Estrutura
@@ -105,8 +121,8 @@ dentia/
 - [x] Migrar as páginas mais acessadas pra query direta (`dono_pacientes.php`)
 - [x] Testes automatizados para autenticação e para o adaptador de persistência
 - [x] Odontograma extraído para um componente reutilizável (`includes/odontograma_svg.php`)
-- [ ] Migrar as demais páginas de listagem (dentistas, agendamentos) pro mesmo padrão de query direta
-- [ ] Paginação nas listagens grandes
+- [x] Cada página consulta só as listas que exibe (`carregarListas(['dentistas', ...])`), em vez de carregar pacientes e agendamentos da clínica inteira a cada acesso
+- [x] Paginação nas listagens de pacientes (gestor e recepção), preservando a busca
 
 ## Testes
 
@@ -130,6 +146,6 @@ Agenda, check-in, cancelamento, pagamento, cadastros, evolução clínica e odon
 
 No drawdb.app, use **File → Import from → JSON** e selecione `database/dentia-drawdb.json`. O arquivo contém as mesmas 31 tabelas do schema, exportadas do catálogo PostgreSQL. Para exportar novamente: `python3 scripts/exportar_drawdb.py` com as variáveis DB já configuradas. [Detalhes](docs/operacao.md).
 
-Quem já instalou a versão normalizada anterior pode aplicar, com backup prévio, `database/migrations/002_operacao_financeira.sql`, `003_funcionamento_clinica.sql` e `004_atendimentos_concluidos.sql`, nessa ordem. As migrações preservam os dados existentes. Schema e seed completos são para banco vazio.
+Quem já instalou a versão normalizada anterior pode aplicar, com backup prévio, `database/migrations/002_operacao_financeira.sql`, `003_funcionamento_clinica.sql`, `004_atendimentos_concluidos.sql`, `005_desempenho_e_horario_derivado.sql`, `006_status_faltou.sql`, `007_historico_status.sql`, `008_limite_acesso_e_view_usuarios.sql`, `009_estorno_pagamento.sql`, `010_estorno_contabil_e_cnpj.sql` e `011_auditoria_banco.sql`, nessa ordem (a 006 não tem reversão; a 008 tem `008_reverter.sql`). As migrações preservam os dados existentes. Schema e seed completos são para banco vazio.
 
 Para conferir faturamento e os meses com movimento na base configurada: `php scripts/verificar_faturamento.php 2026-10`. A tela permite selecionar o mês e registra receitas avulsas e despesas com data. Pagamentos de consultas são confirmados separadamente, sem duplicar receita.

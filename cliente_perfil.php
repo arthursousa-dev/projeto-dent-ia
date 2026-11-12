@@ -4,26 +4,15 @@ require_once 'includes/functions.php';
 verificarSessao('cliente');
 $tituloPagina = 'Meu Perfil';
 $emailSessao  = strtolower($_SESSION['email'] ?? '');
-$erro = ''; $sucesso = '';
+$erro = '';
 
-$usuarios  = lerJson('usuarios.json');
-$pacientes = lerJson('pacientes.json');
-$usuarioAtual  = buscarPorCampo($usuarios,  'email', $emailSessao) ?? [];
-$pacienteAtual = buscarPorCampo($pacientes, 'id_usuario', $usuarioAtual['id'] ?? 0) ?? [];
+$usuarioAtual  = lerJson('usuarios.json',['email'=>$emailSessao])[0] ?? [];
+$pacienteAtual = lerJson('pacientes.json',['id_usuario'=>$usuarioAtual['id'] ?? 0])[0] ?? [];
 $dados = array_merge($usuarioAtual, $pacienteAtual);
 
-if ($_SERVER['REQUEST_METHOD']==='POST') {
-    try {
-        if (isset($_POST['salvar_perfil'])) {
-            salvarPerfilAtual($_POST);$sucesso='Perfil atualizado.';
-            $u=usuarioSessao();$dados=buscarPorCampo(lerJson('usuarios.json'),'id',$u['id']) ?? [];
-            if ($u['tipo']==='cliente') $dados=array_merge($dados,pacienteSessao() ?? []);
-            if ($u['tipo']==='dentista') $dados=array_merge($dados,dentistaSessao() ?? []);
-        } elseif (isset($_POST['alterar_senha'])) {
-            alterarSenhaAtual($_POST);$sucesso='Senha alterada.';
-        }
-    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
-}
+// Salvar perfil e trocar senha: regra única em tratarFormularioPerfil() (includes/operacoes.php).
+[$erro,$dados]=tratarFormularioPerfil($dados);
+$planos=\App\Config\Database::getConnection()->query('SELECT nome FROM plano_saude ORDER BY nome')->fetchAll(PDO::FETCH_COLUMN);
 
 include 'includes/head.php';
 ?>
@@ -33,13 +22,12 @@ include 'includes/head.php';
     <div class="cabecalho-pagina">
       <div><h1><i class="bi bi-person-fill" aria-hidden="true"></i> Meu Perfil</h1><p>Dados pessoais e preferências</p></div>
     </div>
-    <?php if ($sucesso): ?><div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?=limpar($sucesso)?></div><?php endif; ?>
     <?php if ($erro):    ?><div class="alerta alerta-erro"   role="alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?=limpar($erro)?></div><?php endif; ?>
 
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-corpo">
         <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-          <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--destaque),#3182ce);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;flex-shrink:0;">
+          <div style="width:72px;height:72px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;flex-shrink:0;">
             <?=iniciais($dados['nome']??'PA')?>
           </div>
           <div style="flex:1;">
@@ -83,7 +71,7 @@ include 'includes/head.php';
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="pf-plano">Convênio / Plano</label>
-              <input type="text" id="pf-plano" name="plano" value="<?=limpar($dados['plano']??'Particular')?>">
+              <select id="pf-plano" name="plano"><?php foreach ($planos as $plano): ?><option <?= $plano===($dados['plano']??'Particular')?'selected':'' ?>><?=limpar($plano)?></option><?php endforeach; ?></select>
             </div>
             <div class="grupo-campo">
               <label for="pf-alergias">Alergias / Condições relevantes</label>

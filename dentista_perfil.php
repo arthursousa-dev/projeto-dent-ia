@@ -4,26 +4,14 @@ require_once 'includes/functions.php';
 verificarSessao('dentista');
 $tituloPagina = 'Meu Perfil';
 $emailSessao  = strtolower($_SESSION['email'] ?? '');
-$erro = ''; $sucesso = '';
+$erro = '';
 
-$usuarios  = lerJson('usuarios.json');
-$dentistas = lerJson('dentistas.json');
-$uAtual = buscarPorCampo($usuarios,  'email', $emailSessao) ?? [];
-$dAtual = buscarPorCampo($dentistas, 'id_usuario', $uAtual['id'] ?? 0) ?? [];
+$uAtual = lerJson('usuarios.json',['email'=>$emailSessao])[0] ?? [];
+$dAtual = lerJson('dentistas.json',['id_usuario'=>$uAtual['id'] ?? 0])[0] ?? [];
 $dados  = array_merge($uAtual, $dAtual);
 
-if ($_SERVER['REQUEST_METHOD']==='POST') {
-    try {
-        if (isset($_POST['salvar_perfil'])) {
-            salvarPerfilAtual($_POST);$sucesso='Perfil atualizado.';
-            $u=usuarioSessao();$dados=buscarPorCampo(lerJson('usuarios.json'),'id',$u['id']) ?? [];
-            if ($u['tipo']==='cliente') $dados=array_merge($dados,pacienteSessao() ?? []);
-            if ($u['tipo']==='dentista') $dados=array_merge($dados,dentistaSessao() ?? []);
-        } elseif (isset($_POST['alterar_senha'])) {
-            alterarSenhaAtual($_POST);$sucesso='Senha alterada.';
-        }
-    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
-}
+// Salvar perfil e trocar senha: regra única em tratarFormularioPerfil() (includes/operacoes.php).
+[$erro,$dados]=tratarFormularioPerfil($dados);
 
 include 'includes/head.php';
 ?>
@@ -33,20 +21,19 @@ include 'includes/head.php';
     <div class="cabecalho-pagina">
       <div><h1><i class="bi bi-person-fill" aria-hidden="true"></i> Meu Perfil</h1><p>Dados profissionais e preferências</p></div>
     </div>
-    <?php if ($sucesso): ?><div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?=limpar($sucesso)?></div><?php endif; ?>
     <?php if ($erro):    ?><div class="alerta alerta-erro"   role="alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?=limpar($erro)?></div><?php endif; ?>
 
     <!-- Cabeçalho -->
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-corpo">
         <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-          <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--destaque),#276749);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;flex-shrink:0;">
+          <div style="width:72px;height:72px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;flex-shrink:0;">
             <?=iniciais($dados['nome']??'DR')?>
           </div>
           <div style="flex:1;">
             <h2 style="font-size:20px;margin-bottom:4px;"><?=limpar($dados['nome']??'Dentista')?></h2>
             <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--texto-secundario);">
-              <span><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i> <?=limpar($dados['especialidade']??'—')?></span>
+              <span><i class="bi bi-person-badge-fill" aria-hidden="true"></i> <?=limpar($dados['especialidade']??'—')?></span>
               <span><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> <?=limpar($dados['cro']??'—')?></span>
               <span><i class="bi bi-envelope-fill" aria-hidden="true"></i> <?=limpar($emailSessao)?></span>
             </div>
@@ -124,7 +111,7 @@ include 'includes/head.php';
           <div style="padding:16px;background:var(--fundo-campo);border-radius:var(--raio-pequeno);border:1px solid var(--borda);text-align:center;">
             <div style="font-size:24px;margin-bottom:6px;"><?=$icon?></div>
             <div style="font-size:18px;font-weight:700;color:var(--texto-principal);margin-bottom:2px;"><?=limpar((string)$val)?></div>
-            <div style="font-size:11px;color:var(--texto-fraco);text-transform:uppercase;letter-spacing:.5px;"><?=$lbl?></div>
+            <div style="font-size:11px;color:var(--texto-fraco);"><?=$lbl?></div>
           </div>
           <?php endforeach; ?>
         </div>

@@ -3,7 +3,11 @@ require_once __DIR__.'/includes/bootstrap_sessao.php';
 require_once __DIR__.'/includes/functions.php';
 verificarSessao('dono');$tituloPagina='Usuários e recuperação';$erro='';$link='';
 if (isset($_POST['emitir'])) {
-    try { $link='nova_senha.php?token='.emitirRecuperacao((int)$_POST['id_usuario']); }
+    try {
+        $id=filter_var($_POST['id_usuario'] ?? '',FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+        if ($id===false) throw new InvalidArgumentException('Escolha um usuário da lista para gerar o link.');
+        $link='nova_senha.php?token='.emitirRecuperacao($id);
+    }
     catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
 $usuarios=lerJson('usuarios.json');

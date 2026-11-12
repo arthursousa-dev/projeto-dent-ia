@@ -1,7 +1,11 @@
 // Agendamento: o PostgreSQL define os horários realmente disponíveis.
 (() => {
   for (const form of document.querySelectorAll('form[data-agendamento-dinamico]')) {
-    const campo = (nome) => form.elements.namedItem(nome);
+    // Na remarcação, paciente e procedimento vêm de um campo oculto com o mesmo nome do select desabilitado.
+    const campo = (nome) => {
+      const el = form.elements.namedItem(nome);
+      return el instanceof RadioNodeList ? [...el].find(e => !e.disabled) : el;
+    };
     const horario = campo('horario');
     if (!horario) continue;
     let requisicao = 0;
@@ -21,9 +25,14 @@
       url.searchParams.set('paciente_id', paciente);
       try {
         const resposta = await fetch(url, {credentials: 'same-origin'});
-        const corpo = await resposta.json();
-        if (!resposta.ok) throw new Error(corpo.erro || 'Falha ao consultar horários');
+        const corpo = await resposta.json().catch(() => ({}));
         if (atual !== requisicao) return;
+        if (!resposta.ok) {
+          // Mostra a explicação do servidor (ex.: "Pelo portal, agende a partir de..."), não um erro genérico.
+          horario.replaceChildren(new Option(corpo.erro || 'Erro ao consultar horários. Recarregue a página.', ''));
+          horario.disabled = true;
+          return;
+        }
         const horas = corpo.horarios || [];
         horario.replaceChildren(...(horas.length ? horas.map(h => new Option(h, h)) : [new Option('Sem horários disponíveis', '')]));
         if (horas.includes(antigo)) horario.value = antigo;

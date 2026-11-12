@@ -24,7 +24,9 @@ final class PerfilPersistenciaTest extends TestCase
         $stmt->execute(['pessoa'=>$this->pessoa,'senha'=>password_hash('123456',PASSWORD_BCRYPT)]);
         $this->usuario = (int) $stmt->fetchColumn();
         $this->paciente = (int) $this->pdo->query("INSERT INTO pacientes (id_pessoa) VALUES ({$this->pessoa}) RETURNING id")->fetchColumn();
-        $esp = referenciaPorNome($this->pdo,'especialidade','Especialidade Teste');
+        $esp = referenciaPorNome($this->pdo,'especialidade','Especialidade Teste',true);
+        referenciaPorNome($this->pdo,'plano_saude','Plano Teste',true);
+        referenciaPorNome($this->pdo,'sala','Sala Teste',true);
         $this->dentista = (int) $this->pdo->query("INSERT INTO dentistas (id_pessoa,cro_uf,cro_numero,id_especialidade)
             VALUES ({$this->pessoa},'MS','999997',$esp) RETURNING id")->fetchColumn();
         upsertTelefone($this->pdo,$this->pessoa,null,'(67) 91234-5678');
@@ -116,25 +118,24 @@ final class PerfilPersistenciaTest extends TestCase
 
     public function test_falha_reverte_transacao_completa(): void
     {
-        $this->assertFalse(salvarJson('pacientes.json',[
-            ['id'=>$this->paciente,'nome'=>'Não persistir'],
-            ['id'=>$this->paciente,'nome'=>'CPF inválido','cpf'=>'00000000000'],
-        ]));
+        // salvarJson lança a exceção (antes devolvia false); a transação inteira é desfeita.
+        try {
+            salvarJson('pacientes.json',[
+                ['id'=>$this->paciente,'nome'=>'Não persistir'],
+                ['id'=>$this->paciente,'nome'=>'CPF inválido','cpf'=>'00000000000'],
+            ]);
+            $this->fail('CPF inválido foi aceito');
+        } catch (\PDOException $e) {}
         $p=buscarPorCampo(lerJson('pacientes.json'),'id',$this->paciente);
         $this->assertSame('Perfil Teste',$p['nome']);
     }
-    public function test_insercao_paciente_vincula_usuario_e_ajusta_identity(): void
+    /** id_usuario enviado com um registro novo nunca reaproveita a pessoa de outro usuário (falha crítica da banca). */
+    public function test_insercao_nao_reaproveita_pessoa_de_outro_usuario(): void
     {
-        $this->pdo->exec("DELETE FROM pacientes WHERE id={$this->paciente}");
-        $this->paciente = (int)$this->pdo->query('SELECT COALESCE(max(id),0)+100 FROM pacientes')->fetchColumn();
-        $this->assertTrue(salvarJson('pacientes.json',[[
-            'id'=>$this->paciente,'id_usuario'=>$this->usuario,'nome'=>'Novo paciente',
-            'email'=>'contato@teste.local','plano'=>'Particular'
-        ]]));
-        $p=buscarPorCampo(lerJson('pacientes.json'),'id',$this->paciente);
-        $this->assertSame($this->usuario,$p['id_usuario']);
-        $this->assertSame($this->pessoa,(int)$this->pdo->query("SELECT id_pessoa FROM pacientes WHERE id={$this->paciente}")->fetchColumn());
-        $this->assertGreaterThan($this->paciente,(int)$this->pdo->query("SELECT nextval(pg_get_serial_sequence('pacientes','id'))")->fetchColumn());
+        $antes=$this->pdo->query("SELECT nome FROM pessoa WHERE id={$this->pessoa}")->fetchColumn();
+        try {
+            salvarJson('pacientes.json',[['id_usuario'=>$this->usuario,'nome'=>'Tentativa de sobrescrever']]);
+        } catch (\Throwable $e) {} // sem CPF, o cadastro novo é recusado pelo banco
+        $this->assertSame($antes,$this->pdo->query("SELECT nome FROM pessoa WHERE id={$this->pessoa}")->fetchColumn());
     }
-
 }

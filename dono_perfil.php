@@ -4,27 +4,16 @@ require_once 'includes/functions.php';
 verificarSessao('dono');
 $tituloPagina = 'Meu Perfil';
 $emailSessao  = strtolower($_SESSION['email'] ?? '');
-$erro = ''; $sucesso = '';
+$erro = '';
 
-$usuarios = lerJson('usuarios.json');
-$uAtual   = buscarPorCampo($usuarios, 'email', $emailSessao) ?? [];
+$uAtual   = lerJson('usuarios.json',['email'=>$emailSessao])[0] ?? [];
 $dados    = $uAtual;
 
-if ($_SERVER['REQUEST_METHOD']==='POST') {
-    try {
-        if (isset($_POST['salvar_perfil'])) {
-            salvarPerfilAtual($_POST);$sucesso='Perfil atualizado.';
-            $u=usuarioSessao();$dados=buscarPorCampo(lerJson('usuarios.json'),'id',$u['id']) ?? [];
-            if ($u['tipo']==='cliente') $dados=array_merge($dados,pacienteSessao() ?? []);
-            if ($u['tipo']==='dentista') $dados=array_merge($dados,dentistaSessao() ?? []);
-        } elseif (isset($_POST['alterar_senha'])) {
-            alterarSenhaAtual($_POST);$sucesso='Senha alterada.';
-        }
-    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
-}
+// Salvar perfil e trocar senha: regra única em tratarFormularioPerfil() (includes/operacoes.php).
+[$erro,$dados]=tratarFormularioPerfil($dados);
 // Estatísticas rápidas do gestor
 $dentistas  = lerJson('dentistas.json');
-$pacientes  = lerJson('pacientes.json');
+$pacientesAtivos = (int)\App\Config\Database::getConnection()->query("SELECT count(*) FROM pacientes WHERE status='ativo'")->fetchColumn();
 $fat        = lerJsonObjeto('faturamento.json');
 $mesAtual   = $fat['mes_atual'] ?? [];
 include 'includes/head.php';
@@ -35,14 +24,13 @@ include 'includes/head.php';
     <div class="cabecalho-pagina">
       <div><h1><i class="bi bi-award-fill" aria-hidden="true"></i> Meu Perfil</h1><p>Dados do gestor e visão geral da clínica</p></div>
     </div>
-    <?php if ($sucesso): ?><div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?=limpar($sucesso)?></div><?php endif; ?>
     <?php if ($erro):    ?><div class="alerta alerta-erro"   role="alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?=limpar($erro)?></div><?php endif; ?>
 
     <!-- Cabeçalho gestor -->
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-corpo">
         <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-          <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#f5a623,#e08c00);display:flex;align-items:center;justify-content:center;color:#0b2845;font-size:24px;font-weight:900;flex-shrink:0;">
+          <div style="width:72px;height:72px;border-radius:50%;background:#f5a623;display:flex;align-items:center;justify-content:center;color:#0b2845;font-size:24px;font-weight:900;flex-shrink:0;">
             <?=iniciais($dados['nome']??'GE')?>
           </div>
           <div style="flex:1;">
@@ -68,15 +56,15 @@ include 'includes/head.php';
             ['Faturamento','<i class="bi bi-cash-coin" aria-hidden="true"></i>','R$ '.number_format($mesAtual['receita_total']??0,0,',','.')],
             ['Procedimentos','<i class="bi bi-calendar-event-fill" aria-hidden="true"></i>',$mesAtual['procedimentos_realizados']??0],
             ['Ticket Médio','<i class="bi bi-bullseye" aria-hidden="true"></i>','R$ '.number_format($mesAtual['ticket_medio']??0,2,',','.')],
-            ['Dentistas','<i class="bi bi-emoji-smile-fill" aria-hidden="true"></i>',count($dentistas)],
-            ['Pacientes Ativos','<i class="bi bi-people-fill" aria-hidden="true"></i>',count(filtrarPorCampo($pacientes,'status','Ativo'))],
+            ['Dentistas','<i class="bi bi-person-badge-fill" aria-hidden="true"></i>',count($dentistas)],
+            ['Pacientes Ativos','<i class="bi bi-people-fill" aria-hidden="true"></i>',$pacientesAtivos],
             ['Crescimento','<i class="bi bi-graph-up-arrow" aria-hidden="true"></i>',(($mesAtual['crescimento_percentual']??0)>=0 ? '+' : '').number_format($mesAtual['crescimento_percentual']??0,1,',','.').'%'],
           ];
           foreach ($stats as [$lbl,$icon,$val]): ?>
           <div style="padding:16px;background:var(--fundo-campo);border-radius:var(--raio-pequeno);border:1px solid var(--borda);text-align:center;">
             <div style="font-size:22px;margin-bottom:6px;"><?=$icon?></div>
             <div style="font-size:17px;font-weight:700;color:var(--texto-principal);margin-bottom:2px;"><?=limpar((string)$val)?></div>
-            <div style="font-size:11px;color:var(--texto-fraco);text-transform:uppercase;letter-spacing:.5px;"><?=$lbl?></div>
+            <div style="font-size:11px;color:var(--texto-fraco);"><?=$lbl?></div>
           </div>
           <?php endforeach; ?>
         </div>

@@ -11,7 +11,7 @@
 // "_test", os testes recusam rodar, para evitar apagar dados reais
 // por engano.
 
-if (!str_ends_with(getenv('DB_NAME') ?: '', '_test')) {
+if (!str_ends_with(getenv('DB_NAME') ?: '', '_test') && !str_ends_with(getenv('DB_NAME') ?: '', '_teste')) {
     fwrite(STDERR, "\nDB_NAME precisa apontar para um banco de testes (ex.: dentia_test).\n");
     fwrite(STDERR, "Rode: DB_NAME=dentia_test vendor/bin/phpunit\n\n");
     exit(1);

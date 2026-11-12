@@ -4,24 +4,13 @@ require_once 'includes/functions.php';
 verificarSessao('recepcionista');
 $tituloPagina = 'Meu Perfil';
 $emailSessao  = strtolower($_SESSION['email'] ?? '');
-$erro = ''; $sucesso = '';
+$erro = '';
 
-$usuarios = lerJson('usuarios.json');
-$uAtual   = buscarPorCampo($usuarios, 'email', $emailSessao) ?? [];
+$uAtual   = lerJson('usuarios.json',['email'=>$emailSessao])[0] ?? [];
 $dados    = $uAtual;
 
-if ($_SERVER['REQUEST_METHOD']==='POST') {
-    try {
-        if (isset($_POST['salvar_perfil'])) {
-            salvarPerfilAtual($_POST);$sucesso='Perfil atualizado.';
-            $u=usuarioSessao();$dados=buscarPorCampo(lerJson('usuarios.json'),'id',$u['id']) ?? [];
-            if ($u['tipo']==='cliente') $dados=array_merge($dados,pacienteSessao() ?? []);
-            if ($u['tipo']==='dentista') $dados=array_merge($dados,dentistaSessao() ?? []);
-        } elseif (isset($_POST['alterar_senha'])) {
-            alterarSenhaAtual($_POST);$sucesso='Senha alterada.';
-        }
-    } catch (Throwable $e) { $erro=mensagemOperacao($e); }
-}
+// Salvar perfil e trocar senha: regra única em tratarFormularioPerfil() (includes/operacoes.php).
+[$erro,$dados]=tratarFormularioPerfil($dados);
 
 include 'includes/head.php';
 ?>
@@ -31,13 +20,12 @@ include 'includes/head.php';
     <div class="cabecalho-pagina">
       <div><h1><i class="bi bi-person-fill" aria-hidden="true"></i> Meu Perfil</h1><p>Dados pessoais e segurança</p></div>
     </div>
-    <?php if ($sucesso): ?><div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?=limpar($sucesso)?></div><?php endif; ?>
     <?php if ($erro):    ?><div class="alerta alerta-erro"   role="alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?=limpar($erro)?></div><?php endif; ?>
 
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-corpo">
         <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-          <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#d97706,#b45309);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;flex-shrink:0;">
+          <div style="width:72px;height:72px;border-radius:50%;background:#d97706;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;flex-shrink:0;">
             <?=iniciais($dados['nome']??'RE')?>
           </div>
           <div style="flex:1;">

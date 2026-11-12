@@ -2,19 +2,22 @@
 // gerenciamento de pacientes pela recepcionista
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('recepcionista');
+verificarSessao('recepcionista');carregarListas(['pacientes']);
 
 $tituloPagina = 'Pacientes';
 
-$erro='';$sucesso='';$cadastro=[];
+$erro='';$cadastro=[];
 if (isset($_POST['salvar_paciente'])) {
-    try { salvarCadastroPaciente($_POST+['observacoes'=>$_POST['obs'] ?? '']);$sucesso='Paciente salvo.'; }
-    catch (Throwable $e) { $erro=mensagemOperacao($e); }
+    $enviado=$_POST+['observacoes'=>$_POST['obs'] ?? ''];
+    try { salvarCadastroPaciente($enviado);redirecionar('recepcionista_pacientes.php','Paciente salvo.'.(filter_var(trim((string)($_POST['email'] ?? '')),FILTER_VALIDATE_EMAIL) ? ' Se o paciente ainda não tem senha, o gestor gera o link de acesso em Usuários. Se o e-mail foi alterado, o login do portal passa a ser o novo e-mail.' : '')); }
+    catch (Throwable $e) { $erro=mensagemOperacao($e);$cadastro=$enviado; }
 }
-$listaPacientes=array_map(function($p) use ($listaPacientes){$p['ultimaConsulta']=(buscarPorCampo($listaPacientes,'id',$p['id'])['ultimaConsulta'] ?? '—');return $p;},lerJson('pacientes.json'));
-if (isset($_GET['editar'])) $cadastro=buscarPorCampo($listaPacientes,'id',(int)$_GET['editar']) ?? [];
-$termoBusca=trim($_GET['busca'] ?? '');
-$listaBuscada=array_values(array_filter($listaPacientes,fn($p)=>$termoBusca==='' || stripos($p['nome'],$termoBusca)!==false || stripos($p['cpf'],$termoBusca)!==false));
+if (!$cadastro && isset($_GET['editar'])) $cadastro=buscarPorCampo($listaPacientes,'id',idParametro($_GET['editar'])) ?? [];
+$termoBusca=trim((string)($_GET['busca'] ?? ''));
+$digitosBusca=soDigitos($termoBusca);
+$listaBuscada=array_values(array_filter($listaPacientes,fn($p)=>$termoBusca==='' || str_contains(semAcento($p['nome']),semAcento($termoBusca)) || stripos((string)$p['cpf'],$termoBusca)!==false
+    || ($digitosBusca!=='' && str_contains(soDigitos($p['cpf']),$digitosBusca))));
+$paginaPacientes = paginarLista($listaBuscada);
 include 'includes/head.php';
 ?>
 
@@ -38,9 +41,6 @@ include 'includes/head.php';
     </div>
 
     <?php if ($erro): ?><div class="alerta alerta-erro"><?= limpar($erro) ?></div><?php endif; ?>
-    <?php if ($sucesso): ?>
-      <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
-    <?php endif; ?>
 
     <!-- formulário de cadastro de novo paciente -->
     <div class="cartao" id="form-paciente" style="display:<?= $cadastro || $erro ? 'block' : 'none' ?>;margin-bottom:22px;">
@@ -78,7 +78,7 @@ include 'includes/head.php';
             </div>
             <div class="grupo-campo">
               <label for="pac-plano">Plano de Saúde</label>
-              <input type="text" id="pac-plano" name="plano" value="<?= limpar($cadastro['plano'] ?? '') ?>" placeholder="Nome do plano (opcional)">
+              <select id="pac-plano" name="plano"><?php foreach (\App\Config\Database::getConnection()->query('SELECT nome FROM plano_saude ORDER BY nome')->fetchAll(PDO::FETCH_COLUMN) as $plano): ?><option <?= ($cadastro['plano'] ?? 'Particular')===$plano ? 'selected' : '' ?>><?= limpar($plano) ?></option><?php endforeach; ?></select>
             </div>
           </div>
           <div class="grupo-campo">
@@ -130,12 +130,12 @@ include 'includes/head.php';
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($listaBuscada as $paciente): ?>
+            <?php foreach ($paginaPacientes['itens'] as $paciente): ?>
             <tr>
               <td>
                 <div style="display:flex;align-items:center;gap:9px;">
                   <div class="avatar avatar-pequeno"
-                       style="background:linear-gradient(135deg,var(--informacao),#2563b0);"
+                       style="background:var(--informacao);"
                        aria-hidden="true">
                     <?= iniciais($paciente['nome']) ?>
                   </div>
@@ -161,6 +161,7 @@ include 'includes/head.php';
           </tbody>
         </table>
       </div>
+      <?= controlesPaginacao($paginaPacientes) ?>
     </div>
 
   </main>

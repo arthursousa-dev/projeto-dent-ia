@@ -27,11 +27,11 @@ final class OperacaoIntegracaoTest extends TestCase
             $this->usuarios[$tipo]=(int)$stmt->fetchColumn();
         }
         $this->paciente=(int)$this->pdo->query("INSERT INTO pacientes (id_pessoa) VALUES ({$this->pessoas['cliente']}) RETURNING id")->fetchColumn();
-        $esp=referenciaPorNome($this->pdo,'especialidade','Operação');
-        $this->sala=referenciaPorNome($this->pdo,'sala','Sala operação');
+        $esp=referenciaPorNome($this->pdo,'especialidade','Operação',true);
+        $this->sala=referenciaPorNome($this->pdo,'sala','Sala operação',true);
         $this->dentista=(int)$this->pdo->query("INSERT INTO dentistas (id_pessoa,cro_uf,cro_numero,id_especialidade,id_sala)
             VALUES ({$this->pessoas['dentista']},'MS','999996',$esp,{$this->sala}) RETURNING id")->fetchColumn();
-        $cat=referenciaPorNome($this->pdo,'categoria_procedimento','Operação');
+        $cat=referenciaPorNome($this->pdo,'categoria_procedimento','Operação',true);
         $this->procedimento=(int)$this->pdo->query("INSERT INTO procedimentos (nome,id_categoria,duracao_min,valor_base)
             VALUES ('Procedimento operação',$cat,60,90) RETURNING id")->fetchColumn();
         $this->pdo->exec("INSERT INTO dentista_procedimentos VALUES ({$this->dentista},{$this->procedimento})");
@@ -67,9 +67,15 @@ final class OperacaoIntegracaoTest extends TestCase
         foreach ($this->pessoas as $id) $this->pdo->exec("DELETE FROM pessoa WHERE id=$id");
     }
 
+    /** Segunda-feira daqui a ~1 mês: dentro da janela de 365 dias da agenda. */
+    private static function segundaFutura(): string
+    {
+        return (new \DateTimeImmutable('monday next week'))->modify('+4 weeks')->format('Y-m-d');
+    }
+
     private function agendar(string $hora='09:00'): int
     {
-        return criarAgendamento(['procedimento'=>'Procedimento operação','dentista'=>(string)$this->dentista,'data'=>'2030-01-07','horario'=>$hora]);
+        return criarAgendamento(['procedimento'=>'Procedimento operação','dentista'=>(string)$this->dentista,'data'=>self::segundaFutura(),'horario'=>$hora]);
     }
 
     public function test_agendamento_gravado_com_paciente_da_sessao(): void
@@ -81,26 +87,29 @@ final class OperacaoIntegracaoTest extends TestCase
 
     public function test_rejeita_sobreposicao_pela_duracao(): void
     {
-        $this->agendar();$this->expectException(\PDOException::class);$this->agendar('09:30');
+        $this->agendar();$this->expectException(\InvalidArgumentException::class);$this->agendar('09:30'); // recusado antes do banco
     }
 
     public function test_clinica_fechada_e_dentista_sem_disponibilidade(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        criarAgendamento(['procedimento'=>'Procedimento operação','dentista'=>(string)$this->dentista,'data'=>'2030-01-06','horario'=>'09:00']);
+        criarAgendamento(['procedimento'=>'Procedimento operação','dentista'=>(string)$this->dentista,'data'=>(new \DateTimeImmutable(self::segundaFutura()))->modify('-1 day')->format('Y-m-d'),'horario'=>'09:00']);
     }
 
     public function test_cancelamento_e_acesso_a_consulta_de_outro_paciente(): void
     {
         $id=$this->agendar();alterarStatusAgenda($id,'Cancelado');
         $this->assertSame('Cancelado',buscarPorCampo(lerJson('agendamentos.json'),'id',$id)['status']);
-        $this->expectException(\RuntimeException::class);alterarStatusAgenda(1,'Cancelado');
+        // Consulta que não é deste paciente (a primeira de outro paciente que existir no banco de teste).
+        $outra=(int)$this->pdo->query("SELECT id FROM agendamentos WHERE id<>{$id} ORDER BY id LIMIT 1")->fetchColumn();
+        if (!$outra) $this->markTestSkipped('Sem outra consulta no banco de teste.');
+        $this->expectException(\RuntimeException::class);alterarStatusAgenda($outra,'Cancelado');
     }
 
     public function test_recebimento_nao_duplica_receita(): void
     {
         $id=$this->agendar();$this->sessao('dono');
-        $forma=referenciaPorNome($this->pdo,'forma_pagamento','Pix');
+        $forma=referenciaPorNome($this->pdo,'forma_pagamento','Pix',true);
         $antes=resumoFinanceiro($this->pdo)['mes_atual']['receita_total'];
         confirmarPagamento($id,$forma);
         $depois=resumoFinanceiro($this->pdo)['mes_atual']['receita_total'];
@@ -146,7 +155,7 @@ final class OperacaoIntegracaoTest extends TestCase
     {
         $id=$this->agendar();$this->sessao('dono');
         $antes=resumoFinanceiro($this->pdo);
-        confirmarPagamento($id,referenciaPorNome($this->pdo,'forma_pagamento','Pix'));
+        confirmarPagamento($id,referenciaPorNome($this->pdo,'forma_pagamento','Pix',true));
         registrarLancamento(['tipo'=>'Receita','descricao'=>'Kit teste','valor'=>'15,50']);
         $depois=resumoFinanceiro($this->pdo);
         $this->assertEqualsWithDelta(90,($depois['mes_atual']['por_plano']['Particular'] ?? 0)-($antes['mes_atual']['por_plano']['Particular'] ?? 0),0.001);

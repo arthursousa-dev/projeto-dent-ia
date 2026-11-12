@@ -6,21 +6,45 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/seguranca.php';
 require_once __DIR__ . '/operacoes.php';
+require_once __DIR__ . '/monitor_banco.php';
 date_default_timezone_set('America/Cuiaba');
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && !csrfValido($_POST['csrf_token'] ?? null)) {
-    http_response_code(400);
-    exit('Sessão expirada. Recarregue a página e tente novamente.');
+
+/** Login, painel e perfil de cada tipo de acesso: fonte única para redirecionamentos e menus. */
+const PERFIS = [
+    'dono'          => ['login' => 'login_dono.php',          'painel' => 'dono_dashboard.php',          'perfil' => 'dono_perfil.php'],
+    'dentista'      => ['login' => 'login_dentista.php',      'painel' => 'dentista_dashboard.php',      'perfil' => 'dentista_perfil.php'],
+    'recepcionista' => ['login' => 'login_recepcionista.php', 'painel' => 'recepcionista_dashboard.php', 'perfil' => 'recepcionista_perfil.php'],
+    'cliente'       => ['login' => 'login_paciente.php',      'painel' => 'cliente_dashboard.php',       'perfil' => 'cliente_perfil.php'],
+];
+
+// Todo POST passa por aqui: token CSRF válido e formulário ainda não processado.
+// Em vez de uma página crua, a pessoa volta para a mesma tela com um aviso.
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    if (!csrfValido($_POST['csrf_token'] ?? null)) {
+        if (empty($_SESSION['sessao_expirada'])) {
+            definirFlash('aviso', 'O formulário estava desatualizado (a página ficou aberta muito tempo ou a sessão expirou), então nada foi salvo. Preencha e envie de novo.');
+        }
+        redirecionar(paginaAtual());
+    }
+    // Todo formulário do sistema manda "envio" (csrfCampo). Já usado, expirado ou ausente: nada é executado.
+    if (!consumirEnvio((string)($_POST['envio'] ?? ''))) {
+        definirFlash('aviso', 'Este formulário já foi usado ou ficou desatualizado, então nada foi feito agora. Confira a tela e, se precisar, faça de novo.');
+        redirecionar(paginaAtual());
+    }
 }
 
 function data_pt(string $formato, ?int $timestamp = null): string {
     if ($timestamp === null) $timestamp = time();
     static $meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                      'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    static $mesesCurtos = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     static $diasSemana = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira',
                           'Quinta-feira','Sexta-feira','Sábado'];
+    $mes = (int)date('n', $timestamp) - 1;
     $resultado = date($formato, $timestamp);
-    $resultado = str_replace(date('F', $timestamp), $meses[(int)date('n', $timestamp) - 1], $resultado);
+    $resultado = str_replace(date('F', $timestamp), $meses[$mes], $resultado);
     $resultado = str_replace(date('l', $timestamp), $diasSemana[(int)date('w', $timestamp)], $resultado);
+    if (str_contains($formato, 'M')) $resultado = str_replace(date('M', $timestamp), $mesesCurtos[$mes], $resultado);
     return $resultado;
 }
 
@@ -30,9 +54,9 @@ function limpar(?string $texto): string {
 }
 
 function iniciais(string $nome): string {
-    $partes = explode(' ', trim($nome));
-    $r = strtoupper(substr($partes[0], 0, 1));
-    if (count($partes) > 1) $r .= strtoupper(substr(end($partes), 0, 1));
+    $partes = preg_split('/\s+/u', trim($nome)) ?: [''];
+    $r = maiuscula(cortarTexto($partes[0], 0, 1));
+    if (count($partes) > 1) $r .= maiuscula(cortarTexto(end($partes), 0, 1));
     return $r;
 }
 
@@ -43,6 +67,7 @@ function emblema(string $status): string {
         'Aguardando'     => 'emblema-aviso',
         'Agendado'       => 'emblema-cinza',
         'Cancelado'      => 'emblema-perigo',
+        'Faltou'         => 'emblema-aviso',
         'Concluída'      => 'emblema-sucesso',
         'Ativo'          => 'emblema-sucesso',
         'ativo'          => 'emblema-sucesso',
@@ -57,23 +82,26 @@ function emblema(string $status): string {
     return '<span class="emblema ' . $classe . '">' . limpar($status) . '</span>';
 }
 
+/** Identifica a senha atual sem guardar o hash na sessão: trocar a senha derruba as outras sessões. */
+function versaoSenha(string $senhaHash): string {
+    return substr(hash('sha256', $senhaHash), 0, 16);
+}
+
+// Hash de uma senha que ninguém conhece: e-mail inexistente custa o mesmo tempo que um existente.
+const HASH_FICTICIO = '$2y$10$3ulI/ceOKg81dj2CVJbRueYb0tMItcIpi1cljnprVFbX3fQIQqQuS';
+
 /**
- * Autentica um usuário consultando dados/usuarios.json.
+ * Autentica um usuário no PostgreSQL.
  * Retorna array com nome/perfil/redirecionar ou false se inválido.
  */
 function autenticarUsuario(string $email, string $senha, string $perfilEsperado): array|false {
     $email = strtolower(trim($email));
     $pdo   = \App\Config\Database::getConnection();
 
-    $destinos = [
-        'cliente'       => 'cliente_dashboard.php',
-        'recepcionista' => 'recepcionista_dashboard.php',
-        'dentista'      => 'dentista_dashboard.php',
-        'dono'          => 'dono_dashboard.php',
-    ];
-
     $stmt = $pdo->prepare(
-        'SELECT u.id, p.nome, u.tipo, u.status, u.senha_hash, u.tentativas_login, u.bloqueado_ate
+        'SELECT u.id, p.nome, u.tipo, u.status, u.senha_hash, u.tentativas_login,
+                u.bloqueado_ate IS NOT NULL AS teve_bloqueio,
+                COALESCE(u.bloqueado_ate > now(), false) AS bloqueado
          FROM usuarios u JOIN pessoa p ON p.id = u.id_pessoa
          WHERE u.email = :email AND u.tipo = :tipo'
     );
@@ -81,17 +109,19 @@ function autenticarUsuario(string $email, string $senha, string $perfilEsperado)
     $u = $stmt->fetch();
 
     if (!$u) {
-        return false; // não revela se o e-mail existe ou não
+        password_verify($senha, HASH_FICTICIO); // não revela, nem pelo tempo, se o e-mail existe
+        return false;
     }
 
     // Conta bloqueada por excesso de tentativas incorretas.
-    if ($u['bloqueado_ate'] !== null && strtotime($u['bloqueado_ate']) > time()) {
+    if (booleanoPg($u['bloqueado'])) {
         return false;
     }
 
     if (($u['status'] ?? 'ativo') !== 'ativo' || !password_verify($senha, $u['senha_hash'])) {
         // Cada tentativa errada soma 1; na 5ª, bloqueia por 15 minutos.
-        $tentativas = (int) $u['tentativas_login'] + 1;
+        // Depois que um bloqueio vence, a contagem recomeça do zero.
+        $tentativas = (booleanoPg($u['teve_bloqueio']) ? 0 : (int) $u['tentativas_login']) + 1;
         $bloqueio = $tentativas >= 5
             ? "now() + interval '15 minutes'"
             : 'NULL';
@@ -110,67 +140,129 @@ function autenticarUsuario(string $email, string $senha, string $perfilEsperado)
         'nome'         => $u['nome'],
         'perfil'       => $u['tipo'],
         'id'           => $u['id'],
-        'redirecionar' => $destinos[$u['tipo']] ?? 'index.php',
+        'versao_senha' => versaoSenha($u['senha_hash']),
+        'redirecionar' => PERFIS[$u['tipo']]['painel'] ?? 'index.php',
     ];
+}
+
+/** Abre a sessão de um usuário autenticado (novo ID de sessão contra fixação). */
+function iniciarSessaoUsuario(array $usuario, string $email): void {
+    session_regenerate_id(true);
+    $_SESSION['usuario']      = $usuario['nome'];
+    $_SESSION['perfil']       = $usuario['perfil'];
+    $_SESSION['email']        = strtolower(trim($email));
+    $_SESSION['versao_senha'] = $usuario['versao_senha'];
+    unset($_SESSION['sessao_expirada']);
 }
 
 /**
  * Verifica sessão ativa e redireciona se não autorizado.
+ * Também encerra a sessão se o acesso foi desativado ou a senha foi trocada em outro lugar.
  */
 function verificarSessao(string $perfilNecessario): void {
+    $login = PERFIS[$perfilNecessario]['login'] ?? 'index.php';
     if (!isset($_SESSION['usuario']) || $_SESSION['perfil'] !== $perfilNecessario) {
-        $logins = [
-            'cliente'       => 'login_paciente.php',
-            'recepcionista' => 'login_recepcionista.php',
-            'dentista'      => 'login_dentista.php',
-            'dono'          => 'login_dono.php',
-        ];
-        header('Location: ' . ($logins[$perfilNecessario] ?? 'index.php'));
+        $expirou = !empty($_SESSION['sessao_expirada']) ? '?expirou=1' : '';
+        unset($_SESSION['sessao_expirada']);
+        header('Location: ' . $login . $expirou);
         exit;
     }
-}
-
-if (($_SESSION['perfil'] ?? '') === 'recepcionista') {
-    $pdo=\App\Config\Database::getConnection();
-    $listaDentistas=lerJson('dentistas.json');
-    foreach ($listaDentistas as &$dentista) $dentista['atendimentos']=$dentista['atendimentos_mes'];
-    unset($dentista);
-    $listaPacientes=lerJson('pacientes.json');
-    $listaProcedimentos=array_column(lerJson('procedimentos.json'),'nome');
-    $listaHorarios=[];
-    for ($h=8;$h<=18;$h++) for ($m=0;$m<60;$m+=30) if ($h<18 || !$m) $listaHorarios[]=sprintf('%02d:%02d',$h,$m);
-    $listaAgendamentos=lerJson('agendamentos.json');
-} else {
-$listaDentistas = array_map(function($d) {
-    $d['atendimentos']=$d['atendimentos_mes']; return $d;
-},lerJson('dentistas.json'));
-$listaPacientes = lerJson('pacientes.json');
-$listaAgendamentos = array_map(function($a) {
-    $a['procedimento']=$a['servico']; return $a;
-},lerJson('agendamentos.json'));
-if (in_array($_SESSION['perfil'] ?? '',['dentista','cliente'],true)) {
-    $u=usuarioSessao();
-    if ($u['tipo']==='cliente') {
-        $pac=buscarPorCampo($listaPacientes,'id_usuario',$u['id']);
-        $listaAgendamentos=array_values(array_filter($listaAgendamentos,fn($a)=>$a['id_paciente']===($pac['id'] ?? 0)));
-        $listaPacientes=$pac ? [$pac] : [];
-    } else {
-        $dent=buscarPorCampo($listaDentistas,'id_usuario',$u['id']);
-        $listaAgendamentos=array_values(array_filter($listaAgendamentos,fn($a)=>$a['id_dentista']===($dent['id'] ?? 0)));
-        $ids=array_column($listaAgendamentos,'id_paciente');
-        $listaPacientes=array_values(array_filter($listaPacientes,fn($p)=>in_array($p['id'],$ids,true)));
+    $stmt = \App\Config\Database::getConnection()->prepare(
+        "SELECT senha_hash FROM usuarios WHERE email = :email AND tipo = :tipo AND status = 'ativo'");
+    $stmt->execute(['email' => $_SESSION['email'] ?? '', 'tipo' => $perfilNecessario]);
+    $hash = $stmt->fetchColumn();
+    if ($hash === false || !hash_equals((string)($_SESSION['versao_senha'] ?? ''), versaoSenha($hash))) {
+        $_SESSION = [];
+        session_regenerate_id(true);
+        definirFlash('aviso', 'Sua sessão foi encerrada porque os dados de acesso (senha ou e-mail) mudaram ou o acesso foi desativado. Entre novamente.');
+        header('Location: ' . $login);
+        exit;
     }
+    marcarUsuarioNoBanco($perfilNecessario . ':' . ($_SESSION['email'] ?? ''));
 }
-$visitas=\App\Config\Database::getConnection()->query("SELECT id_paciente,
-    MAX(data) FILTER (WHERE status='Concluída') AS ultima,
-    MIN(data) FILTER (WHERE data>=CURRENT_DATE AND status IN ('Agendado','Confirmado','Aguardando')) AS proxima
-    FROM agendamentos GROUP BY id_paciente")->fetchAll(PDO::FETCH_UNIQUE);
-foreach ($listaPacientes as &$p) {
-    $p['ultimaConsulta']=!empty($visitas[$p['id']]['ultima']) ? date('d/m/Y',strtotime($visitas[$p['id']]['ultima'])) : '—';
-    $p['proximaConsulta']=!empty($visitas[$p['id']]['proxima']) ? date('d/m/Y',strtotime($visitas[$p['id']]['proxima'])) : '—';
-}
-unset($p);
-$listaProcedimentos=array_column(lerJson('procedimentos.json'),'nome');
-$listaHorarios=\App\Config\Database::getConnection()->query("SELECT DISTINCT to_char(hora,'HH24:MI') FROM disponibilidade_dentista ORDER BY 1")->fetchAll(PDO::FETCH_COLUMN);
 
+/**
+ * Listas usadas pelas telas de agenda/pacientes. $quais limita o que é consultado
+ * ('dentistas', 'pacientes', 'agendamentos', 'procedimentos', 'horarios'); sem argumento carrega tudo.
+ * Cada página pede só o que exibe: antes a agenda da recepção carregava todos os pacientes e
+ * agendamentos da clínica para usar apenas a lista de dentistas.
+ */
+function carregarListas(?array $quais = null): void {
+    global $listaDentistas, $listaPacientes, $listaProcedimentos, $listaHorarios, $listaAgendamentos;
+    $quer = fn(string $lista): bool => $quais === null || in_array($lista, $quais, true);
+    $pdo = \App\Config\Database::getConnection();
+    $listaDentistas = $listaPacientes = $listaProcedimentos = $listaHorarios = $listaAgendamentos = [];
+    $perfil = $_SESSION['perfil'] ?? '';
+    // O filtro de dentista/cliente depende da lista de dentistas e da agenda; carrega o mínimo para aplicá-lo.
+    $precisaDentistas = $quer('dentistas') || ($perfil === 'dentista' && ($quer('agendamentos') || $quer('pacientes')));
+    $precisaAgenda = $quer('agendamentos') || ($perfil === 'dentista' && $quer('pacientes'));
+    if ($precisaDentistas) $listaDentistas = array_map(function ($d) {
+        $d['atendimentos'] = $d['atendimentos_mes']; return $d;
+    }, lerJson('dentistas.json'));
+    // Cliente e dentista recebem só os próprios registros, filtrados no SQL.
+    $filtroAgenda = [];
+    $filtroPacientes = [];
+    if (in_array($_SESSION['perfil'] ?? '', ['dentista', 'cliente'], true)) {
+        $u = usuarioSessao();
+        if ($u['tipo'] === 'cliente') {
+            $filtroPacientes = ['id_usuario' => $u['id']];
+            $pac = lerJson('pacientes.json', $filtroPacientes)[0] ?? null;
+            $filtroAgenda = ['id_paciente' => $pac['id'] ?? 0];
+        } else {
+            $dent = buscarPorCampo($listaDentistas, 'id_usuario', $u['id']);
+            $filtroAgenda = ['id_dentista' => $dent['id'] ?? 0];
+        }
+    }
+    if ($precisaAgenda) $listaAgendamentos = array_map(function ($a) {
+        $a['procedimento'] = $a['servico']; return $a;
+    }, lerJson('agendamentos.json', $filtroAgenda));
+    if ($quer('procedimentos')) $listaProcedimentos = array_column(lerJson('procedimentos.json'), 'nome');
+    if ($quer('horarios')) $listaHorarios = $pdo->query("SELECT DISTINCT to_char(hora,'HH24:MI') FROM disponibilidade_dentista ORDER BY 1")->fetchAll(PDO::FETCH_COLUMN);
+    if (!$quer('pacientes')) {
+        if (!$quer('agendamentos')) $listaAgendamentos = [];
+        return;
+    }
+    // Dentista vê só os pacientes da própria agenda (sem cadastro de dentista: nenhum, nunca todos).
+    if ($perfil === 'dentista') $filtroPacientes = ['id' => array_values(array_unique(array_column($listaAgendamentos, 'id_paciente')))];
+    $listaPacientes = isset($pac) ? ($pac ? [$pac] : []) : lerJson('pacientes.json', $filtroPacientes);
+    // "Última" e "próxima" consulta de cada paciente, com as mesmas regras de status em todas as telas.
+    $visitas = $pdo->prepare("SELECT id_paciente,
+        MAX(data) FILTER (WHERE status='Concluída') AS ultima,
+        MIN(data) FILTER (WHERE " . SQL_CONSULTA_FUTURA . ") AS proxima
+        FROM agendamentos WHERE id_paciente = ANY(CAST(:ids AS int[])) GROUP BY id_paciente");
+    $visitas->execute(['ids' => '{' . implode(',', array_map('intval', array_column($listaPacientes, 'id'))) . '}']);
+    $visitas = $visitas->fetchAll(PDO::FETCH_UNIQUE);
+    foreach ($listaPacientes as &$p) {
+        $p['ultimaConsulta'] = !empty($visitas[$p['id']]['ultima']) ? date('d/m/Y', strtotime($visitas[$p['id']]['ultima'])) : '—';
+        $p['proximaConsulta'] = !empty($visitas[$p['id']]['proxima']) ? date('d/m/Y', strtotime($visitas[$p['id']]['proxima'])) : '—';
+    }
+    unset($p);
+    if (!$quer('agendamentos')) $listaAgendamentos = [];
+}
+
+/**
+ * Fatia uma lista já filtrada na página pedida em ?pagina= (fora do intervalo vira a
+ * primeira ou a última). Devolve os itens da página e os dados para os controles.
+ */
+function paginarLista(array $itens, int $porPagina = 20): array {
+    $total = count($itens);
+    $totalPaginas = max(1, (int) ceil($total / $porPagina));
+    $pagina = max(1, min($totalPaginas, (int) ($_GET['pagina'] ?? 1)));
+    return ['itens' => array_slice($itens, ($pagina - 1) * $porPagina, $porPagina),
+            'pagina' => $pagina, 'total_paginas' => $totalPaginas, 'total' => $total];
+}
+
+/** Links "Anterior / páginas / Próxima" preservando os demais filtros da URL (busca etc.). */
+function controlesPaginacao(array $pag): string {
+    if ($pag['total_paginas'] <= 1) return '';
+    $base = $_GET;
+    unset($base['pagina']);
+    $link = fn(int $p): string => limpar('?' . http_build_query($base + ['pagina' => $p]));
+    $html = '<nav class="paginacao" aria-label="Páginas da lista">';
+    if ($pag['pagina'] > 1) $html .= '<a href="' . $link($pag['pagina'] - 1) . '">‹ Anterior</a>';
+    for ($p = 1; $p <= $pag['total_paginas']; $p++) {
+        $html .= $p === $pag['pagina'] ? '<span aria-current="page">' . $p . '</span>' : '<a href="' . $link($p) . '">' . $p . '</a>';
+    }
+    if ($pag['pagina'] < $pag['total_paginas']) $html .= '<a href="' . $link($pag['pagina'] + 1) . '">Próxima ›</a>';
+    return $html . '</nav>';
 }

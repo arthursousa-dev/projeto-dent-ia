@@ -2,7 +2,7 @@
 // painel principal do dono — visão geral da clínica
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('dono'); // redireciona pro login se não for o dono
+verificarSessao('dono');carregarListas(['agendamentos', 'dentistas']); // redireciona pro login se não for o dono
 
 $tituloPagina = 'Painel do Gestor';
 include 'includes/head.php';
@@ -67,7 +67,7 @@ $totalAtendimentosMes = (int) $stmtAtendMes->fetchColumn();
       </a>
 
       <a href="dono_dentistas.php" class="cartao-estatistica" aria-label="<?= $totalDentistasAtivos ?> dentistas ativos">
-        <div class="icone-estatistica verde-agua" aria-hidden="true"><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i></div>
+        <div class="icone-estatistica verde-agua" aria-hidden="true"><i class="bi bi-person-badge-fill" aria-hidden="true"></i></div>
         <div class="info-estatistica"><strong><?= $totalDentistasAtivos ?></strong><span>Dentistas ativos</span></div>
       </a>
     </div>
@@ -79,7 +79,7 @@ $totalAtendimentosMes = (int) $stmtAtendMes->fetchColumn();
       <div class="cartao">
         <div class="cartao-cabecalho">
           <h3><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Faturamento — Últimos 6 meses</h3>
-          <a href="dono_faturamento.php" class="cartao-link">Ver detalhes →</a>
+          <a href="dono_faturamento.php" class="cartao-link">Ver detalhes</a>
         </div>
         <div class="cartao-corpo">
           <?php
@@ -110,7 +110,7 @@ $totalAtendimentosMes = (int) $stmtAtendMes->fetchColumn();
       <div class="cartao">
         <div class="cartao-cabecalho">
           <h3><i class="bi bi-trophy-fill" aria-hidden="true"></i> Atendimentos por Dentista</h3>
-          <a href="dono_dentistas.php" class="cartao-link">Ver todos →</a>
+          <a href="dono_dentistas.php" class="cartao-link">Ver todos</a>
         </div>
         <div class="cartao-corpo" style="padding:12px 20px;">
           <?php
@@ -149,8 +149,8 @@ $totalAtendimentosMes = (int) $stmtAtendMes->fetchColumn();
     <!-- Procedimentos mais realizados -->
     <div class="cartao">
       <div class="cartao-cabecalho">
-        <h3><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i> Produção por procedimento — <?= data_pt('F') ?></h3>
-        <a href="dono_relatorios.php" class="cartao-link">Relatório completo →</a>
+        <h3><i class="bi bi-person-badge-fill" aria-hidden="true"></i> Produção por procedimento — <?= data_pt('F') ?></h3>
+        <a href="dono_relatorios.php" class="cartao-link">Relatório completo</a>
       </div>
       <div class="tabela-wrapper">
         <table aria-label="Procedimentos mais realizados no mês">
@@ -189,7 +189,7 @@ $totalAtendimentosMes = (int) $stmtAtendMes->fetchColumn();
     <div class="cartao">
       <div class="cartao-cabecalho">
         <h3><i class="bi bi-people-fill" aria-hidden="true"></i> Últimos Atendimentos</h3>
-        <a href="dono_pacientes.php" class="cartao-link">Ver todos →</a>
+        <a href="dono_pacientes.php" class="cartao-link">Ver todos</a>
       </div>
       <div class="tabela-wrapper">
         <table aria-label="Últimos pacientes atendidos">

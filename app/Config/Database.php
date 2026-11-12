@@ -69,6 +69,8 @@ class Database
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES   => false,
                 ]);
+                // CURRENT_DATE/now() no mesmo fuso do PHP (includes/functions.php), mesmo se o servidor estiver em UTC.
+                self::$instancia->exec("SET TIME ZONE 'America/Cuiaba'");
             } catch (PDOException $e) {
                 throw new \RuntimeException('Não foi possível conectar ao PostgreSQL. Confira o arquivo .env e se o serviço do banco está ativo.', 0, $e);
             }

@@ -1,25 +1,31 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('dentista');
+verificarSessao('dentista');carregarListas(['pacientes', 'procedimentos']);
 
 $tituloPagina = 'Prontuários';
 $pacienteSelecionado = (string)($_GET['paciente'] ?? '');
-$erro='';$sucesso='';$dadosPaciente=null;$prontuarioPaciente=null;
+$erro='';$dadosPaciente=null;$prontuarioPaciente=null;
 if ($pacienteSelecionado!=='') {
-    try { $dadosPaciente=localizarPaciente($pacienteSelecionado);pacientePermitido($dadosPaciente['id']); }
+    try { $dadosPaciente=localizarPaciente($pacienteSelecionado);pacientePermitido($dadosPaciente['id']);
+        // localizarPaciente() só traz id/nome/CPF; a ficha exibida precisa do registro completo da view.
+        $dadosPaciente=buscarPorCampo($listaPacientes,'id',$dadosPaciente['id']) ?? (lerJson('pacientes.json',['id'=>$dadosPaciente['id']])[0] ?? $dadosPaciente); }
     catch (Throwable $e) { $erro=mensagemOperacao($e);$dadosPaciente=null; }
 }
 if ($_SERVER['REQUEST_METHOD']==='POST' && $dadosPaciente) {
     try {
-        if (isset($_POST['salvar_prontuario'])) registrarEvolucao($_POST+['paciente'=>(string)$dadosPaciente['id']]);
-        elseif (isset($_POST['salvar_odontograma'])) salvarOdontograma($dadosPaciente['id'],json_decode($_POST['odontograma'] ?? '{}',true,512,JSON_THROW_ON_ERROR));
-        $sucesso='Prontuário salvo.';
+        if (isset($_POST['salvar_prontuario'])) {
+            registrarEvolucao($_POST+['paciente'=>(string)$dadosPaciente['id']]);
+            redirecionar(paginaAtual(),'Evolução clínica registrada.');
+        } elseif (isset($_POST['salvar_odontograma'])) {
+            try { $dentes=json_decode((string)($_POST['odontograma'] ?? '{}'),true,512,JSON_THROW_ON_ERROR); }
+            catch (JsonException) { throw new InvalidArgumentException('Odontograma em formato inválido. Recarregue a página.'); }
+            salvarOdontograma((int)$dadosPaciente['id'],$dentes);
+            redirecionar(paginaAtual(),'Odontograma salvo.');
+        }
     } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
-foreach (lerJson('prontuarios.json') as $pr) {
-    if ($dadosPaciente && $pr['id_paciente']===$dadosPaciente['id']) { $prontuarioPaciente=$pr;break; }
-}
+if ($dadosPaciente) $prontuarioPaciente=lerJson('prontuarios.json',['id_paciente'=>$dadosPaciente['id']])[0] ?? null;
 $odontoDados=$prontuarioPaciente['odontograma'] ?? [];
 $historicoClinico=$prontuarioPaciente['historico'] ?? [];
 $odontoDadosJson=json_encode($odontoDados ?: new stdClass(),JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT);
@@ -41,16 +47,13 @@ include 'includes/head.php';
     </div>
 
     <?php if ($erro): ?><div class="alerta alerta-erro"><?= limpar($erro) ?></div><?php endif; ?>
-    <?php if ($sucesso): ?>
-      <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
-    <?php endif; ?>
 
     <!-- Seletor de paciente -->
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-corpo">
         <form method="GET" style="display:flex;gap:10px;align-items:flex-end;" aria-label="Selecionar paciente">
           <div style="flex:1;">
-            <label for="sel-paciente" style="font-size:12px;font-weight:600;color:var(--texto-secundario);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Paciente</label>
+            <label for="sel-paciente" style="font-size:12px;font-weight:600;color:var(--texto-secundario);display:block;margin-bottom:6px;">Paciente</label>
             <select id="sel-paciente" name="paciente"
               style="width:100%;padding:11px 14px;border:2px solid var(--borda);border-radius:var(--raio-pilula);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);">
               <option value="">Selecione um paciente...</option>
@@ -72,20 +75,20 @@ include 'includes/head.php';
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-corpo">
         <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-          <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--destaque),var(--primario-claro));display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:700;flex-shrink:0;">
-            <?= iniciais($pacienteSelecionado) ?>
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:700;flex-shrink:0;">
+            <?= iniciais($dadosPaciente['nome']) ?>
           </div>
           <div style="flex:1;min-width:200px;">
-            <h2 style="font-size:20px;margin-bottom:4px;"><?= limpar($pacienteSelecionado) ?></h2>
+            <h2 style="font-size:20px;margin-bottom:4px;"><?= limpar($dadosPaciente['nome']) ?></h2>
             <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13px;color:var(--texto-secundario);">
-              <span><i class="bi bi-telephone-fill" aria-hidden="true"></i> <?= limpar($dadosPaciente['telefone']) ?></span>
-              <span><i class="bi bi-envelope-fill" aria-hidden="true"></i> <?= limpar($dadosPaciente['email']) ?></span>
-              <span><i class="bi bi-cake2-fill" aria-hidden="true"></i> <?= date('d/m/Y', strtotime($dadosPaciente['nascimento'])) ?></span>
-              <span>🆔 <?= limpar($dadosPaciente['cpf']) ?></span>
+              <span><i class="bi bi-telephone-fill" aria-hidden="true"></i> <?= limpar($dadosPaciente['telefone'] ?? '') ?></span>
+              <span><i class="bi bi-envelope-fill" aria-hidden="true"></i> <?= limpar($dadosPaciente['email'] ?? '') ?></span>
+              <span><i class="bi bi-cake2-fill" aria-hidden="true"></i> <?= !empty($dadosPaciente['nascimento']) ? date('d/m/Y', strtotime($dadosPaciente['nascimento'])) : '—' ?></span>
+              <span><i class="bi bi-person-vcard" aria-hidden="true"></i> CPF <?= limpar($dadosPaciente['cpf']) ?></span>
             </div>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <?= emblema($dadosPaciente['status']) ?>
+            <?= emblema($dadosPaciente['status'] ?? '') ?>
             <span style="background:var(--informacao-fundo);color:var(--informacao);border-radius:var(--raio-pilula);padding:4px 12px;font-size:12px;font-weight:600;">
               Última consulta: <?= limpar($dadosPaciente['ultimaConsulta'] ?? '—') ?>
             </span>
@@ -99,7 +102,7 @@ include 'includes/head.php';
       <div class="cartao-corpo">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
           <div>
-            <h3 style="font-size:16px;font-weight:700;margin-bottom:3px;"><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i> Odontograma Interativo</h3>
+            <h3 style="font-size:16px;font-weight:700;margin-bottom:3px;"><i class="bi bi-person-badge-fill" aria-hidden="true"></i> Odontograma Interativo</h3>
             <p style="font-size:13px;color:var(--texto-secundario);">Clique em um dente para ver detalhes e registrar tratamentos</p>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -133,7 +136,7 @@ include 'includes/head.php';
           <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
             <div id="dente-icone" style="width:52px;height:52px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0b2845;flex-shrink:0;"></div>
             <div>
-              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--texto-secundario);margin-bottom:2px;">Dente selecionado</div>
+              <div style="font-size:11px;font-weight:600;color:var(--texto-secundario);margin-bottom:2px;">Dente selecionado</div>
               <div id="dente-titulo" style="font-size:18px;font-weight:700;color:var(--texto-principal);"></div>
               <div id="dente-status-badge" style="margin-top:4px;"></div>
             </div>
@@ -141,11 +144,11 @@ include 'includes/head.php';
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div>
-              <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--texto-secundario);margin-bottom:8px;">Procedimentos registrados</div>
+              <div style="font-size:12px;font-weight:600;color:var(--texto-secundario);margin-bottom:8px;">Procedimentos registrados</div>
               <ul id="dente-procedimentos" style="list-style:none;padding:0;margin:0;font-size:14px;color:var(--texto-principal);"></ul>
             </div>
             <div>
-              <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--texto-secundario);margin-bottom:8px;">Observações clínicas</div>
+              <div style="font-size:12px;font-weight:600;color:var(--texto-secundario);margin-bottom:8px;">Observações clínicas</div>
               <div id="dente-notas" style="font-size:14px;color:var(--texto-principal);line-height:1.6;"></div>
             </div>
           </div>
@@ -168,7 +171,7 @@ include 'includes/head.php';
       <div class="cartao-corpo">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
           <h3 style="font-size:16px;font-weight:700;"><i class="bi bi-folder2-open" aria-hidden="true"></i> Histórico Clínico</h3>
-          <span style="font-size:13px;color:var(--texto-secundario);">4 registros encontrados</span>
+          <span style="font-size:13px;color:var(--texto-secundario);"><?= count($historicoClinico) ?> registro(s)</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:12px;">
           <?php
@@ -179,7 +182,7 @@ include 'includes/head.php';
             <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                 <span style="font-size:13px;font-weight:700;color:var(--texto-principal);"><?= limpar($reg['proc']) ?></span>
-                <span style="font-size:12px;padding:2px 10px;background:var(--informacao-fundo);color:var(--informacao);border-radius:var(--raio-pilula);font-weight:600;"><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i> <?= limpar($reg['dentes']) ?></span>
+                <span style="font-size:12px;padding:2px 10px;background:var(--informacao-fundo);color:var(--informacao);border-radius:var(--raio-pilula);font-weight:600;"><i class="bi bi-person-badge-fill" aria-hidden="true"></i> <?= limpar($reg['dentes']) ?></span>
               </div>
               <div style="display:flex;align-items:center;gap:12px;">
                 <span style="font-size:13px;color:var(--sucesso);font-weight:700;">R$ <?= number_format($reg['valor'],2,',','.') ?></span>
@@ -206,19 +209,19 @@ include 'includes/head.php';
               <select name="procedimento" style="width:100%;padding:11px 14px;border:2px solid var(--borda);border-radius:var(--raio-pequeno);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);">
                 <option value="">Selecione...</option>
                 <?php foreach ($listaProcedimentos as $proc): ?>
-                  <option><?= limpar($proc) ?></option>
+                  <option <?= ($_POST['procedimento'] ?? '')===$proc ? 'selected' : '' ?>><?= limpar($proc) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
             <div class="grupo-campo">
               <label>Dentes (ex: 11, 21, 36)</label>
-              <input type="text" name="dentes" placeholder="Números dos dentes tratados" style="width:100%;padding:11px 14px;border:2px solid var(--borda);border-radius:var(--raio-pequeno);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);box-sizing:border-box;">
+              <input type="text" name="dentes" value="<?= limpar((string)($_POST['dentes'] ?? '')) ?>" placeholder="Números dos dentes tratados" style="width:100%;padding:11px 14px;border:2px solid var(--borda);border-radius:var(--raio-pequeno);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);box-sizing:border-box;">
             </div>
           </div>
           <div class="grupo-campo" style="margin-bottom:16px;">
             <label>Observações clínicas</label>
             <textarea name="observacoes" rows="3" placeholder="Descreva os procedimentos, intercorrências, orientações ao paciente..."
-              style="width:100%;padding:12px 14px;border:2px solid var(--borda);border-radius:var(--raio-pequeno);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);resize:vertical;box-sizing:border-box;"></textarea>
+              style="width:100%;padding:12px 14px;border:2px solid var(--borda);border-radius:var(--raio-pequeno);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);resize:vertical;box-sizing:border-box;"><?= limpar((string)($_POST['observacoes'] ?? '')) ?></textarea>
           </div>
           <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button type="submit" name="salvar_prontuario" class="btn btn-primario"><i class="bi bi-save-fill" aria-hidden="true"></i> Salvar Registro</button>
@@ -231,7 +234,7 @@ include 'includes/head.php';
 
     <div class="cartao">
       <div class="cartao-corpo" style="text-align:center;padding:60px 20px;">
-        <div style="font-size:56px;margin-bottom:16px;"><i class="bi bi-emoji-smile-fill" aria-hidden="true"></i></div>
+        <div style="font-size:56px;margin-bottom:16px;"><i class="bi bi-person-badge-fill" aria-hidden="true"></i></div>
         <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Selecione um paciente</h3>
         <p style="color:var(--texto-secundario);">Escolha um paciente acima para ver o prontuário e o odontograma interativo</p>
       </div>

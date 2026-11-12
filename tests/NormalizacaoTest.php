@@ -72,9 +72,9 @@ final class NormalizacaoTest extends TestCase
     {
         $paciente = (int) $this->pdo->query("INSERT INTO pacientes (id_pessoa) VALUES ({$this->pessoa}) RETURNING id")->fetchColumn();
         $outraPessoa = $this->pdo->query("INSERT INTO pessoa (nome,cpf) VALUES ('Dentista Teste','98765432100') RETURNING id")->fetchColumn();
-        $esp = referenciaPorNome($this->pdo, 'especialidade', 'Teste');
-        $sala = referenciaPorNome($this->pdo, 'sala', 'Teste');
-        $categoria = referenciaPorNome($this->pdo, 'categoria_procedimento', 'Teste');
+        $esp = referenciaPorNome($this->pdo,'especialidade','Teste',true);
+        $sala = referenciaPorNome($this->pdo,'sala','Teste',true);
+        $categoria = referenciaPorNome($this->pdo,'categoria_procedimento','Teste',true);
         $dentista = $this->pdo->query("INSERT INTO dentistas (id_pessoa,cro_uf,cro_numero,id_especialidade,id_sala)
             VALUES ($outraPessoa,'MS','999999',$esp,$sala) RETURNING id")->fetchColumn();
         $proc = $this->pdo->query("INSERT INTO procedimentos (nome,id_categoria,duracao_min,valor_base)
@@ -91,10 +91,10 @@ final class NormalizacaoTest extends TestCase
         $outroPaciente = $this->pdo->query("INSERT INTO pessoa (nome,cpf) VALUES ('Paciente B','11144477735') RETURNING id")->fetchColumn();
         $outroPaciente = $this->pdo->query("INSERT INTO pacientes (id_pessoa) VALUES ($outroPaciente) RETURNING id")->fetchColumn();
         $pessoaD = $this->pdo->query("INSERT INTO pessoa (nome,cpf) VALUES ('Dentista B','52998224725') RETURNING id")->fetchColumn();
-        $esp = referenciaPorNome($this->pdo,'especialidade','Teste');
+        $esp = referenciaPorNome($this->pdo,'especialidade','Teste',true);
         $d = $this->pdo->query("INSERT INTO dentistas (id_pessoa,cro_uf,cro_numero,id_especialidade) VALUES ($pessoaD,'MS','999998',$esp) RETURNING id")->fetchColumn();
         $this->pdo->exec("INSERT INTO dentista_procedimentos VALUES ($d,{$a['proc']})");
-        $s = referenciaPorNome($this->pdo,'sala','Teste B');
+        $s = referenciaPorNome($this->pdo,'sala','Teste B',true);
         // Cada caso isola uma das três restrições de horário.
         foreach ([[$outroPaciente,$a['dentista'],$s],[$a['paciente'],$d,$s],[$outroPaciente,$d,$a['sala']]] as [$p,$dent,$sala]) {
             $this->rejeitar("INSERT INTO agendamentos (id_paciente,id_dentista,id_procedimento,id_sala,data,hora,valor)
@@ -110,7 +110,7 @@ final class NormalizacaoTest extends TestCase
         $a = $this->agenda();
         $id = $a['id'];
         $this->assertFalse($this->pdo->query("SELECT pago FROM vw_agendamentos WHERE id=$id")->fetchColumn());
-        $forma = referenciaPorNome($this->pdo,'forma_pagamento','Pix');
+        $forma = referenciaPorNome($this->pdo,'forma_pagamento','Pix',true);
         $this->pdo->exec("INSERT INTO pagamento (id_agendamento,id_forma_pagamento,valor) VALUES ($id,$forma,90)");
         $this->assertFalse($this->pdo->query("SELECT pago FROM vw_agendamentos WHERE id=$id")->fetchColumn());
         $this->pdo->exec("UPDATE pagamento SET pago_em=now() WHERE id_agendamento=$id");
@@ -120,11 +120,12 @@ final class NormalizacaoTest extends TestCase
     public function test_fdi_fk_composta_e_exclusao_restrita(): void
     {
         $a = $this->agenda();
-        $categoria = referenciaPorNome($this->pdo,'categoria_procedimento','Teste');
+        $categoria = referenciaPorNome($this->pdo,'categoria_procedimento','Teste',true);
         $proc = $this->pdo->query("INSERT INTO procedimentos (nome,id_categoria,duracao_min,valor_base)
             VALUES ('Não habilitado',$categoria,30,90) RETURNING id")->fetchColumn();
         $this->rejeitar("UPDATE agendamentos SET id_procedimento=$proc WHERE id={$a['id']}", '23503');
-        $this->rejeitar("DELETE FROM pacientes WHERE id={$a['paciente']}", '23503');
+        // ON DELETE RESTRICT responde com restrict_violation (23001), não foreign_key_violation (23503).
+        $this->rejeitar("DELETE FROM pacientes WHERE id={$a['paciente']}", '23001');
         $pr = $this->pdo->query("INSERT INTO prontuarios (id_paciente) VALUES ({$a['paciente']}) RETURNING id")->fetchColumn();
         foreach ([10,19,49,56,89,99] as $n) $this->rejeitar("INSERT INTO odontograma_dentes (id_prontuario,numero_dente) VALUES ($pr,$n)", '23514');
         $this->assertSame(1,$this->pdo->exec("INSERT INTO odontograma_dentes (id_prontuario,numero_dente) VALUES ($pr,55)"));

@@ -2,12 +2,12 @@
 // tela onde o paciente agenda sua própria consulta
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('cliente');
+verificarSessao('cliente');carregarListas(['dentistas', 'procedimentos', 'horarios']);
 
 $tituloPagina = 'Agendar Consulta';
-$sucesso='';$erro='';
+$erro='';
 if (isset($_POST['solicitar_consulta'])) {
-    try { $id=criarAgendamento($_POST); $sucesso='Agendamento #'.$id.' salvo no PostgreSQL. <a href="cliente_consultas.php">Ver minhas consultas</a>'; }
+    try { $id=criarAgendamento($_POST); redirecionar('cliente_consultas.php','Consulta #'.$id.' agendada.'); }
     catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
 $pdo=\App\Config\Database::getConnection();
@@ -29,11 +29,6 @@ include 'includes/head.php';
     </div>
 
     <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
-    <?php if ($sucesso): ?>
-      <div class="alerta alerta-sucesso" role="status" aria-live="polite">
-        <i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= $sucesso ?>
-      </div>
-    <?php endif; ?>
 
     <div class="cartao">
       <div class="cartao-cabecalho"><h3><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Solicitar Nova Consulta</h3></div>
@@ -47,7 +42,7 @@ include 'includes/head.php';
             <select id="sol-procedimento" name="procedimento" required aria-required="true">
               <option value="">Selecione o procedimento...</option>
               <?php foreach ($listaProcedimentos as $procedimento): ?>
-                <option><?= limpar($procedimento) ?></option>
+                <option <?= ($_POST['procedimento'] ?? '')===$procedimento ? 'selected' : '' ?>><?= limpar($procedimento) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
@@ -58,7 +53,7 @@ include 'includes/head.php';
             <select id="sol-dentista" name="dentista">
               <option value="">Sem preferência (qualquer dentista disponível)</option>
               <?php foreach ($listaDentistas as $dentista): ?>
-                <option value="<?= $dentista['id'] ?>"><?= limpar($dentista['nome']) ?> — <?= limpar($dentista['especialidade']) ?></option>
+                <option value="<?= $dentista['id'] ?>" <?= (int)($_POST['dentista'] ?? 0)===(int)$dentista['id'] ? 'selected' : '' ?>><?= limpar($dentista['nome']) ?> — <?= limpar($dentista['especialidade']) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
@@ -67,17 +62,18 @@ include 'includes/head.php';
           <div class="linha-campos">
             <div class="grupo-campo">
               <label for="sol-data">Data preferida</label>
-              <!-- começa do dia seguinte pra não permitir agendar hoje -->
+              <!-- antecedência mínima definida pelo gestor em Configurações -->
+              <?php $dataMinima = dataMinimaPaciente(\App\Config\Database::getConnection()); ?>
               <input type="date" id="sol-data" name="data"
-                     min="<?= date('Y-m-d', strtotime('+1 day')) ?>"
-                     value="<?= date('Y-m-d', strtotime('+1 day')) ?>"
+                     min="<?= $dataMinima ?>"
+                     value="<?= limpar((string)($_POST['data'] ?? '') ?: $dataMinima) ?>"
                      required aria-required="true">
             </div>
             <div class="grupo-campo">
               <label for="sol-horario">Horário preferido</label>
               <select id="sol-horario" name="horario">
                 <?php foreach ($listaHorarios as $horario): ?>
-                  <option><?= $horario ?></option>
+                  <option <?= ($_POST['horario'] ?? '')===$horario ? 'selected' : '' ?>><?= $horario ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -88,7 +84,7 @@ include 'includes/head.php';
           <div class="grupo-campo">
             <label for="sol-obs">Descreva o motivo ou sintomas (opcional)</label>
             <textarea id="sol-obs" name="obs" rows="3"
-                      placeholder="Descreva o que está sentindo, dúvidas ou informações importantes para o dentista..."></textarea>
+                      placeholder="Descreva o que está sentindo, dúvidas ou informações importantes para o dentista..."><?= limpar((string)($_POST['obs'] ?? '')) ?></textarea>
           </div>
 
           <button type="submit" name="solicitar_consulta" class="btn btn-primario"
@@ -125,6 +121,6 @@ include 'includes/head.php';
 </div>
 
 <?php include 'includes/a11y_bar.php'; ?>
-<script src="js/agenda-horarios.js" defer></script>
+<script src="js/agenda-horarios.js?v=<?= filemtime(__DIR__ . "/js/agenda-horarios.js") ?>" defer></script>
 </body>
 </html>

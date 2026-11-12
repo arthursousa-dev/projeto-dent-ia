@@ -2,30 +2,26 @@
 // painel da recepcionista — controle do dia a dia da recepção
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('recepcionista');
+verificarSessao('recepcionista');carregarListas(['agendamentos', 'dentistas', 'horarios', 'pacientes', 'procedimentos']);
 
 $tituloPagina = 'Painel da Recepção';
 
 // processa as ações rápidas da tabela de agenda
-$sucesso='';$erro='';
+$erro='';
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     try {
-        if (isset($_POST['agendar_rapido'])) { $novoId=criarAgendamento($_POST); header('Location: recepcionista_agenda.php?data='.urlencode($_POST['data']).'&criado='.$novoId); exit; }
-        elseif (isset($_POST['receber'])) confirmarPagamento((int)$_POST['id'],(int)$_POST['forma']);
+        if (isset($_POST['agendar_rapido'])) { $novoId=criarAgendamento($_POST); redirecionar('recepcionista_agenda.php?data='.urlencode((string)($_POST['data'] ?? '')), 'Agendamento #'.$novoId.' criado e vinculado ao paciente.'); }
+        elseif (isset($_POST['receber'])) { confirmarPagamento(idParametro($_POST['id'] ?? 0),(int)($_POST['forma'] ?? 0)); redirecionar(paginaAtual(),'Pagamento registrado.'); }
         else {
-            $status=isset($_POST['fazer_checkin']) ? 'Aguardando' : (isset($_POST['cancelar_consulta']) ? 'Cancelado' : ($_POST['status'] ?? ''));
-            alterarStatusAgenda((int)($_POST['id'] ?? 0),$status);
+            $status=isset($_POST['fazer_checkin']) ? 'Aguardando' : (isset($_POST['cancelar_consulta']) ? 'Cancelado' : (string)($_POST['status'] ?? ''));
+            alterarStatusAgenda(idParametro($_POST['id'] ?? 0),$status);
+            redirecionar(paginaAtual(),$status==='Cancelado' ? 'Consulta cancelada.' : ($status==='Aguardando' ? 'Check-in feito.' : 'Consulta atualizada.'));
         }
-        $sucesso='Consulta atualizada.';
     } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
 // Dashboard mostra somente consultas de hoje e consulta o banco a cada acesso.
 $pdo = \App\Config\Database::getConnection();
-$stmtHoje = $pdo->prepare("SELECT a.id,a.id_paciente,a.id_dentista,to_char(a.data,'YYYY-MM-DD') AS data,to_char(a.hora,'HH24:MI') AS hora,a.status::text AS status,a.valor,a.observacoes,pp.nome AS paciente,pd.nome AS dentista,pr.nome AS servico,pr.nome AS procedimento, s.nome AS sala,(pg.pago_em IS NOT NULL) AS pago,COALESCE(fp.nome,'') AS forma_pagamento FROM agendamentos a JOIN pacientes pac ON pac.id=a.id_paciente JOIN pessoa pp ON pp.id=pac.id_pessoa JOIN dentistas d ON d.id=a.id_dentista JOIN pessoa pd ON pd.id=d.id_pessoa LEFT JOIN procedimentos pr ON pr.id=a.id_procedimento JOIN sala s ON s.id=a.id_sala LEFT JOIN pagamento pg ON pg.id_agendamento=a.id LEFT JOIN forma_pagamento fp ON fp.id=pg.id_forma_pagamento WHERE a.data=:data ORDER BY a.hora, a.id");
-$stmtHoje->execute(['data'=>date('Y-m-d')]);
-$listaAgendamentos = $stmtHoje->fetchAll(PDO::FETCH_ASSOC);
-foreach ($listaAgendamentos as &$registroAgenda) $registroAgenda['pago']=booleanoPg($registroAgenda['pago']);
-unset($registroAgenda);
+$listaAgendamentos = agendaRecepcao('ag.data = CAST(:data AS date)', ['data'=>date('Y-m-d')]);
 $formas=$pdo->query('SELECT id,nome FROM forma_pagamento ORDER BY id')->fetchAll();
 include 'includes/head.php';
 ?>
@@ -46,9 +42,6 @@ include 'includes/head.php';
     </div>
 
     <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
-    <?php if ($sucesso): ?>
-      <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
-    <?php endif; ?>
 
     <!-- estatísticas do dia -->
     <div class="grade-estatisticas">
@@ -74,7 +67,7 @@ include 'includes/head.php';
     <div class="cartao">
       <div class="cartao-cabecalho">
         <h3><i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Agenda de Hoje — <?= data_pt('d/m/Y') ?></h3>
-        <a href="recepcionista_agenda.php" class="cartao-link">Ver agenda completa →</a>
+        <a href="recepcionista_agenda.php" class="cartao-link">Ver agenda completa</a>
       </div>
       <div class="tabela-wrapper">
         <table aria-label="Agenda de consultas de hoje">
@@ -111,8 +104,8 @@ include 'includes/head.php';
                   </form>
                   <!-- botão de cancelar -->
                   <form method="POST" style="display:inline;"
-                        onsubmit="return confirm('Cancelar consulta de <?= limpar($agendamento['paciente']) ?>
-          <?= csrfCampo() ?>?')">
+                        data-confirmar="Cancelar consulta de <?= limpar($agendamento['paciente']) ?>?">
+                    <?= csrfCampo() ?>
                     <input type="hidden" name="id" value="<?= $agendamento['id'] ?>">
                     <button type="submit" name="cancelar_consulta"
                             class="btn btn-perigo btn-pequeno"
@@ -136,7 +129,7 @@ include 'includes/head.php';
     <div class="cartao">
       <div class="cartao-cabecalho">
         <h3><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i> Agendamento Rápido</h3>
-        <a href="recepcionista_novo_agendamento.php" class="cartao-link">Formulário completo →</a>
+        <a href="recepcionista_novo_agendamento.php" class="cartao-link">Formulário completo</a>
       </div>
       <div class="cartao-corpo">
         <form method="POST" data-agendamento-dinamico aria-label="Formulário de agendamento rápido">
@@ -184,7 +177,7 @@ include 'includes/head.php';
             </div>
           </div>
           <button type="submit" name="agendar_rapido" class="btn btn-primario">
-            Confirmar agendamento →
+            Confirmar agendamento
           </button>
         </form>
       </div>
@@ -194,6 +187,6 @@ include 'includes/head.php';
 </div>
 
 <?php include 'includes/a11y_bar.php'; ?>
-<script src="js/agenda-horarios.js" defer></script>
+<script src="js/agenda-horarios.js?v=<?= filemtime(__DIR__ . "/js/agenda-horarios.js") ?>" defer></script>
 </body>
 </html>

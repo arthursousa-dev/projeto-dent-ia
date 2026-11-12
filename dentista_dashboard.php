@@ -2,21 +2,22 @@
 // painel principal do dentista — visão do dia de trabalho
 require_once __DIR__ . '/includes/bootstrap_sessao.php';
 require_once 'includes/functions.php';
-verificarSessao('dentista');
+verificarSessao('dentista');carregarListas(['agendamentos', 'pacientes', 'procedimentos']);
 
 $tituloPagina = 'Painel do Dentista';
 
-$d=dentistaSessao(); $erro='';$sucesso='';
+$d=dentistaSessao(); $erro='';
 if (isset($_POST['salvar_atendimento'])) {
-    try { registrarEvolucao($_POST);$sucesso='Evolução clínica registrada.'; }
+    try { registrarEvolucao($_POST);redirecionar(paginaAtual(),'Evolução clínica registrada.'); }
     catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
 $agendaHoje=array_values(array_filter($listaAgendamentos,fn($a)=>$a['data']===date('Y-m-d')));
 $atendidos=count(array_filter($agendaHoje,fn($a)=>$a['status']==='Concluída'));
-$restantes=count(array_filter($agendaHoje,fn($a)=>!in_array($a['status'],['Concluída','Cancelado'],true)));
+$restantes=count(array_filter($agendaHoje,fn($a)=>in_array($a['status'],STATUS_EM_ABERTO,true)));
 $mes=count(array_filter($listaAgendamentos,fn($a)=>substr($a['data'],0,7)===date('Y-m') && $a['status']==='Concluída'));
 $proxima=null;
-foreach ($agendaHoje as $a) if (in_array($a['status'],['Aguardando','Confirmado','Agendado'],true)) { $proxima=$a;break; }
+// Próximo paciente do dia: o dentista também espera quem está atrasado (por isso não usa consultaFutura(), que olha a hora).
+foreach ($agendaHoje as $a) if (in_array($a['status'],STATUS_FUTURO,true)) { $proxima=$a;break; }
 $listaProcedimentos=$d['procedimentos'] ?? [];
 include 'includes/head.php';
 ?>
@@ -28,16 +29,13 @@ include 'includes/head.php';
 
     <div class="cabecalho-pagina">
       <div>
-        <h1>Olá, <?= limpar($d['nome'] ?? $_SESSION['usuario']) ?>! <i class="bi bi-emoji-smile-fill" aria-hidden="true"></i></h1>
+        <h1>Olá, <?= limpar($d['nome'] ?? $_SESSION['usuario']) ?>! <i class="bi bi-person-badge-fill" aria-hidden="true"></i></h1>
         <p><?= limpar(($d['especialidade'] ?? '').' — '.($d['cro'] ?? '')) ?> — <?= data_pt('d \d\e F \d\e Y') ?></p>
       </div>
       <a href="dentista_agenda.php" class="btn btn-primario"><i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Ver Agenda Completa</a>
     </div>
 
     <?php if ($erro): ?><div class="alerta alerta-erro"><?= limpar($erro) ?></div><?php endif; ?>
-    <?php if ($sucesso): ?>
-      <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
-    <?php endif; ?>
 
     <!-- estatísticas do dentista -->
     <div class="grade-estatisticas">
@@ -60,10 +58,10 @@ include 'includes/head.php';
     </div>
 
     <!-- destaque do próximo paciente -->
-    <div style="background:linear-gradient(135deg,var(--primario),var(--primario-claro));border-radius:var(--raio);padding:26px 30px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;"
+    <div style="background:var(--primario);border-radius:var(--raio);padding:26px 30px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;"
          role="region" aria-label="Próximo paciente">
       <div style="color:#fff;">
-        <p style="color:rgba(255,255,255,0.55);font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;">
+        <p style="color:rgba(255,255,255,0.55);font-size:0.78rem;margin-bottom:7px;">
           <i class="bi bi-bell-fill" aria-hidden="true"></i> Próximo paciente — <?= limpar($proxima['hora'] ?? 'Sem consulta pendente') ?>
         </p>
         <h2 style="font-family:var(--fonte-titulo);font-size:1.5rem;margin-bottom:5px;"><?= limpar($proxima['paciente'] ?? 'Agenda atualizada') ?></h2>
@@ -85,7 +83,7 @@ include 'includes/head.php';
     <div class="cartao">
       <div class="cartao-cabecalho">
         <h3><i class="bi bi-calendar-event-fill" aria-hidden="true"></i> Agenda de Hoje — <?= data_pt('d/m/Y') ?></h3>
-        <a href="dentista_agenda.php" class="cartao-link">Ver completa →</a>
+        <a href="dentista_agenda.php" class="cartao-link">Ver completa</a>
       </div>
       <div class="tabela-wrapper">
         <table aria-label="Agenda resumida do dia do dentista">
@@ -108,7 +106,7 @@ include 'includes/head.php';
               <td><?= limpar($agendamento['sala']) ?></td>
               <td><?= emblema($agendamento['status']) ?></td>
               <td>
-                <a href="dentista_prontuario.php?paciente=<?= urlencode($agendamento['paciente']) ?>"
+                <a href="dentista_prontuario.php?paciente=<?= (int)$agendamento['id_paciente'] ?>"
                    class="cartao-link" style="font-size:0.8rem;">
                   <i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Prontuário
                 </a>
@@ -132,7 +130,7 @@ include 'includes/head.php';
               <label for="rap-paciente">Paciente</label>
               <select id="rap-paciente" name="paciente">
                 <?php foreach ($listaPacientes as $paciente): ?>
-                  <option><?= limpar($paciente['nome']) ?></option>
+                  <option value="<?= (int)$paciente['id'] ?>"><?= limpar($paciente['nome']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>

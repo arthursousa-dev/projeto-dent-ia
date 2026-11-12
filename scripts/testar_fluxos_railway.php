@@ -45,6 +45,10 @@ try {
     ok((int)$a['id_paciente']===$pac && $a['data']===$day,'agendamento aparece na agenda do dia correto');
     try {criarAgendamento($dados);throw new RuntimeException('duplicidade aceita');}
     catch (InvalidArgumentException $e) {ok(true,'horário duplicado bloqueado');}
+    try {alterarStatusAgenda($id,'Aguardando');throw new RuntimeException('check-in de consulta futura aceito');}
+    catch (InvalidArgumentException $e) {ok(true,'check-in antes do dia da consulta é recusado');}
+    // Dentro da transação de teste: traz a consulta para hoje (00:00) para seguir o fluxo do dia.
+    $pdo->prepare("UPDATE agendamentos SET data=CURRENT_DATE, hora='00:00' WHERE id=:id")->execute(['id'=>$id]);
     alterarStatusAgenda($id,'Aguardando');
     alterarStatusAgenda($id,'Em atendimento');
     alterarStatusAgenda($id,'Concluída');
@@ -60,11 +64,11 @@ try {
     salvarOdontograma($pac,['11'=>['status'=>'tratado','notas'=>'Teste temporário']]);
     $_SESSION['perfil']='dono';$_SESSION['email']='dono@dentai.com';
     $cat=(int)$pdo->query("SELECT id FROM categoria_lancamento WHERE tipo='Despesa' ORDER BY id LIMIT 1")->fetchColumn();
-    $lanc=registrarLancamento(['tipo'=>'Despesa','valor'=>'35.50','descricao'=>'Teste de despesa','data'=>$day,'id_categoria'=>$cat]);
+    $lanc=registrarLancamento(['tipo'=>'Despesa','valor'=>'35.50','descricao'=>'Teste de despesa','data'=>date('Y-m-d'),'id_categoria'=>$cat]);
     ok($lanc>0,'despesa financeira');
     $fat=resumoFinanceiro($pdo,$day);
     ok(isset($fat['mes_atual']['receita_total']),'faturamento baseado em pagamentos');
-    echo '[OK] TESTES TRANSACIONAIS PASSARAM.\n';
+    echo "[OK] TESTES TRANSACIONAIS PASSARAM.\n";
 } catch (Throwable $e) {
     fwrite(STDERR,'[ERRO] '.$e->getMessage()."\n");
     $falhou=true;

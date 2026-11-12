@@ -10,8 +10,7 @@ $erro='';$sucesso='';
 if (!$rec) $erro='Link inválido, expirado ou já utilizado. Solicite outro ao gestor.';
 if ($rec && isset($_POST['salvar_senha'])) {
     try {
-        if (($_POST['nova_senha'] ?? '')!==($_POST['confirmar_senha'] ?? '')) throw new InvalidArgumentException('As senhas não coincidem.');
-        redefinirSenha($token,$_POST['nova_senha'] ?? '');$sucesso='Senha alterada. Faça login com a nova senha.';
+        redefinirSenha($token,(string)($_POST['nova_senha'] ?? ''),(string)($_POST['confirmar_senha'] ?? ''));$sucesso='Senha alterada. Faça login com a nova senha.';
     } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
 $tituloPagina = 'Nova Senha';
@@ -34,7 +33,7 @@ include 'includes/head.php';
         <div style="margin-top:18px;padding:12px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.78rem;opacity:0.75;">
           <strong>Dicas para uma senha segura:</strong>
           <ul style="margin:8px 0 0 16px;line-height:1.7;">
-            <li>Mínimo de 6 caracteres</li>
+            <li>Mínimo de <?= SENHA_MINIMA ?> caracteres</li>
             <li>Misture letras e números</li>
             <li>Use pelo menos um caractere especial</li>
             <li>Evite sequências óbvias (123456, abcdef)</li>
@@ -56,6 +55,7 @@ include 'includes/head.php';
         Conta: <strong style="color:var(--primario);"><?= limpar($emailRecuperacao) ?></strong>
       </p>
 
+      <?= exibirFlash() ?>
       <?php if ($erro): ?>
         <div class="alerta alerta-perigo" role="alert" aria-live="assertive">
           <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?= limpar($erro) ?>
@@ -67,13 +67,13 @@ include 'includes/head.php';
           <i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?>
           <div style="margin-top:12px;">
             <a href="login.php" class="btn btn-primario" style="display:inline-flex;padding:10px 22px;font-size:0.9rem;text-decoration:none;">
-              Ir para o login →
+              Ir para o login
             </a>
           </div>
         </div>
       <?php endif; ?>
 
-      <?php if (!$sucesso): ?>
+      <?php if ($rec && !$sucesso): ?>
       <form method="POST" novalidate aria-label="Formulário de nova senha" id="form-nova-senha">
           <?= csrfCampo() ?><input type="hidden" name="token" value="<?= limpar($token) ?>">
 
@@ -210,7 +210,7 @@ if (formNovaSenha) {
     if (!nEl.value) {
       nErr.textContent = 'Informe a nova senha.';
       nEl.setAttribute('aria-invalid','true'); ok = false;
-    } else if (nEl.value.length < 6) {
+    } else if (nEl.value.length < <?= SENHA_MINIMA ?>) {
       nErr.textContent = 'Mínimo de 6 caracteres.';
       nEl.setAttribute('aria-invalid','true'); ok = false;
     } else {

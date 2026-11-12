@@ -7,7 +7,7 @@ $erro    = '';
 $sucesso = '';
 
 if (isset($_POST['recuperar'])) {
-    $email=strtolower(trim($_POST['email'] ?? ''));
+    $email=strtolower(trim((string)($_POST['email'] ?? '')));
     if (!filter_var($email,FILTER_VALIDATE_EMAIL)) $erro='Informe um e-mail válido.';
     else {
         $pdo=\App\Config\Database::getConnection();
@@ -49,6 +49,7 @@ include 'includes/head.php';
       <h2>Esqueci minha senha <i class="bi bi-key-fill" aria-hidden="true"></i></h2>
       <p>Informe o e-mail da sua conta para continuar</p>
 
+      <?= exibirFlash() ?>
       <?php if ($erro): ?>
         <div class="alerta alerta-perigo" role="alert" aria-live="assertive">
           <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?= limpar($erro) ?>
@@ -79,7 +80,7 @@ include 'includes/head.php';
 
         <button type="submit" name="recuperar" class="btn btn-primario"
                 style="width:100%;justify-content:center;padding:13px;font-size:0.97rem;margin-top:8px;">
-          Localizar minha conta →
+          Localizar minha conta
         </button>
       </form>
 

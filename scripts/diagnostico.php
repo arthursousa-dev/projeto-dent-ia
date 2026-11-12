@@ -1,4 +1,5 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; } // só pelo terminal: nunca pela web
 /** Executar: php scripts/diagnostico.php */
 require_once __DIR__ . '/../app/Config/Database.php';
 $falhas = 0;

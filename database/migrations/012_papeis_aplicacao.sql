@@ -12,7 +12,8 @@ BEGIN
         CREATE ROLE dentia_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'dentia_migracao') THEN
-        CREATE ROLE dentia_migracao LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+        -- CREATEDB: só para criar e apagar o banco temporário do teste de restauração (scripts/backup.php).
+        CREATE ROLE dentia_migracao LOGIN NOSUPERUSER CREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
     END IF;
 END $$;
 

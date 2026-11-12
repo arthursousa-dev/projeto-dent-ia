@@ -28,6 +28,12 @@ function como(string $perfil, string $email): void { $_SESSION['perfil']=$perfil
 $retrato=fn()=>$pdo->query("SELECT (SELECT count(*) FROM agendamentos)||'|'||(SELECT count(*) FROM pessoa)||'|'||(SELECT count(*) FROM usuarios)||'|'||
     (SELECT md5(string_agg(id||nome||cpf,',' ORDER BY id)) FROM pessoa)||'|'||(SELECT md5(string_agg(id||status::text||data||hora,',' ORDER BY id)) FROM agendamentos)")->fetchColumn();
 $antes=$retrato();
+// Os passos de "consulta de hoje" precisam de dois horários de hoje que já passaram e não se sobreponham.
+// Na primeira hora do dia eles não existem: em vez de falhar no meio com erro confuso, avisa e sai com código 2.
+if ((int)date('G')*60+(int)date('i') < 60) {
+    fwrite(STDERR,"[NÃO RODOU] testar_seguranca.php precisa de consultas de hoje já iniciadas. Rode depois de 01:00.\n");
+    exit(2);
+}
 try {
     $pdo->beginTransaction();
 

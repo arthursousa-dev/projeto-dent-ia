@@ -155,6 +155,17 @@ function cidadePorNome(PDO $pdo, ?string $nome, ?string $uf): ?int {
 function gravarCampos(PDO $pdo, string $tabela, array $campos, ?int $id = null): int {
     $permitidas = ['pessoa', 'usuarios', 'pacientes', 'dentistas', 'clinica', 'endereco', 'agendamentos', 'procedimentos'];
     if (!in_array($tabela, $permitidas, true)) throw new InvalidArgumentException('Tabela inválida');
+    // O nome da coluna entra no texto do SQL: só passa o que existe na tabela (lista do catálogo, uma consulta por tabela).
+    // Senha e bloqueio de conta ficam de fora: só as regras de acesso em includes/operacoes.php gravam essas colunas.
+    static $colunas = [];
+    if (!isset($colunas[$tabela])) {
+        $stmt = $pdo->prepare("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=:tabela");
+        $stmt->execute(['tabela' => $tabela]);
+        $colunas[$tabela] = array_diff($stmt->fetchAll(PDO::FETCH_COLUMN), ['senha_hash', 'tentativas_login', 'bloqueado_ate']);
+    }
+    if ($invalidos = array_diff(array_map('strval', array_keys($campos)), $colunas[$tabela])) {
+        throw new InvalidArgumentException('Campo inválido para ' . $tabela . ': ' . cortarTexto(implode(', ', $invalidos), 0, 80));
+    }
     if (!$campos) return $id ?? throw new InvalidArgumentException('Registro vazio');
     if ($id !== null) {
         $updates = array_map(fn($c) => "{$c}=:{$c}", array_keys($campos));

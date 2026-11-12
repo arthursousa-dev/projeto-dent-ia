@@ -7,7 +7,7 @@ if not exist .env (
     pause
     exit /b 1
 )
-set "APP_HOST=0.0.0.0"
+set "APP_HOST=127.0.0.1"
 set "APP_PORT=8000"
 for /f "usebackq eol=# tokens=1,* delims==" %%a in (".env") do set "%%a=%%b"
 

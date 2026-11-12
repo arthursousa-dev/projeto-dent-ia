@@ -77,6 +77,8 @@ DB_NAME=dentia_teste php scripts/testar_melhorias.php
 DB_NAME=dentia_teste php scripts/testar_seguranca.php
 ```
 Em 12/11/2026: PHPUnit com 67 testes (1 pulado de propósito: só o dono do schema consegue apagá-lo) e os três scripts verdes, conectando como `dentia_app`.
+
+**Atenção:** `testar_seguranca.php` precisa de dois horários de hoje que já passaram e não se sobreponham. Entre 00:00 e cerca de 00:40 eles não existem e o script falha no passo do pagamento (a linha final `TODOS OS TESTES DE SEGURANÇA E CADASTRO PASSARAM` não aparece). Rode fora desse intervalo e confira sempre a linha final e o código de saída.
 O primeiro script faz agendamento, check-in, pagamento, prontuário e despesa. O segundo testa remarcação, limite diário, antecedência mínima, registro de faltas, contas novas sem senha padrão e expiração da sessão. O terceiro testa os itens da banca de revisão (dados de outra pessoa, datas e valores absurdos, pagamento repetido, dentista inativo, mensagens sem detalhe técnico, bloqueio de login) e o **Cadastre-se** do paciente. Os três rodam dentro de uma transação e desfazem tudo no final (ROLLBACK); o terceiro confere no fim que pessoas, usuários e consultas ficaram idênticos.
 
 Para rodar contra a cópia de teste em vez do banco principal (PowerShell): `$env:DB_NAME="dentia_teste"; php scripts\testar_seguranca.php`.

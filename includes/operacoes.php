@@ -9,7 +9,12 @@ const STATUS_FUTURO = ['Agendado', 'Confirmado', 'Aguardando'];
 const STATUS_SEM_COBRANCA = ['Cancelado', 'Faltou'];
 /** Valores aceitos pelo tipo status_dente do banco. */
 const STATUS_DENTE = ['saudavel', 'tratado', 'precisaTratamento', 'ausente'];
-const SENHA_MINIMA = 6;
+const SENHA_MINIMA = 10;
+/** Senhas de demonstração e as mais comuns, em minúsculas. Quem entra com uma delas é obrigado a trocar. */
+const SENHAS_PROIBIDAS = ['123456','1234567','12345678','123456789','1234567890','12345678910','1234567891','0123456789',
+    '0987654321','9876543210','1122334455','1234512345','123456789a','a123456789','102030405060','qwertyuiop','qwerty123456',
+    '1q2w3e4r5t','abcdefghij','abc1234567','password12','password123','passw0rd123','iloveyou12','senha12345','senha123456',
+    'mudar12345','mudar123456','admin12345','admin123456','dentia1234','dentia12345','dentia123456','dentai12345','brasil12345'];
 /** Limite do bcrypt: acima de 72 bytes o resto da senha é ignorado. */
 const SENHA_MAXIMA_BYTES = 72;
 const REGEX_TELEFONE = '/^(1[1-9]|2[12478]|3[1-578]|4[1-9]|5[1345]|6[1-9]|7[134579]|8[1-9]|9[1-9])([2-5][0-9]{7}|9[0-9]{8})$/';
@@ -131,8 +136,15 @@ function textoValido(?string $valor, string $campo, int $maximo, bool $obrigator
     return $valor;
 }
 
+/** Por que a senha é fraca, ou null se serve. Vale para senha nova e, no login, para exigir a troca. */
+function motivoSenhaFraca(string $senha): ?string {
+    if (tamanhoTexto($senha)<SENHA_MINIMA) return 'A senha deve ter pelo menos '.SENHA_MINIMA.' caracteres.';
+    if (in_array(strtolower($senha),SENHAS_PROIBIDAS,true) || preg_match('/^(.)\1+$/us',$senha)) return 'Essa senha é muito comum ou fácil de adivinhar. Escolha outra.';
+    return null;
+}
+
 function validarNovaSenha(string $senha, ?string $confirmacao=null): void {
-    if (tamanhoTexto($senha)<SENHA_MINIMA) throw new InvalidArgumentException('A senha deve ter pelo menos '.SENHA_MINIMA.' caracteres.');
+    if ($motivo=motivoSenhaFraca($senha)) throw new InvalidArgumentException($motivo);
     if (strlen($senha)>SENHA_MAXIMA_BYTES) throw new InvalidArgumentException('A senha está longa demais: use até 72 caracteres (letras acentuadas e emojis contam como mais de um).');
     if ($confirmacao!==null && $senha!==$confirmacao) throw new InvalidArgumentException('As senhas não coincidem.');
 }
@@ -869,6 +881,7 @@ function alterarSenhaAtual(array $dados): void {
     $pdo->prepare('UPDATE usuarios SET senha_hash=:senha WHERE id=:id')->execute(['senha'=>$hash,'id'=>$u['id']]);
     // Esta sessão continua; as outras sessões desta conta são encerradas no próximo acesso.
     $_SESSION['versao_senha']=versaoSenha($hash);
+    unset($_SESSION['trocar_senha']);
 }
 
 // ---------- dentistas e clínica ----------

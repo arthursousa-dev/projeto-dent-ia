@@ -17,6 +17,9 @@ const PERFIS = [
     'cliente'       => ['login' => 'login_paciente.php',      'painel' => 'cliente_dashboard.php',       'perfil' => 'cliente_perfil.php'],
 ];
 
+// Toda página e todo POST passam por aqui antes de qualquer regra: com troca de senha pendente, nada mais abre.
+if (trocaDeSenhaPendente($_SERVER['SCRIPT_NAME'] ?? '')) redirecionar('trocar_senha.php');
+
 // Todo POST passa por aqui: token CSRF válido e formulário ainda não processado.
 // Em vez de uma página crua, a pessoa volta para a mesma tela com um aviso.
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
@@ -141,6 +144,7 @@ function autenticarUsuario(string $email, string $senha, string $perfilEsperado)
         'perfil'       => $u['tipo'],
         'id'           => $u['id'],
         'versao_senha' => versaoSenha($u['senha_hash']),
+        'trocar_senha' => motivoSenhaFraca($senha) !== null,
         'redirecionar' => PERFIS[$u['tipo']]['painel'] ?? 'index.php',
     ];
 }
@@ -152,7 +156,13 @@ function iniciarSessaoUsuario(array $usuario, string $email): void {
     $_SESSION['perfil']       = $usuario['perfil'];
     $_SESSION['email']        = strtolower(trim($email));
     $_SESSION['versao_senha'] = $usuario['versao_senha'];
-    unset($_SESSION['sessao_expirada']);
+    unset($_SESSION['sessao_expirada'], $_SESSION['trocar_senha']);
+    if (!empty($usuario['trocar_senha'])) $_SESSION['trocar_senha'] = true;
+}
+
+/** Entrou com senha de demonstração ou fraca: só a troca de senha e o Sair ficam abertos. */
+function trocaDeSenhaPendente(string $script): bool {
+    return !empty($_SESSION['trocar_senha']) && !in_array(basename($script), ['trocar_senha.php', 'logout.php'], true);
 }
 
 /**

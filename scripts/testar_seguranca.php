@@ -129,7 +129,7 @@ try {
     unset($_SESSION['perfil'],$_SESSION['email']);
     $cpfNovo=cpfTeste(); $emailNovo='cadastro.'.$cpfNovo.'@exemplo.com';
     $base=['nome'=>'Paciente Portal Teste','cpf'=>$cpfNovo,'email'=>$emailNovo,'telefone'=>'(67) 99999-1234','nascimento'=>'1990-05-10',
-        'senha'=>'segredo1','confirmar_senha'=>'segredo1','aceite'=>'1'];
+        'senha'=>'segredo-teste-1','confirmar_senha'=>'segredo-teste-1','aceite'=>'1'];
     falha(fn()=>cadastrarPacientePortal(['aceite'=>'']+$base),'sem aceite dos dados (LGPD) não cadastra','aceite');
     falha(fn()=>cadastrarPacientePortal(['confirmar_senha'=>'outra']+$base),'senhas diferentes não cadastram','coincidem');
     $u=cadastrarPacientePortal($base);
@@ -137,8 +137,8 @@ try {
         FROM usuarios u JOIN pacientes pac ON pac.id_pessoa=u.id_pessoa WHERE u.id=:id");
     $linha->execute(['id'=>$u['id']]); $linha=$linha->fetch();
     ok($linha && $linha['tipo']==='cliente' && (int)$linha['prontuarios']===1,'cadastro cria pessoa, paciente, prontuário e acesso de paciente');
-    ok(str_starts_with($linha['senha_hash'],'$2y$') && password_verify('segredo1',$linha['senha_hash']),'senha guardada com bcrypt');
-    ok(is_array(autenticarUsuario($emailNovo,'segredo1','cliente')),'o paciente recém-cadastrado entra com e-mail e senha');
+    ok(str_starts_with($linha['senha_hash'],'$2y$') && password_verify('segredo-teste-1',$linha['senha_hash']),'senha guardada com bcrypt');
+    ok(is_array(autenticarUsuario($emailNovo,'segredo-teste-1','cliente')),'o paciente recém-cadastrado entra com e-mail e senha');
     $generica='Não foi possível concluir o cadastro';
     falha(fn()=>cadastrarPacientePortal(['email'=>'outro.'.$emailNovo]+$base),'CPF já cadastrado: resposta genérica',$generica);
     falha(fn()=>cadastrarPacientePortal(['cpf'=>cpfTeste()]+$base),'e-mail já cadastrado: mesma resposta genérica',$generica);

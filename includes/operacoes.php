@@ -217,6 +217,24 @@ function ipOrigem(): string {
     return $ip;
 }
 
+/** Tentativas erradas de login em 15 minutos: por computador+conta e, como teto contra quem testa várias contas, por computador. */
+const LOGIN_MAX_POR_CONTA = 20;
+const LOGIN_MAX_POR_ORIGEM = 100;
+
+/** Na clínica todos saem pelo mesmo IP: a contagem principal leva a conta junto, para um erro repetido não travar a recepção inteira. */
+function acaoLoginConta(string $email): string {
+    return 'login:'.substr(hash('sha256',strtolower(trim($email))),0,16);
+}
+
+function loginLimitado(string $email): bool {
+    return limiteAtingido(acaoLoginConta($email),LOGIN_MAX_POR_CONTA,15) || limiteAtingido('login',LOGIN_MAX_POR_ORIGEM,15);
+}
+
+function registrarFalhaLogin(string $email): void {
+    registrarTentativa(acaoLoginConta($email));
+    registrarTentativa('login');
+}
+
 function chaveOrigem(string $acao): string {
     return $acao.':'.ipOrigem();
 }

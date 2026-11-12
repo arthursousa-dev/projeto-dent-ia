@@ -7,7 +7,11 @@
  */
 function monitorPermitido(): bool {
     \App\Config\Database::getConnection(); // carrega o .env
-    return in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true) || getenv('APP_MONITOR_REDE') === 'true';
+    if (getenv('APP_MONITOR_REDE') === 'true') return true;
+    // Atrás de proxy na mesma máquina (APP_PROXY_CONFIAVEL=true) TODA requisição chega de 127.0.0.1:
+    // aí só vale o endereço que o proxy informou. Proxy que não informa = não dá para saber quem é = fechado.
+    if (getenv('APP_PROXY_CONFIAVEL') === 'true' && empty($_SERVER['HTTP_X_FORWARDED_FOR'])) return false;
+    return in_array(ipOrigem(), ['127.0.0.1', '::1'], true);
 }
 
 /** Barra quem não é o gestor ou está fora deste computador. A página "não existe" para os outros. */

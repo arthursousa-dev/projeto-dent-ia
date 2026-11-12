@@ -16,8 +16,8 @@ $erro = isset($_GET['expirou']) ? 'Sua sessão foi encerrada após 60 minutos se
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $email = trim((string)($_POST['email'] ?? ''));
     $senha = (string)($_POST['senha'] ?? '');
-    if (limiteAtingido('login', 20, 15)) {
-        $erro = 'Muitas tentativas de acesso deste computador. Aguarde 15 minutos e tente de novo.';
+    if (loginLimitado($email)) {
+        $erro = 'Muitas tentativas de acesso para esta conta neste computador. Aguarde 15 minutos e tente de novo.';
     } elseif ($email === '' || $senha === '') {
         $erro = 'Informe e-mail e senha.';
     } else {
@@ -28,7 +28,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             header('Location: ' . $usuario['redirecionar'], true, 303);
             exit;
         }
-        registrarTentativa('login');
+        registrarFalhaLogin($email);
         $erro = 'E-mail ou senha incorretos. Depois de 5 tentativas erradas, a conta fica bloqueada por 15 minutos.';
     }
 }

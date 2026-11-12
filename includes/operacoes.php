@@ -17,6 +17,9 @@ const SENHAS_PROIBIDAS = ['123456','1234567','12345678','123456789','1234567890'
     'mudar12345','mudar123456','admin12345','admin123456','dentia1234','dentia12345','dentia123456','dentai12345','brasil12345'];
 /** Limite do bcrypt: acima de 72 bytes o resto da senha é ignorado. */
 const SENHA_MAXIMA_BYTES = 72;
+/** Termo de uso de dados aceito no cadastro. Mudou o texto? Mude a versão: cada aceite guarda a versão e o hash do texto. */
+const TERMO_LGPD_VERSAO = '2026-11-12';
+const TERMO_LGPD_TEXTO = 'Autorizo a clínica a usar meus dados para cadastro, agendamento e prontuário, conforme a LGPD. Posso pedir correção ou exclusão na recepção.';
 const REGEX_TELEFONE = '/^(1[1-9]|2[12478]|3[1-578]|4[1-9]|5[1345]|6[1-9]|7[134579]|8[1-9]|9[1-9])([2-5][0-9]{7}|9[0-9]{8})$/';
 
 // Texto UTF-8 sem depender da extensão mbstring (desligada no PHP local; o iconv vem embutido).
@@ -746,6 +749,7 @@ function cadastrarPacientePortal(array $dados): array {
             $stmt->execute(['cpf'=>$pessoa['cpf']]);
             $pac=$stmt->fetch();
             $pdo->prepare('INSERT INTO prontuarios (id_paciente) VALUES (:id) ON CONFLICT (id_paciente) DO NOTHING')->execute(['id'=>$pac['id']]);
+            registrarConsentimento($pdo,(int)$pac['id'],'site');
             $hash=password_hash((string)$dados['senha'],PASSWORD_BCRYPT);
             $stmt=$pdo->prepare("INSERT INTO usuarios (id_pessoa,email,senha_hash,tipo) VALUES (:pessoa,:email,:senha,'cliente') RETURNING id");
             $stmt->execute(['pessoa'=>$pac['id_pessoa'],'email'=>$pessoa['email'],'senha'=>$hash]);
@@ -757,6 +761,35 @@ function cadastrarPacientePortal(array $dados): array {
         if ($e->getCode()==='23505') throw new InvalidArgumentException($jaCadastrado);
         throw $e;
     }
+}
+
+/** Guarda o aceite do termo LGPD (versão, hash do texto, origem, IP, data). A aplicação só acrescenta: não altera nem apaga. */
+function registrarConsentimento(PDO $pdo, int $paciente, string $origem): void {
+    $pdo->prepare('INSERT INTO consentimento (id_paciente,versao_termo,hash_termo,origem,ip) VALUES (:paciente,:versao,:hash,:origem,:ip)')
+        ->execute(['paciente'=>$paciente,'versao'=>TERMO_LGPD_VERSAO,'hash'=>hash('sha256',TERMO_LGPD_TEXTO),'origem'=>$origem,'ip'=>ipOrigem()]);
+}
+
+/** Último aceite do paciente, para mostrar no perfil. */
+function consentimentoDoPaciente(int $paciente): ?array {
+    $stmt=\App\Config\Database::getConnection()->prepare("SELECT versao_termo,origem,to_char(aceito_em,'DD/MM/YYYY HH24:MI') AS aceito_em
+        FROM consentimento WHERE id_paciente=:id ORDER BY aceito_em DESC LIMIT 1");
+    $stmt->execute(['id'=>$paciente]);
+    return $stmt->fetch() ?: null;
+}
+
+/** Registra quem abriu os dados clínicos de qual paciente. Só acréscimo. */
+function registrarLeituraProntuario(int $paciente, string $pagina): void {
+    \App\Config\Database::getConnection()->prepare('INSERT INTO acesso_prontuario (usuario,id_paciente,pagina) VALUES (:usuario,:paciente,:pagina)')
+        ->execute(['usuario'=>($_SESSION['perfil'] ?? '?').':'.($_SESSION['email'] ?? '?'),'paciente'=>$paciente,'pagina'=>$pagina]);
+}
+
+/** Alergias, medicamentos e condições que já constaram e foram retirados ou corrigidos (mais recentes primeiro). */
+function historicoRetificado(int $paciente): array {
+    $stmt=\App\Config\Database::getConnection()->prepare("SELECT tipo::text AS tipo,descricao,to_char(registrado_em,'DD/MM/YYYY') AS registrado_em,
+        to_char(retificado_em,'DD/MM/YYYY HH24:MI') AS retificado_em,COALESCE(retificado_por,'sistema') AS retificado_por
+        FROM historico_clinico_retificado WHERE id_paciente=:id ORDER BY id DESC");
+    $stmt->execute(['id'=>$paciente]);
+    return $stmt->fetchAll();
 }
 
 function registrarEvolucao(array $dados): int {

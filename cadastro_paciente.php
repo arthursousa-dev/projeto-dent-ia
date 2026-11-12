@@ -103,7 +103,7 @@ $hoje = date('Y-m-d');
         </div>
         <label class="aceite" for="aceite">
           <input type="checkbox" id="aceite" name="aceite" value="1" required aria-describedby="texto-aceite" <?= !empty($_POST['aceite']) ? 'checked' : '' ?>>
-          <span id="texto-aceite">Autorizo a clínica a usar meus dados para cadastro, agendamento e prontuário, conforme a LGPD. Posso pedir correção ou exclusão na recepção.</span>
+          <span id="texto-aceite"><?= limpar(TERMO_LGPD_TEXTO) ?></span>
         </label>
         <p class="erro-campo" id="erro-cadastro" role="alert"></p>
         <button type="submit" class="btn-entrar">Criar meu acesso</button>

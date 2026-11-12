@@ -18,6 +18,8 @@ final class OperacaoIntegracaoTest extends TestCase
     protected function setUp(): void
     {
         $this->pdo=Database::getConnection();
+        // Transação com rollback: evolução clínica é só acréscimo (migração 013), não dá para apagar na limpeza.
+        $this->pdo->beginTransaction();
         foreach ([['52998224725','dono'],['11144477735','dentista'],['12345678909','cliente']] as [$cpf,$tipo]) {
             $stmt=$this->pdo->prepare('INSERT INTO pessoa (nome,cpf,email) VALUES (:nome,:cpf,:email) RETURNING id');
             $stmt->execute(['nome'=>'Operação '.$tipo,'cpf'=>$cpf,'email'=>'operacao.'.$tipo.'@teste.local']);
@@ -47,24 +49,7 @@ final class OperacaoIntegracaoTest extends TestCase
     protected function tearDown(): void
     {
         $_SESSION=[];
-        $this->pdo->exec("DELETE FROM evolucao_dente WHERE id_evolucao IN (SELECT e.id FROM evolucao_clinica e JOIN prontuarios pr ON pr.id=e.id_prontuario WHERE pr.id_paciente={$this->paciente})");
-        $this->pdo->exec("DELETE FROM evolucao_clinica WHERE id_dentista={$this->dentista}");
-        $this->pdo->exec("DELETE FROM odontograma_procedimentos WHERE id_dente IN (SELECT d.id FROM odontograma_dentes d JOIN prontuarios pr ON pr.id=d.id_prontuario WHERE pr.id_paciente={$this->paciente})");
-        $this->pdo->exec("DELETE FROM odontograma_dentes WHERE id_prontuario IN (SELECT id FROM prontuarios WHERE id_paciente={$this->paciente})");
-        $this->pdo->exec("DELETE FROM prontuarios WHERE id_paciente={$this->paciente}");
-        $this->pdo->exec("DELETE FROM pagamento WHERE id_agendamento IN (SELECT id FROM agendamentos WHERE id_paciente={$this->paciente})");
-        $this->pdo->exec("DELETE FROM agendamentos WHERE id_paciente={$this->paciente}");
-        $this->pdo->exec("DELETE FROM dentista_procedimentos WHERE id_dentista={$this->dentista}");
-        $this->pdo->exec("DELETE FROM disponibilidade_dentista WHERE id_dentista={$this->dentista}");
-        $this->pdo->exec("DELETE FROM dentistas WHERE id={$this->dentista}");
-        $this->pdo->exec("DELETE FROM procedimentos WHERE id={$this->procedimento}");
-        $this->pdo->exec("DELETE FROM pacientes WHERE id={$this->paciente}");
-        foreach ($this->usuarios as $id) {
-            $this->pdo->exec("DELETE FROM lancamento_financeiro WHERE id_usuario=$id");
-            $this->pdo->exec("DELETE FROM recuperacao_senha WHERE id_usuario=$id");
-            $this->pdo->exec("DELETE FROM usuarios WHERE id=$id");
-        }
-        foreach ($this->pessoas as $id) $this->pdo->exec("DELETE FROM pessoa WHERE id=$id");
+        $this->pdo->rollBack();
     }
 
     /** Segunda-feira daqui a ~1 mês: dentro da janela de 365 dias da agenda. */

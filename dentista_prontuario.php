@@ -26,6 +26,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && $dadosPaciente) {
     } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
 if ($dadosPaciente) $prontuarioPaciente=lerJson('prontuarios.json',['id_paciente'=>$dadosPaciente['id']])[0] ?? null;
+// Toda abertura da ficha fica registrada (quem, quando, qual paciente). POST redireciona para um GET, então conta uma vez.
+if ($dadosPaciente && $_SERVER['REQUEST_METHOD']==='GET') registrarLeituraProntuario((int)$dadosPaciente['id'],'dentista_prontuario.php');
+$retificados=$dadosPaciente ? historicoRetificado((int)$dadosPaciente['id']) : [];
 $odontoDados=$prontuarioPaciente['odontograma'] ?? [];
 $historicoClinico=$prontuarioPaciente['historico'] ?? [];
 $odontoDadosJson=json_encode($odontoDados ?: new stdClass(),JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT);
@@ -198,6 +201,21 @@ include 'includes/head.php';
     </div>
 
     <!-- Novo registro -->
+    <?php if ($retificados): ?>
+    <div class="cartao" style="margin-bottom:20px;">
+      <div class="cartao-corpo">
+        <h3 style="font-size:16px;font-weight:700;margin-bottom:12px;"><i class="bi bi-clock-history" aria-hidden="true"></i> Alergias, medicamentos e condições que já constaram</h3>
+        <ul style="margin:0 0 0 18px;font-size:14px;line-height:1.7;">
+          <?php foreach ($retificados as $r): ?>
+          <li><strong><?= limpar(['alergia'=>'Alergia','medicamento'=>'Medicamento','condicao'=>'Condição'][$r['tipo']] ?? $r['tipo']) ?>:</strong>
+            <?= limpar($r['descricao']) ?> — constava <?= $r['registrado_em'] ? 'desde '.limpar($r['registrado_em']) : 'desde antes de 12/11/2026' ?>,
+            retirado em <?= limpar($r['retificado_em']) ?> por <?= limpar($r['retificado_por']) ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <div class="cartao">
       <div class="cartao-corpo">
         <h3 style="font-size:16px;font-weight:700;margin-bottom:20px;"><i class="bi bi-pencil-fill" aria-hidden="true"></i> Novo Registro Clínico</h3>

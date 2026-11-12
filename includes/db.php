@@ -273,10 +273,12 @@ function salvarJson(string $arquivo, array $dados): bool {
                             $descricoes = array_values(array_unique(array_filter(array_map('trim', explode(',', $registro[$campo] ?? '')))));
                             $stmt = $pdo->prepare('SELECT descricao FROM historico_clinico WHERE id_paciente=:id AND tipo=:tipo ORDER BY id');
                             $stmt->execute(['id' => $id, 'tipo' => $tipo]);
-                            if ($stmt->fetchAll(PDO::FETCH_COLUMN) === $descricoes) continue;
-                            $pdo->prepare('DELETE FROM historico_clinico WHERE id_paciente=:id AND tipo=:tipo')->execute(['id' => $id, 'tipo' => $tipo]);
+                            $atuais = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                            // Só o que mudou: o que sai é copiado para historico_clinico_retificado (trigger); o que fica mantém a data original.
+                            $stmt = $pdo->prepare('DELETE FROM historico_clinico WHERE id_paciente=:id AND tipo=:tipo AND descricao=:descricao');
+                            foreach (array_diff($atuais, $descricoes) as $descricao) $stmt->execute(['id' => $id, 'tipo' => $tipo, 'descricao' => $descricao]);
                             $stmt = $pdo->prepare('INSERT INTO historico_clinico (id_paciente,tipo,descricao) VALUES (:id,:tipo,:descricao)');
-                            foreach ($descricoes as $descricao) $stmt->execute(['id' => $id, 'tipo' => $tipo, 'descricao' => $descricao]);
+                            foreach (array_diff($descricoes, $atuais) as $descricao) $stmt->execute(['id' => $id, 'tipo' => $tipo, 'descricao' => $descricao]);
                         }
                     } elseif ($tabela === 'dentistas') {
                         if (isset($registro['horarios'], $registro['dias_atendimento'])) {

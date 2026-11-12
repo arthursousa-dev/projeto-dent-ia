@@ -9,6 +9,7 @@ $erro = '';
 $usuarioAtual  = lerJson('usuarios.json',['email'=>$emailSessao])[0] ?? [];
 $pacienteAtual = lerJson('pacientes.json',['id_usuario'=>$usuarioAtual['id'] ?? 0])[0] ?? [];
 $dados = array_merge($usuarioAtual, $pacienteAtual);
+$consentimento = !empty($pacienteAtual['id']) ? consentimentoDoPaciente((int)$pacienteAtual['id']) : null;
 
 // Salvar perfil e trocar senha: regra única em tratarFormularioPerfil() (includes/operacoes.php).
 [$erro,$dados]=tratarFormularioPerfil($dados);
@@ -84,6 +85,14 @@ include 'includes/head.php';
           </div>
           <button type="submit" name="salvar_perfil" class="btn btn-primario"><i class="bi bi-save-fill" aria-hidden="true"></i> Salvar Alterações</button>
         </form>
+        <p style="font-size:13px;color:var(--texto-secundario);margin-top:14px;">
+          <i class="bi bi-shield-check" aria-hidden="true"></i>
+          <?php if ($consentimento): ?>
+            Consentimento LGPD: termo versão <?= limpar($consentimento['versao_termo']) ?> aceito em <?= limpar($consentimento['aceito_em']) ?> (<?= $consentimento['origem']==='site' ? 'pelo site' : 'na recepção' ?>).
+          <?php else: ?>
+            Consentimento LGPD: ainda não há aceite registrado neste sistema. Procure a recepção.
+          <?php endif; ?>
+        </p>
       </div>
     </div>
 

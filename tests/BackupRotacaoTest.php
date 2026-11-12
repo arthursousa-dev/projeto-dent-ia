@@ -23,7 +23,7 @@ final class BackupRotacaoTest extends TestCase
     public function test_sessenta_dias_viram_sete_diarios_e_quatro_semanais(): void
     {
         $todos = $this->diarios(60);
-        $ficam = array_values(array_diff($todos, backupsParaApagar($todos)));
+        $ficam = array_values(array_diff($todos, backupsParaApagar($todos, 'dentia')));
 
         $this->assertCount(11, $ficam);
         $this->assertSame(array_slice($todos, 0, 7), array_slice($ficam, 0, 7), 'os 7 dias mais recentes ficam');
@@ -35,13 +35,17 @@ final class BackupRotacaoTest extends TestCase
 
     public function test_dois_backups_no_mesmo_dia_guardam_so_o_mais_novo(): void
     {
-        $apagar = backupsParaApagar(['auto_dentia_20261112_020000.dump', 'auto_dentia_20261112_180000.dump']);
+        $apagar = backupsParaApagar(['auto_dentia_20261112_020000.dump', 'auto_dentia_20261112_180000.dump'], 'dentia');
         $this->assertSame(['auto_dentia_20261112_020000.dump'], $apagar);
     }
 
     public function test_poucos_backups_e_arquivos_manuais_nunca_sao_apagados(): void
     {
-        $this->assertSame([], backupsParaApagar($this->diarios(7)));
-        $this->assertSame([], backupsParaApagar(['dentia_20261027_172215.dump', 'dentia_antes_migracao_20261112_041339.dump']));
+        $this->assertSame([], backupsParaApagar($this->diarios(7), 'dentia'));
+        // Defeito real de 12/11/2026: o backup do dentia_teste fazia a rotação apagar o do dentia do mesmo dia.
+        $doisBancos = ['auto_dentia_teste_20261112_041647.dump', 'auto_dentia_20261112_041704.dump'];
+        $this->assertSame([], backupsParaApagar($doisBancos, 'dentia'));
+        $this->assertSame([], backupsParaApagar($doisBancos, 'dentia_teste'));
+        $this->assertSame([], backupsParaApagar(['dentia_20261027_172215.dump', 'dentia_antes_migracao_20261112_041339.dump'], 'dentia'));
     }
 }

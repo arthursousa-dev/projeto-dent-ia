@@ -7,9 +7,9 @@
 // backups manuais (backup_banco.bat, antes de migração) nunca são apagados por aqui.
 // O resultado de cada teste de restauração fica em backups/restauracoes.log.
 
-/** Dos nomes de arquivo recebidos, quais a rotação apaga. Só olha "auto_<banco>_AAAAMMDD_HHMMSS.dump". */
-function backupsParaApagar(array $nomes): array {
-    $autos = array_values(array_filter($nomes, fn($n) => preg_match('/^auto_.+_\d{8}_\d{6}\.dump$/', $n)));
+/** Dos nomes de arquivo recebidos, quais a rotação apaga. Só olha "auto_<banco>_AAAAMMDD_HHMMSS.dump" deste banco exato. */
+function backupsParaApagar(array $nomes, string $banco): array {
+    $autos = array_values(array_filter($nomes, fn($n) => preg_match('/^auto_' . preg_quote($banco, '/') . '_\d{8}_\d{6}\.dump$/', $n)));
     rsort($autos); // mesmo banco: ordem do nome = ordem da data, mais novo primeiro
     $dias = $semanas = $apagar = [];
     foreach ($autos as $nome) {
@@ -53,7 +53,7 @@ passthru('pg_dump -Fc -d ' . escapeshellarg($banco) . ' -f ' . escapeshellarg("$
 if ($saida !== 0 || !is_file("$pasta/$nome") || filesize("$pasta/$nome") === 0) $parar('Backup FALHOU (pg_dump).');
 echo "[OK] backup: backups/$nome (" . number_format(filesize("$pasta/$nome") / 1024, 0, ',', '.') . " KB)\n";
 
-foreach (backupsParaApagar(array_map('basename', glob("$pasta/auto_{$banco}_*.dump"))) as $velho) {
+foreach (backupsParaApagar(array_map('basename', glob("$pasta/auto_*.dump")), $banco) as $velho) {
     unlink("$pasta/$velho");
     echo "     rotação: apagado $velho\n";
 }

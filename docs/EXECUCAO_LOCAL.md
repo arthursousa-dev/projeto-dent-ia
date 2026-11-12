@@ -76,7 +76,7 @@ DB_NAME=dentia_teste php scripts/testar_fluxos_railway.php
 DB_NAME=dentia_teste php scripts/testar_melhorias.php
 DB_NAME=dentia_teste php scripts/testar_seguranca.php
 ```
-Em 12/11/2026: PHPUnit com 67 testes (1 pulado de propósito: só o dono do schema consegue apagá-lo) e os três scripts verdes, conectando como `dentia_app`.
+Em 12/11/2026: PHPUnit com 74 testes (1 pulado de propósito: só o dono do schema consegue apagá-lo) e os três scripts verdes, conectando como `dentia_app`.
 
 **Atenção:** `testar_seguranca.php` precisa de dois horários de hoje que já passaram e não se sobreponham. Entre 00:00 e cerca de 00:40 eles não existem e o script falha no passo do pagamento (a linha final `TODOS OS TESTES DE SEGURANÇA E CADASTRO PASSARAM` não aparece). Rode fora desse intervalo e confira sempre a linha final e o código de saída.
 O primeiro script faz agendamento, check-in, pagamento, prontuário e despesa. O segundo testa remarcação, limite diário, antecedência mínima, registro de faltas, contas novas sem senha padrão e expiração da sessão. O terceiro testa os itens da banca de revisão (dados de outra pessoa, datas e valores absurdos, pagamento repetido, dentista inativo, mensagens sem detalhe técnico, bloqueio de login) e o **Cadastre-se** do paciente. Os três rodam dentro de uma transação e desfazem tudo no final (ROLLBACK); o terceiro confere no fim que pessoas, usuários e consultas ficaram idênticos.
@@ -116,7 +116,7 @@ Depois troque `DB_NAME=dentia_railway` no `.env`. O banco do Railway não é alt
 Entre como **gestor** neste computador (`http://localhost:8000/login_dono.php`) e abra **Banco de dados** no menu (`dono_banco.php`).
 - **Mapa das tabelas (estilo graph view do Obsidian):** cada tabela é um nó, colorido pela área (agenda, clínico, financeiro, pessoas e acesso, sistema) e com tamanho proporcional aos registros; as linhas são as chaves estrangeiras reais. Cada alteração dispara uma partícula do núcleo DENT IA até a tabela, que acende. Arraste nós, role para zoom, arraste o fundo para mover e clique num nó para abrir o **Inspetor** (registros, última alteração, inclusões/alterações/exclusões, tamanho, colunas e tabelas ligadas). Para teclado e leitor de tela, use a **Lista de tabelas**.
 - **Pipeline:** o fluxo de eventos no estilo terminal (INSERT, UPDATE, DELETE), com as métricas de tamanho, registros, alterações de hoje e por minuto no topo.
-- **O que cada evento mostra:** cada inclusão, alteração e exclusão em qualquer tabela, com hora, tabela, id do registro, **quais colunas** mudaram e quem fez (perfil:e-mail; "login:…" nas tentativas de login; "cadastro-publico:…" no Cadastre-se; "sistema" para scripts). Atualiza sozinho a cada 3 segundos; o botão Pausar congela a tela.
+- **O que cada evento mostra:** cada inclusão, alteração e exclusão em qualquer tabela, com hora, tabela, id do registro, **quais colunas** mudaram e quem fez (perfil:e-mail; "login:…" nas tentativas de login; "cadastro-publico:…" no Cadastre-se; "sistema" para scripts). Atualiza sozinho a cada 5 segundos (pausa com a aba oculta); o botão Pausar congela a tela.
 - **Conteúdo da tabela:** clique numa tabela para ver os registros, 50 por página, os mais recentes primeiro.
 
 Segurança da tela:
@@ -151,5 +151,14 @@ Segurança da tela:
 - Alergias, medicamentos e condições: o que é retirado ou corrigido vai para `historico_clinico_retificado`, com quem e quando, e aparece na ficha em "que já constaram".
 - Evolução clínica: não pode ser alterada nem apagada. A correção é uma nova evolução.
 - Leitura: cada abertura da ficha em `dentista_prontuario.php` grava uma linha em `acesso_prontuario` (quem, quando, qual paciente). O site só acrescenta nessa tabela.
+
+**JavaScript e CSP** (P2.1). A política de segurança de conteúdo não tem mais `'unsafe-inline'` para scripts. O navegador só roda `js/*.js` e blocos `<script nonce="<?= cspNonce() ?>">` escritos pelo servidor; `onclick=`, `href="javascript:"` e qualquer script injetado numa página são bloqueados.
+- Ao criar ou mudar uma tela: nada de `onclick=`/`onchange=` no HTML. Ligue o evento com `addEventListener`, num bloco `<script nonce="<?= cspNonce() ?>">` ou em `js/*.js`. O teste `tests/CspTest.php` falha se isso voltar.
+- A CSP das páginas sai de `includes/bootstrap_sessao.php`. `router.php` e `.htaccess` trazem o padrão sem inline para o resto. No Apache/Docker o `.htaccess` usa `Header setifempty` para não trocar a CSP com nonce; isso **não foi testado** (o Dockerfile nunca foi construído nesta máquina).
+- Conferido em 12/11/2026 no navegador, servidor de teste (porta 8001): 4 perfis e páginas públicas, sem erro de CSP no console.
+
+**Limite de tentativas de login** (P2.13). Conta por computador+conta: 20 erros em 15 minutos travam só aquela conta naquele computador, e 100 erros do mesmo computador travam o login dali (`LOGIN_MAX_POR_CONTA`, `LOGIN_MAX_POR_ORIGEM`). Continua valendo o bloqueio da conta após 5 senhas erradas.
+
+**Tela do banco atrás de proxy** (P2.2). Com `APP_PROXY_CONFIAVEL=true`, a tela "Banco de dados" usa o endereço que o proxy informa (`X-Forwarded-For`); proxy que não informa o endereço deixa a tela fechada. Antes, com um proxy na mesma máquina, qualquer visitante parecia local.
 
 **Script perigoso.** `database\RECONSTRUIR_RAILWAY.sql` aborta em qualquer banco que não termine em `_demo`, a menos que a mesma sessão rode antes `SET dentia.permitir_reset = 'SIM';`. No banco `dentia` ele aborta sempre.

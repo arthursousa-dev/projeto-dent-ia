@@ -304,5 +304,5 @@
     if (!pausado) buscar();
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) buscar(); });
-  setInterval(buscar, 3000);
+  setInterval(buscar, 5000); // php -S atende uma requisição por vez: 5 s deixa folga para a recepção
 })();

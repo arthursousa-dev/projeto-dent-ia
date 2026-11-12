@@ -264,7 +264,7 @@ include 'includes/head.php';
 </div>
 <?php include 'includes/a11y_bar.php'; ?>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 const tipoLancamento=document.getElementById('fat-tipo');
 const categoriaLancamento=document.getElementById('fat-categoria');
 function atualizarCategorias() {

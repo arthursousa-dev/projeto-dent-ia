@@ -106,7 +106,7 @@ $mostrarDemo = getenv('APP_DEMO') === 'true';
 
 </main>
 <?php include __DIR__ . '/a11y_bar.php'; ?>
-<script>
+<script nonce="<?= cspNonce() ?>">
 document.getElementById('form-login').addEventListener('submit', function (e) {
   var email = document.getElementById('email'), senha = document.getElementById('senha');
   var erroEmail = document.getElementById('err-email'), erroSenha = document.getElementById('err-senha');

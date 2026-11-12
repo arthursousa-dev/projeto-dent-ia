@@ -8,6 +8,18 @@ ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
 header_remove('X-Powered-By');
 
+/**
+ * Nonce da CSP desta requisição. Só roda JavaScript de js/*.js e de blocos <script nonce="..."> escritos pelo servidor;
+ * onclick=, javascript: e qualquer <script> injetado numa página ficam bloqueados pelo navegador.
+ */
+function cspNonce(): string {
+    static $nonce = null;
+    return $nonce ??= base64_encode(random_bytes(16));
+}
+if (!headers_sent()) {
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-" . cspNonce() . "'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'");
+}
+
 /** Página de erro amigável, com o layout do sistema, para respostas que não chegam à tela normal. */
 function paginaErro(int $codigo, string $titulo, string $mensagem): never {
     if (!headers_sent()) http_response_code($codigo);
@@ -22,7 +34,7 @@ function paginaErro(int $codigo, string $titulo, string $mensagem): never {
     echo '<!DOCTYPE html><html lang="pt-br"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">'
         . '<title>' . $t . ' — DENT IA</title><link rel="stylesheet" href="css/style.css"></head>'
         . '<body><main class="pagina-erro" id="conteudo-principal"><h1>' . $t . '</h1><p>' . $m . '</p>'
-        . '<p><a class="btn btn-primario" href="javascript:history.back()">Voltar</a> <a class="btn btn-fantasma" href="index.php">Início</a></p></main></body></html>';
+        . '<p><a class="btn btn-primario" href="index.php">Início</a></p></main></body></html>';
     exit;
 }
 

@@ -118,10 +118,8 @@ include 'includes/head.php';
               ['<i class="bi bi-calendar-event-fill" aria-hidden="true"></i>', 'Agendar',  'Marcar consulta',    'cliente_agendamento.php'],
           ];
           foreach ($atalhos as [$icone, $titulo, $descricao, $href]): ?>
-          <a href="<?= $href ?>"
-             style="display:flex;align-items:center;gap:12px;padding:16px;background:var(--fundo-campo);border:1px solid var(--borda);border-radius:var(--raio);text-decoration:none;color:var(--texto-principal);transition:border-color var(--transicao);"
-             onmouseover="this.style.borderColor='var(--destaque)'"
-             onmouseout="this.style.borderColor='var(--borda)'">
+          <a href="<?= $href ?>" class="atalho-painel"
+             style="display:flex;align-items:center;gap:12px;padding:16px;background:var(--fundo-campo);border:1px solid var(--borda);border-radius:var(--raio);text-decoration:none;color:var(--texto-principal);transition:border-color var(--transicao);">
             <span style="font-size:1.5rem;" aria-hidden="true"><?= $icone ?></span>
             <div>
               <strong style="display:block;font-size:0.9rem;"><?= $titulo ?></strong>

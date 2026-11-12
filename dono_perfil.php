@@ -123,7 +123,7 @@ include 'includes/head.php';
     </div>
   </main>
 </div>
-<script>
+<script nonce="<?= cspNonce() ?>">
 document.getElementById('frm-senha').addEventListener('submit',function(e){
   var n=document.getElementById('sn').value,c=document.getElementById('sc').value,er=document.getElementById('err-s');
   if(n&&c&&n!==c){er.textContent='As senhas não coincidem.';e.preventDefault();}else er.textContent='';

@@ -109,8 +109,8 @@ include 'includes/head.php';
             <p style="font-size:13px;color:var(--texto-secundario);">Clique em um dente para ver detalhes e registrar tratamentos</p>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <button id="btn-xray" onclick="toggleXray()" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;"><i class="bi bi-search" aria-hidden="true"></i> Modo Raio-X</button>
-            <button onclick="resetOdontograma()" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Resetar</button>
+            <button type="button" id="btn-xray" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;"><i class="bi bi-search" aria-hidden="true"></i> Modo Raio-X</button>
+            <button type="button" data-acao="resetar-odontograma" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Resetar</button>
           </div>
         </div>
 
@@ -134,7 +134,7 @@ include 'includes/head.php';
 
         <!-- Painel de detalhe do dente -->
         <div id="dente-painel" style="display:none;margin-top:20px;padding:20px;background:var(--fundo-campo);border-radius:var(--raio);border:2px solid var(--destaque);position:relative;">
-          <button onclick="fecharPainel()" style="position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;color:var(--texto-fraco);font-size:18px;line-height:1;" aria-label="Fechar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+          <button type="button" data-acao="fechar-painel" style="position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;color:var(--texto-fraco);font-size:18px;line-height:1;" aria-label="Fechar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
 
           <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
             <div id="dente-icone" style="width:52px;height:52px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0b2845;flex-shrink:0;"></div>
@@ -157,9 +157,9 @@ include 'includes/head.php';
           </div>
 
           <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--borda);display:flex;gap:8px;flex-wrap:wrap;">
-            <button onclick="marcarStatus('saudavel')" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;"><i class="bi bi-circle" aria-hidden="true"></i> Marcar Saudável</button>
-            <button onclick="marcarStatus('tratado')" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;color:var(--sucesso);border-color:var(--sucesso);"><i class="bi bi-circle-fill" aria-hidden="true"></i> Marcar Tratado</button>
-            <button onclick="marcarStatus('precisaTratamento')" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;color:var(--perigo);border-color:var(--perigo);"><i class="bi bi-circle-fill" aria-hidden="true"></i> Precisa Tratamento</button>
+            <button type="button" data-marcar-status="saudavel" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;"><i class="bi bi-circle" aria-hidden="true"></i> Marcar Saudável</button>
+            <button type="button" data-marcar-status="tratado" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;color:var(--sucesso);border-color:var(--sucesso);"><i class="bi bi-circle-fill" aria-hidden="true"></i> Marcar Tratado</button>
+            <button type="button" data-marcar-status="precisaTratamento" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;color:var(--perigo);border-color:var(--perigo);"><i class="bi bi-circle-fill" aria-hidden="true"></i> Precisa Tratamento</button>
           </div>
         </div>
 
@@ -265,7 +265,7 @@ include 'includes/head.php';
 
 <?php include 'includes/a11y_bar.php'; ?>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 // Odontograma interativo — numeração FDI, com modo raio-x
 
 // Dados dos dentes do prontuário (vindos do PHP)
@@ -349,7 +349,7 @@ function renderDente(num) {
       fill="${fill}" stroke="${stroke}" stroke-width="${isAtivo?2.5:1.5}"
       filter="${isAtivo?'url(#glow-hover)':'url(#sombra-dente)'}"
       style="cursor:pointer;transition:all 0.15s ease;"
-      onclick="selecionarDente(${num})" aria-label="Dente ${num}"/>`;
+      aria-label="Dente ${num}"/>`;
     // Detalhe interno para molares (cúspides)
     if (d.tipo === 'molar' && !modoXray) {
       const lc = `stroke="${stroke}" stroke-width="0.7" opacity="0.4"`;
@@ -362,14 +362,14 @@ function renderDente(num) {
       fill="${fill}" stroke="${stroke}" stroke-width="${isAtivo?2.5:1.5}"
       filter="${isAtivo?'url(#glow-hover)':'url(#sombra-dente)'}"
       style="cursor:pointer;transition:all 0.15s ease;"
-      onclick="selecionarDente(${num})" aria-label="Dente ${num}"/>`;
+      aria-label="Dente ${num}"/>`;
   } else {
     // Incisivos e pré-molares: elipse suave
     forma = `<ellipse cx="${d.cx}" cy="${d.cy}" rx="${d.rx}" ry="${d.ry}"
       fill="${fill}" stroke="${stroke}" stroke-width="${isAtivo?2.5:1.5}"
       filter="${isAtivo?'url(#glow-hover)':'url(#sombra-dente)'}"
       style="cursor:pointer;transition:all 0.15s ease;"
-      onclick="selecionarDente(${num})" aria-label="Dente ${num}"/>`;
+      aria-label="Dente ${num}"/>`;
   }
 
   const numY = d.arco === 'superior' ? d.cy - d.ry - 5 : d.cy + d.ry + 12;
@@ -388,8 +388,7 @@ function renderDente(num) {
   }
 
   return `<g class="dente-grupo" data-num="${num}" role="button" tabindex="0"
-    aria-label="${d.nome} — ${status === 'saudavel' ? 'Saudável' : status === 'tratado' ? 'Tratado' : 'Precisa Tratamento'}"
-    onkeydown="if(event.key==='Enter'||event.key===' ')selecionarDente(${num})">
+    aria-label="${d.nome} — ${status === 'saudavel' ? 'Saudável' : status === 'tratado' ? 'Tratado' : 'Precisa Tratamento'}">
     ${forma}${iconeStatus}${numLabel}
   </g>`;
 }
@@ -490,6 +489,25 @@ document.getElementById('salvar-odontograma')?.addEventListener('submit',()=> {
 });
 inicializarStatus();
 renderOdontograma();
+
+// Ligado aqui, e não em onclick: a CSP do sistema não aceita JavaScript dentro de atributos.
+document.getElementById('btn-xray')?.addEventListener('click', toggleXray);
+document.querySelector('[data-acao="resetar-odontograma"]')?.addEventListener('click', resetOdontograma);
+document.querySelector('[data-acao="fechar-painel"]')?.addEventListener('click', fecharPainel);
+document.querySelectorAll('[data-marcar-status]').forEach(function (b) {
+  b.addEventListener('click', function () { marcarStatus(b.dataset.marcarStatus); });
+});
+// Os dentes são redesenhados a cada mudança: um ouvinte só, no grupo que os contém.
+(function () {
+  var grupo = document.getElementById('dentes-group');
+  if (!grupo) return;
+  function denteDoEvento(e) { var g = e.target.closest('.dente-grupo'); return g ? Number(g.dataset.num) : 0; }
+  grupo.addEventListener('click', function (e) { var n = denteDoEvento(e); if (n) selecionarDente(n); });
+  grupo.addEventListener('keydown', function (e) {
+    var n = denteDoEvento(e);
+    if (n && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); selecionarDente(n); }
+  });
+})();
 </script>
 
 <style>

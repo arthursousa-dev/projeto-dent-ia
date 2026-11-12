@@ -32,7 +32,7 @@ include 'includes/head.php';
         <p>Cadastro e busca de pacientes da clínica</p>
       </div>
       <button class="btn btn-primario"
-              onclick="alternarFormulario()"
+              data-acao="alternar-formulario"
               id="botao-cadastrar"
               aria-expanded="false"
               aria-controls="form-paciente">
@@ -46,7 +46,7 @@ include 'includes/head.php';
     <div class="cartao" id="form-paciente" style="display:<?= $cadastro || $erro ? 'block' : 'none' ?>;margin-bottom:22px;">
       <div class="cartao-cabecalho">
         <h3><i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Cadastrar Novo Paciente</h3>
-        <button class="btn btn-fantasma btn-pequeno" onclick="alternarFormulario()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        <button class="btn btn-fantasma btn-pequeno" data-acao="alternar-formulario"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </div>
       <div class="cartao-corpo">
         <form method="POST" aria-label="Formulário de cadastro de paciente">
@@ -99,7 +99,7 @@ include 'includes/head.php';
           </div>
           <div style="display:flex;gap:10px;">
             <button type="submit" name="salvar_paciente" class="btn btn-primario">Salvar</button>
-            <button type="button" class="btn btn-fantasma" onclick="alternarFormulario()">Cancelar</button>
+            <button type="button" class="btn btn-fantasma" data-acao="alternar-formulario">Cancelar</button>
           </div>
         </form>
       </div>
@@ -178,7 +178,7 @@ include 'includes/head.php';
   </main>
 </div>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 function alternarFormulario() {
   var formulario = document.getElementById('form-paciente');
   var botao      = document.getElementById('botao-cadastrar');
@@ -190,6 +190,9 @@ function alternarFormulario() {
     if (primeiroCampo) primeiroCampo.focus();
   }
 }
+
+// Ligado aqui, e não em onclick: a CSP do sistema não aceita JavaScript dentro de atributos.
+document.querySelectorAll('[data-acao="alternar-formulario"]').forEach(function (b) { b.addEventListener('click', alternarFormulario); });
 </script>
 
 <?php include 'includes/a11y_bar.php'; ?>

@@ -35,7 +35,7 @@ include 'includes/head.php';
       </div>
       <!-- botão que mostra/esconde o formulário de cadastro -->
       <button class="btn btn-primario"
-              onclick="alternarFormulario()"
+              data-acao="alternar-formulario"
               aria-expanded="<?= $novo ? 'true' : 'false' ?>"
               aria-controls="form-novo-dentista"
               id="botao-novo-dentista">
@@ -51,7 +51,7 @@ include 'includes/head.php';
       <div class="cartao-cabecalho">
         <h3><i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Cadastrar Novo Dentista</h3>
         <button type="button" class="btn btn-fantasma btn-pequeno"
-                onclick="alternarFormulario()"><i class="bi bi-x-lg" aria-hidden="true"></i> Fechar</button>
+                data-acao="alternar-formulario"><i class="bi bi-x-lg" aria-hidden="true"></i> Fechar</button>
       </div>
       <div class="cartao-corpo">
         <form method="POST" aria-label="Formulário de cadastro de dentista">
@@ -166,7 +166,7 @@ include 'includes/head.php';
   </main>
 </div>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 // mostra ou esconde o formulário de novo dentista
 function alternarFormulario() {
   var formulario = document.getElementById('form-novo-dentista');
@@ -182,6 +182,9 @@ function alternarFormulario() {
     if (primeiroCampo) primeiroCampo.focus();
   }
 }
+
+// Ligado aqui, e não em onclick: a CSP do sistema não aceita JavaScript dentro de atributos.
+document.querySelectorAll('[data-acao="alternar-formulario"]').forEach(function (b) { b.addEventListener('click', alternarFormulario); });
 </script>
 
 <?php include 'includes/a11y_bar.php'; ?>

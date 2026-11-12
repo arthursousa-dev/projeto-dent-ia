@@ -116,7 +116,7 @@ $hoje = date('Y-m-d');
 
 </main>
 <?php include 'includes/a11y_bar.php'; ?>
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
   // Máscaras simples: só formatam o que foi digitado; a validação de verdade é no servidor.
   function mascarar(campo, tipo) {

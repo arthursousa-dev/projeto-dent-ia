@@ -96,7 +96,7 @@ include 'includes/head.php';
 input[aria-invalid="true"] { border-color:var(--perigo,#ef4444) !important;box-shadow:0 0 0 2px rgba(239,68,68,0.15) !important; }
 </style>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 var formEsqueci = document.getElementById('form-esqueci');
 if (formEsqueci) {
   var reEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

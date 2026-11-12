@@ -86,6 +86,17 @@ include 'includes/head.php';
             <textarea id="pac-obs" name="obs" rows="2"
                       placeholder="Alergias a medicamentos ou condições de saúde relevantes..."><?= limpar($cadastro['observacoes'] ?? '') ?></textarea>
           </div>
+          <?php $aceiteAtual = !empty($cadastro['id']) ? consentimentoDoPaciente((int)$cadastro['id']) : null; ?>
+          <div class="grupo-campo">
+            <?php if (($aceiteAtual['versao_termo'] ?? '') === TERMO_LGPD_VERSAO): ?>
+              <span class="dica-campo"><i class="bi bi-shield-check" aria-hidden="true"></i> Termo de uso de dados (versão <?= limpar(TERMO_LGPD_VERSAO) ?>) aceito em <?= limpar($aceiteAtual['aceito_em']) ?>.</span>
+            <?php else: ?>
+              <label class="aceite" for="pac-consentimento">
+                <input type="checkbox" id="pac-consentimento" name="consentimento_lgpd" value="1" <?= !empty($cadastro['consentimento_lgpd']) ? 'checked' : '' ?>>
+                <span>O paciente leu e assinou o termo de uso de dados (versão <?= limpar(TERMO_LGPD_VERSAO) ?>): “<?= limpar(TERMO_LGPD_TEXTO) ?>”</span>
+              </label>
+            <?php endif; ?>
+          </div>
           <div style="display:flex;gap:10px;">
             <button type="submit" name="salvar_paciente" class="btn btn-primario">Salvar</button>
             <button type="button" class="btn btn-fantasma" onclick="alternarFormulario()">Cancelar</button>

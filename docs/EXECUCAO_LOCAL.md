@@ -76,7 +76,7 @@ DB_NAME=dentia_teste php scripts/testar_fluxos_railway.php
 DB_NAME=dentia_teste php scripts/testar_melhorias.php
 DB_NAME=dentia_teste php scripts/testar_seguranca.php
 ```
-Em 12/11/2026: PHPUnit com 60 testes (1 pulado de propósito: só o dono do schema consegue apagá-lo) e os três scripts verdes, conectando como `dentia_app`.
+Em 12/11/2026: PHPUnit com 67 testes (1 pulado de propósito: só o dono do schema consegue apagá-lo) e os três scripts verdes, conectando como `dentia_app`.
 O primeiro script faz agendamento, check-in, pagamento, prontuário e despesa. O segundo testa remarcação, limite diário, antecedência mínima, registro de faltas, contas novas sem senha padrão e expiração da sessão. O terceiro testa os itens da banca de revisão (dados de outra pessoa, datas e valores absurdos, pagamento repetido, dentista inativo, mensagens sem detalhe técnico, bloqueio de login) e o **Cadastre-se** do paciente. Os três rodam dentro de uma transação e desfazem tudo no final (ROLLBACK); o terceiro confere no fim que pessoas, usuários e consultas ficaram idênticos.
 
 Para rodar contra a cópia de teste em vez do banco principal (PowerShell): `$env:DB_NAME="dentia_teste"; php scripts\testar_seguranca.php`.
@@ -136,7 +136,14 @@ Segurança da tela:
 | `dentia_migracao` | scripts de manutenção | dono das tabelas; aplica migrações, faz backup, cria o banco temporário do teste de restauração |
 | `postgres` | só você, à mão | superusuário; a senha não fica mais no `.env` |
 
-**Consentimento** (migração 013). O aceite do Cadastre-se fica na tabela `consentimento` com versão do termo, hash do texto, origem, IP e data, e aparece em "Meu perfil" do paciente. Ao mudar o texto do termo (`TERMO_LGPD_TEXTO`), mude também `TERMO_LGPD_VERSAO`. O cadastro feito pela recepção ainda não grava consentimento.
+**Consentimento** (migração 013). O aceite do Cadastre-se fica na tabela `consentimento` com versão do termo, hash do texto, origem, IP e data, e aparece em "Meu perfil" do paciente. Ao mudar o texto do termo (`TERMO_LGPD_TEXTO`), mude também `TERMO_LGPD_VERSAO`. No cadastro feito pela recepção, o aceite só é gravado quando a recepcionista marca a caixa "O paciente leu e assinou o termo"; guarde o termo assinado em papel.
+
+**Direitos do paciente** (migração 014, `includes/privacidade.php`).
+- O paciente abre **Privacidade** no portal (`cliente_privacidade.php`): vê para que serve cada dado, baixa uma cópia (cadastro, consultas e prontuário, em JSON) e pede correção ou exclusão.
+- O gestor responde em **Pedidos LGPD** (`dono_privacidade.php`). Toda resposta fica gravada com data e autor; o site não apaga pedidos.
+- Atender uma exclusão apaga telefone, e-mail, endereço, RG, profissão, estado civil, carteirinha e observações, e encerra o acesso ao portal. Nome, CPF, nascimento, prontuário, consultas e pagamentos ficam (Lei 13.787/2018). **Não tem como desfazer**, a não ser restaurando um backup.
+- A exclusão é recusada pelo sistema se o paciente tem consulta marcada ou se a mesma pessoa é da equipe.
+- A tela mostra como encarregado dos dados o nome, o e-mail e o telefone da clínica (Configurações). Falta definir quem é a pessoa encarregada e revisar o texto do termo e das finalidades com ela.
 
 **Prontuário** (migração 013).
 - Alergias, medicamentos e condições: o que é retirado ou corrigido vai para `historico_clinico_retificado`, com quem e quando, e aparece na ficha em "que já constaram".

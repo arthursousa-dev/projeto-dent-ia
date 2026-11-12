@@ -22,6 +22,7 @@ $menusPorPerfil = [
             ['dono_usuarios.php', '<i class="bi bi-people-fill" aria-hidden="true"></i>', 'Usuários'],
             ['dono_perfil.php',        '<i class="bi bi-person-fill" aria-hidden="true"></i>', 'Meu Perfil'],
             ['dono_configuracoes.php', '<i class="bi bi-gear-fill" aria-hidden="true"></i>', 'Configurações'],
+            ['dono_privacidade.php',   '<i class="bi bi-shield-lock-fill" aria-hidden="true"></i>', 'Pedidos LGPD'],
         ],
     ],
     'recepcionista' => [
@@ -52,6 +53,7 @@ $menusPorPerfil = [
             ['cliente_agendamento.php', '<i class="bi bi-calendar-event-fill" aria-hidden="true"></i>', 'Agendar Consulta'],
             ['cliente_consultas.php',   '<i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i>', 'Minhas Consultas'],
             ['cliente_perfil.php',      '<i class="bi bi-person-fill" aria-hidden="true"></i>', 'Meu Perfil'],
+            ['cliente_privacidade.php', '<i class="bi bi-shield-lock-fill" aria-hidden="true"></i>', 'Privacidade'],
         ],
         'Sistema' => [
         ],

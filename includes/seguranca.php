@@ -39,7 +39,7 @@ function csrfValido(?string $tokenRecebido): bool {
 
 /** Consome o código de envio único. Falso quando o formulário já foi usado ou expirou. "livre" = formulário que pode repetir. */
 function consumirEnvio(string $codigo): bool {
-    if ($codigo === 'livre') return in_array(basename($_SERVER['SCRIPT_NAME'] ?? ''), ['logout.php', 'dono_relatorios.php'], true);
+    if ($codigo === 'livre') return in_array(basename($_SERVER['SCRIPT_NAME'] ?? ''), ['logout.php', 'dono_relatorios.php', 'cliente_privacidade.php'], true);
     if (!isset($_SESSION['envios'][$codigo])) return false;
     unset($_SESSION['envios'][$codigo]);
     return true;

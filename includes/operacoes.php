@@ -676,6 +676,8 @@ function emailDeAcessoEmUso(PDO $pdo, string $email, ?int $pessoa): bool {
 
 function salvarCadastroPaciente(array $dados): int {
     exigirPerfil(['recepcionista','dono']);
+    // A recepção marca a caixa quando o paciente leu e assinou o termo no balcão.
+    $aceite=!empty($dados['consentimento_lgpd']);
     $dados=camposPresentes($dados,CAMPOS_CADASTRO_PACIENTE);
     $idTexto=trim((string)($dados['id'] ?? ''));
     $id=idParametro($idTexto) ?: null;
@@ -691,12 +693,13 @@ function salvarCadastroPaciente(array $dados): int {
     }
     $dados=validarDadosPessoa($dados);
     $dados['observacoes']=textoValido($dados['observacoes'] ?? '','as observações',2000,false);
-    return transacaoOperacao(function(PDO $pdo) use($dados,$emailAnterior) {
+    return transacaoOperacao(function(PDO $pdo) use($dados,$emailAnterior,$aceite) {
         salvarJson('pacientes.json',[$dados]);
         $stmt=$pdo->prepare('SELECT pac.id,pac.id_pessoa FROM pacientes pac JOIN pessoa p ON p.id=pac.id_pessoa WHERE p.cpf=:cpf');
         $stmt->execute(['cpf'=>soDigitos($dados['cpf'])]);
         $pac=$stmt->fetch();
         $pdo->prepare('INSERT INTO prontuarios (id_paciente) VALUES (:id) ON CONFLICT (id_paciente) DO NOTHING')->execute(['id'=>$pac['id']]);
+        if ($aceite) registrarConsentimento($pdo,(int)$pac['id'],'recepcao');
         // Paciente com e-mail ganha conta de acesso ao portal; a senha é definida pelo link emitido em Usuários.
         $email=$dados['email'] ?? '';
         if ($email!=='') {
@@ -765,6 +768,10 @@ function cadastrarPacientePortal(array $dados): array {
 
 /** Guarda o aceite do termo LGPD (versão, hash do texto, origem, IP, data). A aplicação só acrescenta: não altera nem apaga. */
 function registrarConsentimento(PDO $pdo, int $paciente, string $origem): void {
+    // Mesma versão do termo não é gravada duas vezes (a recepção pode salvar o cadastro de novo com a caixa marcada).
+    $stmt=$pdo->prepare('SELECT 1 FROM consentimento WHERE id_paciente=:paciente AND versao_termo=:versao');
+    $stmt->execute(['paciente'=>$paciente,'versao'=>TERMO_LGPD_VERSAO]);
+    if ($stmt->fetchColumn()) return;
     $pdo->prepare('INSERT INTO consentimento (id_paciente,versao_termo,hash_termo,origem,ip) VALUES (:paciente,:versao,:hash,:origem,:ip)')
         ->execute(['paciente'=>$paciente,'versao'=>TERMO_LGPD_VERSAO,'hash'=>hash('sha256',TERMO_LGPD_TEXTO),'origem'=>$origem,'ip'=>ipOrigem()]);
 }

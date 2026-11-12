@@ -5,7 +5,6 @@ require_once __DIR__ . '/includes/functions.php';
 exigirMonitor();
 $tituloPagina = 'Banco de dados';
 $pdo = \App\Config\Database::getConnection();
-limparRegistroAntigo($pdo);
 
 $resumo = resumoBanco($pdo);
 $tabelas = tabelasMonitor($pdo);

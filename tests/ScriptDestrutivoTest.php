@@ -55,6 +55,10 @@ final class ScriptDestrutivoTest extends TestCase
 
     public function test_com_liberacao_explicita_o_script_reconstroi_o_schema(): void
     {
+        // Só o dono do schema consegue apagá-lo; o papel da aplicação (dentia_app) nem com a liberação.
+        if (!$this->pdo->query("SELECT pg_has_role(current_user, nspowner, 'USAGE') FROM pg_namespace WHERE nspname = 'public'")->fetchColumn()) {
+            $this->markTestSkipped('Conectado sem posse do schema public (papel da aplicação).');
+        }
         $this->pdo->exec("SET LOCAL dentia.permitir_reset = 'SIM'");
         $this->pdo->exec($this->sql);
 

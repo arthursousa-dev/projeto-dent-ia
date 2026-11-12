@@ -11,3 +11,5 @@ __pycache__/
 /diagnostico_railway_esquema.json
 backups/
 *.dump
+.env.*
+!.env.example

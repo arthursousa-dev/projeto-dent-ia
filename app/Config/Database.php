@@ -15,7 +15,7 @@ class Database
     private static ?PDO $instancia = null;
 
     /** Lê .env local sem dependências externas; variáveis já definidas têm precedência. */
-    private static function carregarAmbiente(): void
+    public static function carregarAmbiente(): void
     {
         $arquivo = dirname(__DIR__, 2) . '/.env';
         if (!is_readable($arquivo)) return;
@@ -27,6 +27,15 @@ class Database
             $valor = trim($valor, "\"'");
             putenv($chave . '=' . $valor);
         }
+    }
+
+    /** Scripts de manutenção (migrações, limpeza) conectam como dono das tabelas, quando o .env traz DB_MIGRACAO_USER. */
+    public static function usarPapelDeMigracao(): void
+    {
+        self::carregarAmbiente();
+        if (!getenv('DB_MIGRACAO_USER')) return;
+        putenv('DB_USER=' . getenv('DB_MIGRACAO_USER'));
+        putenv('DB_PASS=' . getenv('DB_MIGRACAO_PASS'));
     }
 
     public static function getConnection(): PDO

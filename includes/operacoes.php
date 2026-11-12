@@ -221,7 +221,6 @@ function chaveOrigem(string $acao): string {
 /** Verdadeiro quando esta origem já fez $maximo tentativas de $acao nos últimos $minutos. */
 function limiteAtingido(string $acao, int $maximo, int $minutos): bool {
     $pdo=\App\Config\Database::getConnection();
-    if (random_int(1, 50) === 1) $pdo->exec("DELETE FROM tentativa_acesso WHERE momento < now() - interval '1 day'"); // limpeza ocasional
     $stmt=$pdo->prepare('SELECT count(*) FROM tentativa_acesso WHERE chave=:chave AND momento > now() - make_interval(mins=>:minutos)');
     $stmt->execute(['chave'=>chaveOrigem($acao),'minutos'=>$minutos]);
     return (int)$stmt->fetchColumn()>=$maximo;

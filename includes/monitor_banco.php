@@ -116,7 +116,3 @@ function conteudoTabela(PDO $pdo, string $tabela, int $pagina = 1, int $porPagin
     return ['colunas' => $colunas, 'linhas' => $linhas, 'total' => $total, 'pagina' => $pagina, 'paginas' => $paginas];
 }
 
-/** O registro guarda 180 dias; o mais antigo sai de vez em quando (não a cada acesso). */
-function limparRegistroAntigo(PDO $pdo): void {
-    if (random_int(1, 20) === 1) $pdo->exec("DELETE FROM auditoria_banco WHERE momento < now() - interval '180 days'");
-}

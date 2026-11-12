@@ -5,7 +5,7 @@
 Este pacote destina-se apenas à base fictícia. Faça um backup antes de qualquer exclusão.
 
 1. No Railway, confira se o serviço web aponta para o PostgreSQL correto e execute um backup.
-2. Execute `database/RECONSTRUIR_RAILWAY.sql` **manualmente** usando o editor SQL do banco ou `psql` (destrutivo).
+2. Execute `database/RECONSTRUIR_RAILWAY.sql` **manualmente** usando o editor SQL do banco ou `psql` (destrutivo). O arquivo só roda se o banco terminar em `_demo` ou se você executar antes, na mesma sessão, `SET dentia.permitir_reset = 'SIM';`. No banco `dentia` ele aborta sempre.
 3. Execute `database/schema.sql` inteiro, em seguida `database/seed.sql` inteiro. Não rode o reset em cada deploy.
 4. No serviço PHP, configure `DATABASE_URL` ou os campos `PGHOST`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` e `PGPORT`. Certifique-se de que `pdo_pgsql` está instalado.
 5. Execute `php scripts/verificar_reconstrucao.php` no mesmo ambiente do projeto.

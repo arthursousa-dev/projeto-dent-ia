@@ -58,7 +58,7 @@ foreach (backupsParaApagar(array_map('basename', glob("$pasta/auto_*.dump")), $b
     echo "     rotação: apagado $velho\n";
 }
 
-if (!in_array('--testar-restauracao', $argv, true)) exit(0);
+if (!in_array('--testar-restauracao', $_SERVER['argv'], true)) exit(0);
 
 $temp = 'dentia_restore_teste';
 $registrar = function (string $resultado) use ($pasta, $nome): void {

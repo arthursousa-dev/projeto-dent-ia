@@ -8,7 +8,8 @@ $periodo=(string)($_GET['mes'] ?? '') ?: date('Y-m');
 $dt=DateTimeImmutable::createFromFormat('!Y-m',$periodo);
 $erro='';
 if (!$dt || $dt->format('Y-m')!==$periodo || $periodo<'2000-01' || $periodo>'2100-12') { $periodo=date('Y-m');$erro='Mês inválido: use o formato AAAA-MM, entre 2000-01 e 2100-12. Mostrando o mês atual.'; }
-$sucesso='';
+// Definido antes do POST: o redirecionamento abaixo leva o histórico escolhido (6 ou 12 meses) de volta para a tela.
+$mesesHistorico=in_array((int)($_GET['historico'] ?? 6),[6,12],true) ? (int)($_GET['historico'] ?? 6) : 6;
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     try {
         if (isset($_POST['salvar'])) registrarLancamento($_POST);
@@ -18,7 +19,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         redirecionar('dono_faturamento.php?mes='.urlencode($destino).'&historico='.$mesesHistorico, isset($_POST['salvar']) ? 'Lançamento salvo.' : 'Pagamento registrado.');
     } catch (Throwable $e) { $erro=mensagemOperacao($e); }
 }
-$mesesHistorico=in_array((int)($_GET['historico'] ?? 6),[6,12],true) ? (int)($_GET['historico'] ?? 6) : 6;
 $fat=resumoFinanceiro(\App\Config\Database::getConnection(),$periodo.'-01',$mesesHistorico);
 $mesAtual=$fat['mes_atual'];$historico=$fat['historico_mensal'];$transacoes=$fat['transacoes'];
 $inicio=$periodo.'-01';$fim=date('Y-m-d',strtotime($inicio.' +1 month'));
@@ -49,7 +49,6 @@ include 'includes/head.php';
     </div>
 
     <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
-    <?php if ($sucesso): ?><div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div><?php endif; ?>
 
     <form method="GET" style="margin-bottom:20px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
       <div class="grupo-campo" style="margin-bottom:0;min-width:220px;"><label for="fat-mes">Mês de referência</label><input id="fat-mes" type="month" name="mes" value="<?= limpar($periodo) ?>" min="2000-01" max="2100-12" required></div>

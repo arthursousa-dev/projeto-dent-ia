@@ -12,7 +12,7 @@ if ($dataFiltro !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataFiltro)) $da
 $dentistaFiltro = (string)($_GET['dentista'] ?? '');
 if ($dentistaFiltro !== '' && idParametro($dentistaFiltro) < 1) $dentistaFiltro = '';
 $somentePendentes = isset($_GET['pendentes']);
-$sucesso = ''; $erro = '';
+$erro = '';
 
 // Ações da tabela: cada uma volta para a mesma agenda com a mensagem (padrão POST → redirecionamento → GET).
 if ($_SERVER['REQUEST_METHOD']==='POST') {
@@ -89,9 +89,6 @@ include 'includes/head.php';
     </div>
 
     <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
-    <?php if ($sucesso): ?>
-      <div class="alerta alerta-sucesso" role="status"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?></div>
-    <?php endif; ?>
     <?php if ($somentePendentes): ?>
       <p><a href="recepcionista_agenda.php" class="btn btn-fantasma btn-pequeno"><i class="bi bi-arrow-left" aria-hidden="true"></i> Voltar para a agenda do dia</a></p>
     <?php elseif ($totalPendentes): ?>

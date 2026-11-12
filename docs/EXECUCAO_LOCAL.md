@@ -69,16 +69,22 @@ O `router.php` faz o papel do `.htaccess`: serve **só** as páginas PHP da raiz
 
 ## 5. Testes
 
-Sempre contra a cópia de teste, nunca contra o `dentia` (Git Bash):
+**Um comando para tudo** (Git Bash, na pasta do projeto): `bash scripts/verificar_tudo.sh`. Ele roda a sintaxe (`php -l`), a análise estática (PHPStan nível 5), o PHPUnit e os três scripts, e sai com código diferente de zero se algo falhar. Usa o banco `dentia_limpo_teste`; para outro banco de teste, passe o nome: `bash scripts/verificar_tudo.sh dentia_teste`. Recusa banco que não termine em `_teste`.
+
+**Banco de teste sem dados de backup:** `php scripts/criar_banco_teste.php` cria `dentia_limpo_teste` só com `schema.sql`, `seed.sql` e as migrações. Use este para os testes: o `dentia_teste` antigo é cópia de um backup do banco principal. Para refazer, apague antes com `dropdb -U dentia_migracao dentia_limpo_teste`.
+
+**Análise estática:** `php vendor/bin/phpstan analyse --memory-limit=1G` (PHPStan, só desenvolvimento). Os 50 apontamentos que já existiam em 12/11/2026 estão em `phpstan-baseline.neon`: quase todos são variáveis criadas por `carregarListas()` ou pela página que inclui o arquivo, que a ferramenta não enxerga. Erro novo aparece e faz a análise falhar.
+
+Cada parte em separado, sempre contra um banco de teste, nunca contra o `dentia` (Git Bash):
 ```
 DB_NAME=dentia_teste php vendor/bin/phpunit
 DB_NAME=dentia_teste php scripts/testar_fluxos_railway.php
 DB_NAME=dentia_teste php scripts/testar_melhorias.php
 DB_NAME=dentia_teste php scripts/testar_seguranca.php
 ```
-Em 12/11/2026: PHPUnit com 74 testes (1 pulado de propósito: só o dono do schema consegue apagá-lo) e os três scripts verdes, conectando como `dentia_app`.
+Em 12/11/2026: PHPUnit com 77 testes (1 pulado de propósito: só o dono do schema consegue apagá-lo) e os três scripts verdes, conectando como `dentia_app`.
 
-**Atenção:** `testar_seguranca.php` precisa de dois horários de hoje que já passaram e não se sobreponham. Entre 00:00 e cerca de 00:40 eles não existem e o script falha no passo do pagamento (a linha final `TODOS OS TESTES DE SEGURANÇA E CADASTRO PASSARAM` não aparece). Rode fora desse intervalo e confira sempre a linha final e o código de saída.
+**Atenção:** `testar_seguranca.php` precisa de consultas de hoje que já começaram. Na primeira hora do dia (00:00 a 01:00) ele não roda: avisa `[NÃO RODOU]` e sai com código 2. Confira sempre a linha final `TODOS OS TESTES DE SEGURANÇA E CADASTRO PASSARAM` ou o código de saída.
 O primeiro script faz agendamento, check-in, pagamento, prontuário e despesa. O segundo testa remarcação, limite diário, antecedência mínima, registro de faltas, contas novas sem senha padrão e expiração da sessão. O terceiro testa os itens da banca de revisão (dados de outra pessoa, datas e valores absurdos, pagamento repetido, dentista inativo, mensagens sem detalhe técnico, bloqueio de login) e o **Cadastre-se** do paciente. Os três rodam dentro de uma transação e desfazem tudo no final (ROLLBACK); o terceiro confere no fim que pessoas, usuários e consultas ficaram idênticos.
 
 Para rodar contra a cópia de teste em vez do banco principal (PowerShell): `$env:DB_NAME="dentia_teste"; php scripts\testar_seguranca.php`.

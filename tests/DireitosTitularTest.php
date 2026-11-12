@@ -145,12 +145,24 @@ final class DireitosTitularTest extends TestCase
 
     public function test_consulta_futura_impede_a_exclusao(): void
     {
-        $comFutura = (int)$this->valor("SELECT id_paciente FROM agendamentos WHERE data > current_date AND status IN (" . listaSql(STATUS_FUTURO) . ") LIMIT 1");
-        if (!$comFutura) $this->markTestSkipped('O banco de teste não tem consulta futura.');
+        // Marca uma consulta futura para o paciente do teste, num horário em que algum dentista atende (não depende dos dados do banco).
+        $vaga = $this->pdo->query("SELECT d.id AS dentista, d.id_sala AS sala, dd.id_dia_semana AS dia, to_char(dd.hora, 'HH24:MI') AS hora,
+                (SELECT dp.id_procedimento FROM dentista_procedimentos dp WHERE dp.id_dentista = d.id LIMIT 1) AS procedimento
+            FROM disponibilidade_dentista dd JOIN dentistas d ON d.id = dd.id_dentista
+            JOIN funcionamento_clinica f ON f.id_dia_semana = dd.id_dia_semana AND dd.hora >= f.abertura AND dd.hora < f.fechamento
+            WHERE d.id_sala IS NOT NULL AND d.status = 'ativo' AND EXISTS (SELECT 1 FROM dentista_procedimentos dp WHERE dp.id_dentista = d.id)
+            ORDER BY d.id, dd.id_dia_semana, dd.hora DESC LIMIT 1")->fetch();
+        $this->assertNotFalse($vaga, 'O banco de teste precisa de ao menos um dentista com horário e procedimento.');
+        $dia = new \DateTimeImmutable('+60 days');
+        while ((int)$dia->format('w') !== (int)$vaga['dia']) $dia = $dia->modify('+1 day');
+        $this->pdo->prepare('INSERT INTO agendamentos (id_paciente, id_dentista, id_procedimento, id_sala, data, hora, valor)
+            VALUES (:p, :d, :pr, :s, :data, :hora, 100)')
+            ->execute(['p' => $this->paciente, 'd' => $vaga['dentista'], 'pr' => $vaga['procedimento'], 's' => $vaga['sala'],
+                       'data' => $dia->format('Y-m-d'), 'hora' => $vaga['hora']]);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('consulta');
-        anonimizarPaciente($this->pdo, $comFutura);
+        $this->expectExceptionMessage('consulta marcada');
+        anonimizarPaciente($this->pdo, $this->paciente);
     }
 
     public function test_recepcao_registra_o_consentimento_uma_vez(): void

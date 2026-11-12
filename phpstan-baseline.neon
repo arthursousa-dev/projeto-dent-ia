@@ -1,0 +1,163 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Variable \$listaDentistas might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: cliente_agendamento.php
+
+		-
+			message: '#^Variable \$listaHorarios might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: cliente_agendamento.php
+
+		-
+			message: '#^Variable \$listaProcedimentos might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: cliente_agendamento.php
+
+		-
+			message: '#^Variable \$listaAgendamentos might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: dentista_agenda.php
+
+		-
+			message: '#^Variable \$listaAgendamentos might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: dentista_dashboard.php
+
+		-
+			message: '#^Variable \$listaPacientes might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: dentista_dashboard.php
+
+		-
+			message: '#^Variable \$listaPacientes might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: dentista_pacientes.php
+
+		-
+			message: '#^Variable \$listaPacientes might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: dentista_prontuario.php
+
+		-
+			message: '#^Variable \$listaAgendamentos might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: dono_dashboard.php
+
+		-
+			message: '#^Variable \$listaDentistas might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: dono_dashboard.php
+
+		-
+			message: '#^Variable \$listaDentistas might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: dono_dentistas.php
+
+		-
+			message: '#^Variable \$listaProcedimentos might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: dono_dentistas.php
+
+		-
+			message: '#^Variable \$listaProcedimentos might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: dono_editar_dentista.php
+
+		-
+			message: '#^Variable \$historico might not be defined\.$#'
+			identifier: variable.undefined
+			count: 4
+			path: includes/grafico_financeiro.php
+
+		-
+			message: '#^Variable \$login might not be defined\.$#'
+			identifier: variable.undefined
+			count: 13
+			path: includes/login_form.php
+
+		-
+			message: '#^Variable \$listaDentistas might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: recepcionista_agenda.php
+
+		-
+			message: '#^Variable \$listaDentistas might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: recepcionista_dashboard.php
+
+		-
+			message: '#^Variable \$listaHorarios might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: recepcionista_dashboard.php
+
+		-
+			message: '#^Variable \$listaPacientes might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: recepcionista_dashboard.php
+
+		-
+			message: '#^Variable \$listaProcedimentos might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: recepcionista_dashboard.php
+
+		-
+			message: '#^Variable \$listaDentistas might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: recepcionista_novo_agendamento.php
+
+		-
+			message: '#^Variable \$listaHorarios might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: recepcionista_novo_agendamento.php
+
+		-
+			message: '#^Variable \$listaPacientes might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: recepcionista_novo_agendamento.php
+
+		-
+			message: '#^Variable \$listaProcedimentos might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: recepcionista_novo_agendamento.php
+
+		-
+			message: '#^Variable \$listaPacientes might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: recepcionista_pacientes.php
+
+		-
+			message: '#^Ternary operator condition is always false\.$#'
+			identifier: ternary.alwaysFalse
+			count: 2
+			path: scripts/diagnostico.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 1
+			path: scripts/diagnostico.php

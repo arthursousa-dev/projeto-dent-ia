@@ -12,7 +12,7 @@ $dataPreenchida = (string)($_POST['data'] ?? $_GET['data'] ?? date('Y-m-d'));
 $validacaoData = DateTimeImmutable::createFromFormat('!Y-m-d', $dataPreenchida);
 if (!$validacaoData || $validacaoData->format('Y-m-d') !== $dataPreenchida || $dataPreenchida < date('Y-m-d')) $dataPreenchida = date('Y-m-d');
 
-$sucesso='';$erro='';
+$erro='';
 $pdo=\App\Config\Database::getConnection();
 // remarcação: mesmo formulário, com paciente e procedimento da consulta original
 $reagendar=idParametro($_POST['reagendar'] ?? $_GET['reagendar'] ?? 0);
@@ -58,11 +58,6 @@ include 'includes/head.php';
     </div>
 
     <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
-    <?php if ($sucesso): ?>
-      <div class="alerta alerta-sucesso" role="status" aria-live="polite">
-        <i class="bi bi-check-circle-fill" aria-hidden="true"></i> <?= limpar($sucesso) ?>
-      </div>
-    <?php endif; ?>
 
     <div class="cartao">
       <div class="cartao-cabecalho"><h3><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Dados do Agendamento</h3></div>

@@ -34,7 +34,7 @@ $aplicadas = $pdo->query('SELECT nome FROM schema_migrations')->fetchAll(PDO::FE
 $pendentes = array_values(array_diff($arquivos, $aplicadas));
 echo "Banco: $banco — " . count($aplicadas) . ' aplicadas, ' . count($pendentes) . " pendentes\n";
 foreach ($pendentes as $p) echo "  pendente: $p\n";
-if (!$pendentes || in_array('--listar', $argv, true)) exit(0);
+if (!$pendentes || in_array('--listar', $_SERVER['argv'], true)) exit(0);
 
 // Backup antes de mexer em banco que não é de teste. Sem backup, nada é aplicado.
 if (!preg_match('/_teste?$/', $banco)) {

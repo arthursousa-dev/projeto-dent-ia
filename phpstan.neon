@@ -1,0 +1,20 @@
+# Análise estática (só desenvolvimento). Rodar: php vendor/bin/phpstan analyse --memory-limit=1G
+# Os erros que já existiam em 12/11/2026 estão em phpstan-baseline.neon: a análise só acusa o que for novo.
+# Para regravar a linha de base depois de corrigir erros antigos:
+#   php vendor/bin/phpstan analyse --memory-limit=1G --generate-baseline
+includes:
+    - phpstan-baseline.neon
+parameters:
+    level: 5
+    paths:
+        - app
+        - includes
+        - scripts
+        - tests
+        - .
+    excludePaths:
+        - vendor
+        - backups
+        - database
+        - docs
+        - deploy

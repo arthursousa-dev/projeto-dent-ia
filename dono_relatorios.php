@@ -120,7 +120,7 @@ include 'includes/head.php';
         <div class="cartao-cabecalho"><h3><i class="bi bi-trophy-fill" aria-hidden="true"></i> Top Procedimentos</h3></div>
         <div class="cartao-corpo">
           <?php if (!empty($top5proc)):
-            $maxP = max($top5proc) ?: 1; ?>
+            $maxP = max($top5proc); ?>
           <?php foreach ($top5proc as $nome => $qtd): ?>
           <?php $pct = round(($qtd / $maxP) * 100); ?>
           <div style="margin-bottom:12px;">

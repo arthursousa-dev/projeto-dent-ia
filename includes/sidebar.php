@@ -131,4 +131,3 @@ $estiloAvatarDono = $perfilAtual === 'dono' ? 'style="background:var(--destaque2
 <?php $flash = exibirFlash(); if ($flash !== ''): ?>
 <div class="area-flash"><?= $flash ?></div>
 <?php endif; ?>
-

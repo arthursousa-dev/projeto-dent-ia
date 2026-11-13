@@ -13,3 +13,4 @@ backups/
 *.dump
 .env.*
 !.env.example
+ferramentas/

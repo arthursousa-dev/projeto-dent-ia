@@ -257,12 +257,19 @@ try {
     $usuarios=conteudoTabela($pdo,'usuarios');
     ok(!array_filter($usuarios['linhas'],fn($l)=>isset($l['senha_hash']) && $l['senha_hash']!=='•••• (oculto)'),'conteúdo da tabela: hash de senha nunca aparece');
     falha(fn()=>conteudoTabela($pdo,'usuarios; DROP TABLE pessoa'),'nome de tabela fora da lista é recusado','Tabela não encontrada');
+    // Atrás do proxy do HTTPS (APP_PROXY_CONFIAVEL=true) toda requisição chega de 127.0.0.1 e o visitante vem no X-Forwarded-For.
     $ipReal=$_SERVER['REMOTE_ADDR'];
-    $_SERVER['REMOTE_ADDR']='192.168.0.50';
+    $comProxy=getenv('APP_PROXY_CONFIAVEL')==='true';
+    $visitante=function(string $ip) use($comProxy): void {
+        $_SERVER['REMOTE_ADDR']=$comProxy ? '127.0.0.1' : $ip;
+        if ($comProxy) $_SERVER['HTTP_X_FORWARDED_FOR']=$ip;
+    };
+    $visitante('192.168.0.50');
     ok(getenv('APP_MONITOR_REDE')==='true' || !monitorPermitido(),'tela do banco fechada para outro aparelho da rede');
-    $_SERVER['REMOTE_ADDR']='127.0.0.1';
+    $visitante('127.0.0.1');
     ok(monitorPermitido(),'tela do banco abre neste computador');
     $_SERVER['REMOTE_ADDR']=$ipReal;
+    unset($_SERVER['HTTP_X_FORWARDED_FOR']);
     ok(count(tabelasMonitor($pdo))===count(tabelasDoBanco($pdo)),'todas as tabelas aparecem na tela');
 
     // ---- troca de senha derruba as outras sessões ----

@@ -7,4 +7,5 @@ set "ENCONTRADO="
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr /r /c:":%APP_PORT% .*LISTENING"') do (
     tasklist /fi "PID eq %%p" | findstr /i "php.exe" >nul && (taskkill /pid %%p /f >nul & set "ENCONTRADO=1")
 )
+if exist ferramentas\caddy.exe ferramentas\caddy.exe stop >nul 2>&1
 if defined ENCONTRADO (echo DENT IA parado.) else (echo Nenhum servidor PHP do DENT IA na porta %APP_PORT%.)

@@ -20,7 +20,7 @@ Options -Indexes
 </IfModule>
 
 # Sem mod_rewrite, ainda bloqueia o que é sensível.
-<FilesMatch "(^\.|\.(env|sql|dump|log|md|lock|sh|bat|ps1|xml|zip|json)$|^(Dockerfile|router\.php)$)">
+<FilesMatch "(^\.|\.(env|sql|dump|log|md|lock|sh|bat|ps1|xml|zip|json)$|^(Dockerfile|Caddyfile|router\.php)$)">
     Require all denied
 </FilesMatch>
 

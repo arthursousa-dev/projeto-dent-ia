@@ -1,0 +1,19 @@
+# HTTPS na frente do servidor PHP do DENT IA, só neste computador (P0.3).
+# Endereço: https://localhost
+# Sobe junto com o iniciar_dentia.bat. À mão: ferramentas\caddy.exe start --config Caddyfile
+# Para o navegador confiar no certificado (uma vez só): ferramentas\caddy.exe trust
+{
+	# A porta 80 é usada pelo Windows nesta máquina: sem redirecionamento automático de http para https.
+	auto_https disable_redirects
+	# O certificado raiz local só entra na lista de confiança do Windows quando o dono rodar "caddy trust".
+	skip_install_trust
+}
+
+https://localhost, https://127.0.0.1 {
+	# Só este computador. Para abrir na rede da clínica, leia a seção 3 de docs/EXECUCAO_LOCAL.md antes.
+	bind 127.0.0.1
+	tls internal
+	encode gzip
+	# O PHP continua em 127.0.0.1, na porta do .env (APP_PORT); o Caddy informa o endereço e o protocolo do visitante.
+	reverse_proxy 127.0.0.1:{$APP_PORT:8000}
+}

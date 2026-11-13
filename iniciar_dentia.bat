@@ -17,11 +17,25 @@ sc query postgresql-x64-18 | findstr /c:"RUNNING" >nul || (
     exit /b 1
 )
 
+rem HTTPS: o Caddy (ferramentas\caddy.exe) fica na frente do PHP e atende em https://localhost.
+set "HTTPS_ATIVO="
+if exist ferramentas\caddy.exe (
+    ferramentas\caddy.exe start --config Caddyfile >nul 2>&1
+    netstat -ano | findstr /r /c:"127.0.0.1:443 .*LISTENING" >nul && set "HTTPS_ATIVO=1"
+)
+
 echo.
-echo DENT IA neste computador:  http://localhost:%APP_PORT%
+if defined HTTPS_ATIVO (
+    echo DENT IA com HTTPS:         https://localhost
+    echo   Aviso de "site nao seguro"? Rode uma vez: ferramentas\caddy.exe trust
+) else (
+    echo HTTPS nao subiu ^(falta ferramentas\caddy.exe ou a porta 443 esta ocupada^).
+)
+echo DENT IA sem HTTPS:         http://localhost:%APP_PORT%
 if "%APP_HOST%"=="0.0.0.0" (
     echo Em outros dispositivos da rede, use um destes enderecos:
     for /f "tokens=2 delims=:" %%i in ('ipconfig ^| findstr /c:"IPv4"') do for /f "tokens=*" %%j in ("%%i") do echo    http://%%j:%APP_PORT%
 )
 echo.
 php -S %APP_HOST%:%APP_PORT% router.php
+if exist ferramentas\caddy.exe ferramentas\caddy.exe stop >nul 2>&1

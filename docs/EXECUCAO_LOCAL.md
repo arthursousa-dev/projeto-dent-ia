@@ -26,7 +26,18 @@ Migrações novas: crie `database\migrations\NNN_nome.sql` **sem** `BEGIN`/`COMM
 | Reiniciar | pare e inicie de novo |
 | Banco | é um serviço do Windows e já inicia com o computador. Para iniciar à mão: `services.msc` → postgresql-x64-18 → Iniciar |
 
-Neste computador, acesse `http://localhost:8000`.
+Neste computador, acesse **`https://localhost`** (HTTPS). O endereço antigo, `http://localhost:8000`, continua funcionando, sem criptografia.
+
+### HTTPS neste computador (desde 13/11/2026)
+
+O `iniciar_dentia.bat` sobe junto o Caddy (`ferramentas\caddy.exe`, versão 2.11.9), que fica na frente do PHP e atende em `https://localhost` (porta 443, só neste computador). A configuração está no arquivo `Caddyfile`, na raiz do projeto. O `parar_dentia.bat` encerra os dois.
+
+- **Primeira vez, para o navegador não mostrar "site não seguro":** rode uma vez, na pasta do projeto, `ferramentas\caddy.exe trust` e aceite a pergunta do Windows. Isso põe o certificado local do Caddy na lista de confiança deste computador. Sem esse passo o HTTPS funciona, mas o navegador avisa e você precisa clicar em "avançar".
+- O certificado é local (emitido pelo próprio Caddy nesta máquina). Ele vale para `localhost` e `127.0.0.1`, e é renovado sozinho.
+- No `.env`, `APP_PROXY_CONFIAVEL=true` faz o PHP confiar no que o Caddy informa: o cookie de sessão só trafega em HTTPS e a tela "Banco de dados" continua abrindo só neste computador.
+- A porta 80 é usada pelo Windows nesta máquina, por isso não há redirecionamento automático de `http://localhost` para `https://localhost`.
+- O `ferramentas\caddy.exe` não vai para o Git. Em outra máquina, baixe o Caddy em caddyserver.com/download e ponha o `caddy.exe` nessa pasta.
+- **Rede da clínica:** o HTTPS está fechado para este computador (`bind 127.0.0.1` no `Caddyfile`). Abrir para outros aparelhos pede três coisas antes: ligar o Firewall do Windows com regra só para a porta 443, trocar o `bind` e o endereço no `Caddyfile` pelo nome ou IP da máquina, e instalar o certificado raiz do Caddy em cada aparelho.
 
 ## 3. Acesso por outros dispositivos da rede
 

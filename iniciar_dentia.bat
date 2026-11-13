@@ -32,6 +32,9 @@ if defined HTTPS_ATIVO (
     echo HTTPS nao subiu ^(falta ferramentas\caddy.exe ou a porta 443 esta ocupada^).
 )
 echo DENT IA sem HTTPS:         http://localhost:%APP_PORT%
+rem Acesso de fora pelos seus aparelhos (Tailscale): mostra o endereco se o encaminhamento estiver ligado.
+set "TS=%ProgramFiles%\Tailscale\tailscale.exe"
+if exist "%TS%" for /f "tokens=1" %%u in ('call "%TS%" serve status 2^>nul ^| findstr /b /c:"https://"') do echo De outros aparelhos seus:  %%u
 if "%APP_HOST%"=="0.0.0.0" (
     echo Em outros dispositivos da rede, use um destes enderecos:
     for /f "tokens=2 delims=:" %%i in ('ipconfig ^| findstr /c:"IPv4"') do for /f "tokens=*" %%j in ("%%i") do echo    http://%%j:%APP_PORT%

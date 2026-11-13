@@ -37,6 +37,19 @@ O `iniciar_dentia.bat` sobe junto o Caddy (`ferramentas\caddy.exe`, versão 2.11
 - No `.env`, `APP_PROXY_CONFIAVEL=true` faz o PHP confiar no que o Caddy informa: o cookie de sessão só trafega em HTTPS e a tela "Banco de dados" continua abrindo só neste computador.
 - A porta 80 é usada pelo Windows nesta máquina, por isso não há redirecionamento automático de `http://localhost` para `https://localhost`.
 - O `ferramentas\caddy.exe` não vai para o Git. Em outra máquina, baixe o Caddy em caddyserver.com/download e ponha o `caddy.exe` nessa pasta.
+### Abrir de outro computador, em outra internet (Tailscale, desde 13/11/2026)
+
+Um endereço do tipo **`https://nome-deste-pc.nome-da-rede.ts.net`** abre o DENT IA em qualquer aparelho que esteja na sua rede privada Tailscale (mesma conta), de qualquer internet. Quem não está na sua conta não alcança o sistema: ele não fica exposto na internet.
+
+- **Qual é o endereço:** aparece na janela do `iniciar_dentia.bat`, na linha "De outros aparelhos seus". Ele muda se este computador trocar de conta Tailscale; depois de trocar, rode de novo `tailscale serve --bg --yes 8000`.
+- **Como funciona:** o Tailscale deste computador recebe a conexão com certificado válido (Let's Encrypt) e repassa para o PHP em `127.0.0.1:8000`. Foi ligado com `tailscale serve --bg --yes 8000` e continua valendo depois de reiniciar o computador.
+- **Para usar:** este computador ligado, com o `iniciar_dentia.bat` aberto (ele mostra o endereço na janela). No outro aparelho: Tailscale instalado, com a mesma conta e conectado.
+- **Se o endereço responder erro 502:** o Tailscale está ligado, mas o DENT IA está parado. Abra o `iniciar_dentia.bat`.
+- **Ver o estado:** `tailscale serve status`. **Desligar o acesso de fora:** `tailscale serve --https=443 off`.
+- A tela "Banco de dados" continua abrindo só neste computador, nunca pelo endereço de fora.
+- O nome do computador na rede Tailscale consta num registro público de certificados; o conteúdo do sistema não.
+- Para tirar um aparelho da rede (perdido, vendido): painel do Tailscale, **Machines**, **Remove**.
+
 - **Rede da clínica:** o HTTPS está fechado para este computador (`bind 127.0.0.1` no `Caddyfile`). Abrir para outros aparelhos pede três coisas antes: ligar o Firewall do Windows com regra só para a porta 443, trocar o `bind` e o endereço no `Caddyfile` pelo nome ou IP da máquina, e instalar o certificado raiz do Caddy em cada aparelho.
 
 ## 3. Acesso por outros dispositivos da rede

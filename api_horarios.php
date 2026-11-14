@@ -10,6 +10,12 @@ if (!in_array($_SESSION['perfil'] ?? '', ['cliente','recepcionista'],true)) {
 try {
     $data=dataValida((string)($_GET['data'] ?? ''),'data da consulta',hoje(),emDias(AGENDA_DIAS_A_FRENTE));
     $nomeProc=trim((string)($_GET['procedimento'] ?? ''));
+    // Quadro da recepção: todos os horários livres de todos os dentistas no dia (procedimento é opcional).
+    if (isset($_GET['quadro'])) {
+        $pacienteQuadro=(string)($_GET['paciente_id'] ?? '0');
+        echo json_encode(quadroHorarios($data,$nomeProc,ctype_digit($pacienteQuadro) && strlen($pacienteQuadro)<=9 ? (int)$pacienteQuadro : 0),JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     if ($nomeProc==='') throw new InvalidArgumentException('Selecione o procedimento.');
     $dentista=(string)($_GET['dentista'] ?? '0');
     if (!ctype_digit($dentista) || strlen($dentista)>9) throw new InvalidArgumentException('Dentista inválido.');

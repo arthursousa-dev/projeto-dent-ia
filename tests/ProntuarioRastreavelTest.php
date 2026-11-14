@@ -80,7 +80,7 @@ final class ProntuarioRastreavelTest extends TestCase
     {
         $novo = cadastrarPacientePortal(['nome' => 'Paciente do Site', 'cpf' => '111.444.777-35', 'email' => 'paciente.site@dentia.local',
             'telefone' => '(67) 99234-5678', 'nascimento' => '1990-05-10',
-            'senha' => 'clinica-Sorriso-42', 'confirmar_senha' => 'clinica-Sorriso-42', 'aceite' => '1']);
+            'senha' => 'Clinica-Sorriso-42', 'confirmar_senha' => 'Clinica-Sorriso-42', 'aceite' => '1']);
 
         $c = $this->pdo->query("SELECT versao_termo, hash_termo, origem, ip, aceito_em FROM consentimento WHERE id_paciente = {$novo['id_paciente']}")->fetchAll();
         $this->assertCount(1, $c);

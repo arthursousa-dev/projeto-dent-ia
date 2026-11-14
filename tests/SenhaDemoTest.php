@@ -58,8 +58,8 @@ final class SenhaDemoTest extends TestCase
 
     public function test_login_com_senha_forte_nao_exige_troca(): void
     {
-        $this->criarUsuario('clinica-Sorriso-42');
-        $usuario = autenticarUsuario($this->email, 'clinica-Sorriso-42', 'dono');
+        $this->criarUsuario('Clinica-Sorriso-42');
+        $usuario = autenticarUsuario($this->email, 'Clinica-Sorriso-42', 'dono');
 
         $this->assertFalse($usuario['trocar_senha']);
         @iniciarSessaoUsuario($usuario, $this->email);
@@ -104,23 +104,44 @@ final class SenhaDemoTest extends TestCase
         $this->criarUsuario('123456');
         @iniciarSessaoUsuario(autenticarUsuario($this->email, '123456', 'dono'), $this->email);
 
-        alterarSenhaAtual(['senha_atual' => '123456', 'senha_nova' => 'clinica-Sorriso-42', 'confirmar_senha_nova' => 'clinica-Sorriso-42']);
+        alterarSenhaAtual(['senha_atual' => '123456', 'senha_nova' => 'Clinica-Sorriso-42', 'confirmar_senha_nova' => 'Clinica-Sorriso-42']);
 
         $this->assertArrayNotHasKey('trocar_senha', $_SESSION);
-        $this->assertFalse(autenticarUsuario($this->email, 'clinica-Sorriso-42', 'dono')['trocar_senha']);
+        $this->assertFalse(autenticarUsuario($this->email, 'Clinica-Sorriso-42', 'dono')['trocar_senha']);
     }
 
     public function test_senha_nova_fraca_e_recusada(): void
     {
-        foreach (['123456', 'curta-123', '1234567890', 'senha12345', 'aaaaaaaaaaaa', 'DENTIA12345'] as $fraca) {
+        // [senha, trecho esperado na explicação]
+        $fracas = [['123456', '8 caracteres'], ['Aa1!aaa', '8 caracteres'], ['semmaiuscula1!', 'maiúscula'], ['SEMMINUSCULA1!', 'minúscula'],
+                   ['SemNumero!!', 'número'], ['SemEspecial12', 'especial'], ['Senha@123', 'comum'], ['Dentia@123', 'comum']];
+        foreach ($fracas as [$fraca, $motivo]) {
             try {
                 validarNovaSenha($fraca);
                 $this->fail('Aceitou a senha fraca: ' . $fraca);
             } catch (InvalidArgumentException $e) {
-                $this->addToAssertionCount(1);
+                $this->assertStringContainsString($motivo, $e->getMessage(), $fraca);
             }
         }
-        validarNovaSenha('clinica-Sorriso-42');
-        $this->assertGreaterThanOrEqual(10, SENHA_MINIMA);
+        // A explicação lista tudo o que falta, não só o primeiro item.
+        $this->assertSame('A senha precisa ter uma letra maiúscula, um número, um caractere especial (como ! @ # $ %).', motivoSenhaFraca('abcdefghij'));
+        validarNovaSenha('Clinica-Sorriso-42');
+        validarNovaSenha('Aa1!aaaa');          // exatamente 8, com os quatro tipos
+        validarNovaSenha('Ação#2026');         // letras acentuadas contam como letras
+        $this->assertSame(8, SENHA_MINIMA);
+    }
+
+    public function test_lista_de_requisitos_da_tela_segue_a_regra(): void
+    {
+        $html = requisitosSenha('senha_nova');
+        foreach (['tamanho', 'maiuscula', 'minuscula', 'numero', 'especial'] as $regra) {
+            $this->assertStringContainsString('data-regra="' . $regra . '"', $html);
+        }
+        $this->assertStringContainsString('Pelo menos ' . SENHA_MINIMA . ' caracteres', $html);
+        $this->assertStringContainsString('data-requisitos-para="senha_nova"', $html);
+        // A tela de troca obrigatória tem o olhinho nos três campos e a lista de requisitos.
+        $tela = file_get_contents(__DIR__ . '/../trocar_senha.php');
+        $this->assertSame(3, substr_count($tela, 'data-alternar-senha='));
+        $this->assertStringContainsString("requisitosSenha('senha_nova')", $tela);
     }
 }

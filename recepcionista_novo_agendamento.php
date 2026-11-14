@@ -59,6 +59,24 @@ include 'includes/head.php';
 
     <?php if ($erro): ?><div class="alerta alerta-erro" role="alert"><?= limpar($erro) ?></div><?php endif; ?>
 
+    <!-- todos os horários livres de cada dentista no dia escolhido (js/agenda-horarios.js preenche) -->
+    <div class="cartao" data-quadro-horarios style="margin-bottom:20px;">
+      <div class="cartao-cabecalho">
+        <h3><i class="bi bi-calendar2-week-fill" aria-hidden="true"></i> Horários livres</h3>
+        <div class="quadro-dia">
+          <button type="button" class="btn btn-fantasma" data-quadro-dia="-1" aria-label="Dia anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+          <strong data-quadro-data aria-live="polite"></strong>
+          <button type="button" class="btn btn-fantasma" data-quadro-dia="1" aria-label="Próximo dia"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+        </div>
+      </div>
+      <div class="cartao-corpo">
+        <p class="dica-campo" style="margin:0 0 10px;">Todos os horários livres de cada dentista neste dia. Clique num horário para preencher o dentista e o horário no formulário abaixo. Com o procedimento escolhido, o quadro considera a duração dele.</p>
+        <p class="quadro-aviso" data-quadro-aviso role="status" aria-live="polite"></p>
+        <div data-quadro-lista><p class="quadro-vazio">Carregando os horários…</p></div>
+        <noscript><p class="quadro-vazio">Ative o JavaScript para ver os horários livres.</p></noscript>
+      </div>
+    </div>
+
     <div class="cartao">
       <div class="cartao-cabecalho"><h3><i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i> Dados do Agendamento</h3></div>
       <div class="cartao-corpo">
@@ -147,43 +165,6 @@ include 'includes/head.php';
             <a href="<?= $original ? 'recepcionista_agenda.php?data='.urlencode($original['data']) : 'recepcionista_dashboard.php' ?>" class="btn btn-fantasma"><?= $original ? 'Manter consulta original' : 'Cancelar' ?></a>
           </div>
         </form>
-      </div>
-    </div>
-
-    <!-- disponibilidade dos dentistas hoje -->
-    <div class="cartao">
-      <div class="cartao-cabecalho"><h3><i class="bi bi-person-badge-fill" aria-hidden="true"></i> Disponibilidade de Hoje</h3></div>
-      <div class="tabela-wrapper">
-        <table aria-label="Disponibilidade dos dentistas hoje">
-          <thead>
-            <tr>
-              <th>Dentista</th>
-              <th>Especialidade</th>
-              <th>Consultas</th>
-              <th>Próximo horário livre</th>
-              <th>Situação</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php
-            $disponibilidade=[];
-            $livresHoje=proximosHorariosPorDentista(date('Y-m-d'));
-            $consultasHoje=$pdo->query("SELECT id_dentista,count(*) FROM agendamentos WHERE data=CURRENT_DATE AND status<>'Cancelado' GROUP BY id_dentista")->fetchAll(PDO::FETCH_KEY_PAIR);
-            foreach ($listaDentistas as $d) {
-                $livres=$livresHoje[(int)$d['id']] ?? [];
-                $disponibilidade[]=[$d['nome'],$d['especialidade'],(string)($consultasHoje[(int)$d['id']] ?? 0),$livres[0] ?? 'Sem horário',$livres ? 'Disponível' : 'Lotado'];
-            }
-            foreach ($disponibilidade as [$nome, $especialidade, $consultas, $proximo, $situacao]): ?>
-            <tr>
-              <td><strong><?= limpar($nome) ?></strong></td>
-              <td><?= limpar($especialidade) ?></td>
-              <td><?= limpar($consultas) ?></td>
-              <td><?= limpar($proximo) ?></td>
-              <td><?= emblema($situacao) ?></td>
-            </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
       </div>
     </div>
 

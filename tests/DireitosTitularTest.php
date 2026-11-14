@@ -31,7 +31,7 @@ final class DireitosTitularTest extends TestCase
         $this->pdo->exec("INSERT INTO prontuarios (id_paciente) VALUES ({$this->paciente})");
         $this->pdo->exec("INSERT INTO historico_clinico (id_paciente, tipo, descricao) VALUES ({$this->paciente}, 'alergia', 'Látex')");
         $this->pdo->prepare("INSERT INTO usuarios (id_pessoa, email, senha_hash, tipo) VALUES (:p, :e, :s, 'cliente')")
-            ->execute(['p' => $this->pessoa, 'e' => $this->email, 's' => password_hash('clinica-Sorriso-42', PASSWORD_BCRYPT)]);
+            ->execute(['p' => $this->pessoa, 'e' => $this->email, 's' => password_hash('Clinica-Sorriso-42', PASSWORD_BCRYPT)]);
         upsertTelefone($this->pdo, $this->pessoa, null, '(67) 99234-5678');
         $_SERVER['REMOTE_ADDR'] = '203.0.113.9';
         $this->como('cliente', $this->email);
@@ -100,7 +100,7 @@ final class DireitosTitularTest extends TestCase
         $u = $this->pdo->query("SELECT email, status FROM usuarios WHERE id_pessoa={$this->pessoa}")->fetch();
         $this->assertSame('inativo', $u['status']);
         $this->assertStringNotContainsString('titular.teste', $u['email']);
-        $this->assertFalse(autenticarUsuario($this->email, 'clinica-Sorriso-42', 'cliente'));
+        $this->assertFalse(autenticarUsuario($this->email, 'Clinica-Sorriso-42', 'cliente'));
 
         // Ficou: identificação do prontuário e todo o conteúdo clínico.
         $this->assertSame('Titular de Teste', $p['nome']);

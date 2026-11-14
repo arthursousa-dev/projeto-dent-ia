@@ -88,10 +88,10 @@ $hoje = date('Y-m-d');
           <div class="grupo">
             <label for="senha">Senha</label>
             <div class="campo-senha">
-              <input type="password" id="senha" name="senha" required minlength="<?= SENHA_MINIMA ?>" autocomplete="new-password" aria-describedby="dica-senha">
+              <input type="password" id="senha" name="senha" required minlength="<?= SENHA_MINIMA ?>" autocomplete="new-password" aria-describedby="regras-senha">
               <button type="button" class="btn-olho" data-alternar-senha="senha" aria-label="Mostrar senha" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button>
             </div>
-            <span class="dica-campo" id="dica-senha">Pelo menos <?= SENHA_MINIMA ?> caracteres.</span>
+            <?= requisitosSenha('senha') ?>
           </div>
           <div class="grupo">
             <label for="confirmar_senha">Confirme a senha</label>

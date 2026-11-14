@@ -9,12 +9,13 @@ const STATUS_FUTURO = ['Agendado', 'Confirmado', 'Aguardando'];
 const STATUS_SEM_COBRANCA = ['Cancelado', 'Faltou'];
 /** Valores aceitos pelo tipo status_dente do banco. */
 const STATUS_DENTE = ['saudavel', 'tratado', 'precisaTratamento', 'ausente'];
-const SENHA_MINIMA = 10;
+const SENHA_MINIMA = 8;
 /** Senhas de demonstração e as mais comuns, em minúsculas. Quem entra com uma delas é obrigado a trocar. */
-const SENHAS_PROIBIDAS = ['123456','1234567','12345678','123456789','1234567890','12345678910','1234567891','0123456789',
-    '0987654321','9876543210','1122334455','1234512345','123456789a','a123456789','102030405060','qwertyuiop','qwerty123456',
-    '1q2w3e4r5t','abcdefghij','abc1234567','password12','password123','passw0rd123','iloveyou12','senha12345','senha123456',
-    'mudar12345','mudar123456','admin12345','admin123456','dentia1234','dentia12345','dentia123456','dentai12345','brasil12345'];
+const SENHAS_PROIBIDAS = ['123456','1234567','12345678','123456789','1234567890','12345678910','0123456789','0987654321',
+    'qwertyuiop','1q2w3e4r5t','password123','senha12345','senha123456','mudar12345','admin12345','dentia12345',
+    // cumprem a regra de composição, mas são as primeiras que qualquer um tenta
+    'senha@123','senha@1234','mudar@123','mudar@1234','admin@123','admin@1234','dentia@123','dentia@1234','dentai@123',
+    'abc@1234','abcd@1234','aa@12345','teste@123','teste@1234','brasil@123','clinica@123','password@1','passw0rd!','p@ssw0rd','p@ssword1','qwerty@123'];
 /** Limite do bcrypt: acima de 72 bytes o resto da senha é ignorado. */
 const SENHA_MAXIMA_BYTES = 72;
 /** Termo de uso de dados aceito no cadastro. Mudou o texto? Mude a versão: cada aceite guarda a versão e o hash do texto. */
@@ -148,6 +149,13 @@ function textoValido(?string $valor, string $campo, int $maximo, bool $obrigator
 /** Por que a senha é fraca, ou null se serve. Vale para senha nova e, no login, para exigir a troca. */
 function motivoSenhaFraca(string $senha): ?string {
     if (tamanhoTexto($senha)<SENHA_MINIMA) return 'A senha deve ter pelo menos '.SENHA_MINIMA.' caracteres.';
+    // Regra de composição: os quatro tipos de caractere. A mesma lista aparece na tela (requisitosSenha) e no js/app.js.
+    $faltam=[];
+    if (!preg_match('/\p{Lu}/u',$senha)) $faltam[]='uma letra maiúscula';
+    if (!preg_match('/\p{Ll}/u',$senha)) $faltam[]='uma letra minúscula';
+    if (!preg_match('/\d/',$senha)) $faltam[]='um número';
+    if (!preg_match('/[^\p{L}\p{N}\s]/u',$senha)) $faltam[]='um caractere especial (como ! @ # $ %)';
+    if ($faltam) return 'A senha precisa ter '.implode(', ',$faltam).'.';
     if (in_array(strtolower($senha),SENHAS_PROIBIDAS,true) || preg_match('/^(.)\1+$/us',$senha)) return 'Essa senha é muito comum ou fácil de adivinhar. Escolha outra.';
     return null;
 }
@@ -357,6 +365,45 @@ function proximosHorariosPorDentista(string $data): array {
     $porDentista=[];
     foreach ($stmt->fetchAll() as $linha) $porDentista[(int)$linha['id']][]=$linha['hora'];
     return $porDentista;
+}
+
+/**
+ * Quadro da recepção: TODOS os horários livres de cada dentista num dia (antes a tela mostrava só o próximo).
+ * Com procedimento escolhido, usa a duração dele e as mesmas regras de horariosLivres(), e marca quem não o realiza.
+ * Sem procedimento, usa o menor procedimento de cada dentista (proximosHorariosPorDentista).
+ */
+function quadroHorarios(string $data, string $procedimento='', int $paciente=0): array {
+    exigirPerfil(['recepcionista']);
+    $pdo=\App\Config\Database::getConnection();
+    $dentistas=$pdo->query("SELECT d.id,p.nome,e.nome AS especialidade FROM dentistas d
+        JOIN pessoa p ON p.id=d.id_pessoa JOIN especialidade e ON e.id=d.id_especialidade
+        WHERE d.status='ativo' ORDER BY p.nome")->fetchAll();
+    $stmt=$pdo->prepare("SELECT id_dentista,count(*) FROM agendamentos WHERE data=CAST(:data AS date) AND status<>'Cancelado' GROUP BY id_dentista");
+    $stmt->execute(['data'=>$data]);
+    $consultas=$stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $atendem=[];$semProcedimento=[];$aviso='';
+    if ($procedimento!=='') {
+        $stmt=$pdo->prepare('SELECT dp.id_dentista FROM dentista_procedimentos dp JOIN procedimentos p ON p.id=dp.id_procedimento WHERE p.nome=:nome');
+        $stmt->execute(['nome'=>$procedimento]);
+        $atendem=array_map('intval',$stmt->fetchAll(PDO::FETCH_COLUMN));
+    } else {
+        $semProcedimento=proximosHorariosPorDentista($data);
+    }
+    $linhas=[];
+    foreach ($dentistas as $d) {
+        $id=(int)$d['id'];
+        $atende=$procedimento==='' || in_array($id,$atendem,true);
+        $horarios=[];
+        if ($procedimento==='') $horarios=$semProcedimento[$id] ?? [];
+        elseif ($atende) {
+            // Dia com o limite de consultas atingido: o quadro mostra o aviso em vez de quebrar.
+            try { $horarios=horariosLivres($data,$procedimento,$id,$paciente); }
+            catch (InvalidArgumentException $e) { $aviso=$e->getMessage(); }
+        }
+        $linhas[]=['id'=>$id,'nome'=>$d['nome'],'especialidade'=>$d['especialidade'],'consultas'=>(int)($consultas[$id] ?? 0),
+            'atende'=>$atende,'horarios'=>array_values($horarios)];
+    }
+    return ['data'=>$data,'aviso'=>$aviso,'dentistas'=>$linhas];
 }
 
 /**

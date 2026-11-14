@@ -110,7 +110,7 @@ include 'includes/head.php';
           <?= csrfCampo() ?>
           <div class="linha-campos">
             <div class="grupo-campo"><label for="sa">Senha atual</label><input type="password" id="sa" name="senha_atual" placeholder="••••••••"></div>
-            <div class="grupo-campo"><label for="sn">Nova senha</label><input type="password" id="sn" name="senha_nova" placeholder="••••••••"></div>
+            <div class="grupo-campo"><label for="sn">Nova senha</label><input type="password" id="sn" name="senha_nova" placeholder="••••••••" aria-describedby="regras-sn"><?= requisitosSenha('sn') ?></div>
           </div>
           <div class="grupo-campo" style="max-width:50%">
             <label for="sc">Confirmar nova senha</label>

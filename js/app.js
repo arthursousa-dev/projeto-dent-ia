@@ -42,6 +42,29 @@
     if (icone) icone.className = 'bi ' + (mostrar ? 'bi-eye-slash' : 'bi-eye');
   });
 
+  // ---- requisitos da senha: <ul data-requisitos-para="id-do-campo"> marca cada regra conforme a pessoa digita ----
+  // Só orienta: quem decide se a senha serve é o servidor (motivoSenhaFraca).
+  var REGRAS_SENHA = {
+    maiuscula: /\p{Lu}/u, minuscula: /\p{Ll}/u, numero: /\d/, especial: /[^\p{L}\p{N}\s]/u
+  };
+  document.querySelectorAll('[data-requisitos-para]').forEach(function (lista) {
+    var campo = document.getElementById(lista.getAttribute('data-requisitos-para'));
+    if (!campo) return;
+    var minimo = Number(lista.getAttribute('data-minimo')) || 8;
+    function conferir() {
+      var valor = campo.value;
+      lista.querySelectorAll('[data-regra]').forEach(function (item) {
+        var regra = item.getAttribute('data-regra');
+        var ok = regra === 'tamanho' ? Array.from(valor).length >= minimo : REGRAS_SENHA[regra].test(valor);
+        item.classList.toggle('ok', ok);
+        var estado = item.querySelector('.estado');
+        if (estado) estado.textContent = ok ? ' (ok)' : ' (falta)';
+      });
+    }
+    campo.addEventListener('input', conferir);
+    conferir();
+  });
+
   // ---- confirmação antes de ações sensíveis ----
   // <form data-confirmar="Cancelar a consulta de Maria?">: o texto vem escapado no HTML e é lido como texto,
   // nunca montado dentro de código JavaScript (nome com aspas não vira script).

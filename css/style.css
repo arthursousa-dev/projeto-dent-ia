@@ -1168,3 +1168,30 @@ tbody td {
 
 /* Atalhos do painel do paciente: realce ao passar o mouse ou focar (antes era onmouseover no HTML). */
 .atalho-painel:hover, .atalho-painel:focus-visible { border-color: var(--destaque) !important; }
+
+/* Requisitos da senha: lista embaixo do campo, marcada pelo js/app.js conforme a pessoa digita. */
+.requisitos-senha { list-style: none; margin: 8px 0 0; padding: 0; font-size: 0.82rem; color: var(--texto-secundario); display: grid; gap: 3px; text-align: left; }
+.requisitos-senha li { display: flex; align-items: center; gap: 8px; }
+.requisitos-senha .marca { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--borda); display: inline-block; position: relative; }
+.requisitos-senha li.ok { color: var(--sucesso); font-weight: 600; }
+.requisitos-senha li.ok .marca { background: var(--sucesso); border-color: var(--sucesso); }
+.requisitos-senha li.ok .marca::after { content: ""; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 1.8px 1.8px 0; transform: rotate(45deg); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Quadro de horários livres da recepção: uma linha por dentista, um botão por horário. */
+.quadro-dia { display: flex; align-items: center; gap: 10px; }
+.quadro-dia strong { min-width: 15ch; text-align: center; font-variant-numeric: tabular-nums; }
+.quadro-dia .btn { padding: 6px 10px; }
+.quadro-dentista { display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: 14px; align-items: start; padding: 12px 0; border-top: 1px solid var(--borda); }
+.quadro-dentista:first-child { border-top: 0; padding-top: 0; }
+.quadro-quem strong { display: block; line-height: 1.25; }
+.quadro-quem span { display: block; font-size: 0.82rem; color: var(--texto-secundario); }
+.quadro-horas { display: flex; flex-wrap: wrap; gap: 6px; }
+.horario-livre { font: inherit; font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; padding: 6px 12px; border-radius: var(--raio-pequeno); border: 1px solid var(--borda); background: var(--fundo-campo); color: var(--texto-principal); cursor: pointer; transition: border-color var(--transicao), background var(--transicao); }
+.horario-livre:hover { border-color: var(--destaque); }
+.horario-livre:focus-visible { outline: none; box-shadow: var(--anel-foco); }
+.horario-livre[aria-pressed="true"] { background: var(--destaque); border-color: var(--destaque); color: var(--texto-sobre-destaque); }
+.quadro-vazio { color: var(--texto-fraco); font-size: 0.9rem; margin: 0; }
+.quadro-aviso { margin: 0 0 10px; font-size: 0.9rem; font-weight: 600; color: var(--destaque); min-height: 1.2em; }
+[data-quadro-horarios][aria-busy="true"] [data-quadro-lista] { opacity: 0.55; }
+@media (max-width: 640px) { .quadro-dentista { grid-template-columns: 1fr; gap: 8px; } }

@@ -45,6 +45,19 @@ function consumirEnvio(string $codigo): bool {
     return true;
 }
 
+/**
+ * Lista dos requisitos da senha, mostrada embaixo do campo. O js/app.js marca cada item conforme a pessoa digita.
+ * A regra que vale é a do servidor (motivoSenhaFraca, includes/operacoes.php); esta lista só orienta.
+ */
+function requisitosSenha(string $idCampo): string {
+    $itens = ['tamanho' => 'Pelo menos ' . SENHA_MINIMA . ' caracteres', 'maiuscula' => 'Uma letra maiúscula', 'minuscula' => 'Uma letra minúscula',
+              'numero' => 'Um número', 'especial' => 'Um caractere especial (como ! @ # $ %)'];
+    $id = htmlspecialchars($idCampo, ENT_QUOTES, 'UTF-8');
+    $html = '<ul class="requisitos-senha" id="regras-' . $id . '" data-requisitos-para="' . $id . '" data-minimo="' . SENHA_MINIMA . '" aria-label="A senha precisa ter">';
+    foreach ($itens as $regra => $texto) $html .= '<li data-regra="' . $regra . '"><span class="marca" aria-hidden="true"></span>' . $texto . '<span class="sr-only estado"> (falta)</span></li>';
+    return $html . '</ul>';
+}
+
 /** Guarda uma mensagem para a próxima página (padrão POST → redirecionamento → GET). */
 function definirFlash(string $tipo, string $mensagem): void {
     $_SESSION['flash'][] = ['tipo' => in_array($tipo, ['erro', 'aviso'], true) ? $tipo : 'sucesso', 'mensagem' => $mensagem];

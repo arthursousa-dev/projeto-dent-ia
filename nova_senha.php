@@ -42,9 +42,9 @@ include 'includes/head.php';
           <strong>Dicas para uma senha segura:</strong>
           <ul style="margin:8px 0 0 16px;line-height:1.7;">
             <li>Mínimo de <?= SENHA_MINIMA ?> caracteres</li>
-            <li>Misture letras e números</li>
-            <li>Use pelo menos um caractere especial</li>
-            <li>Evite sequências óbvias (123456, abcdef)</li>
+            <li>Letra maiúscula e letra minúscula</li>
+            <li>Pelo menos um número</li>
+            <li>Pelo menos um caractere especial (! @ # $ %)</li>
           </ul>
         </div>
         <div style="margin-top:12px;padding:10px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.78rem;opacity:0.75;text-align:center;">

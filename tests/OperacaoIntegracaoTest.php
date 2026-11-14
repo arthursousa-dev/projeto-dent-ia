@@ -129,9 +129,9 @@ final class OperacaoIntegracaoTest extends TestCase
     {
         $this->sessao('dono');$token=emitirRecuperacao($this->usuarios['cliente']);
         $this->assertNotNull(consultarRecuperacao($token));
-        redefinirSenha($token,'SenhaNova123');
+        redefinirSenha($token,'SenhaNova#123');
         $this->assertNull(consultarRecuperacao($token));
-        $this->assertIsArray(autenticarUsuario('operacao.cliente@teste.local','SenhaNova123','cliente'));
+        $this->assertIsArray(autenticarUsuario('operacao.cliente@teste.local','SenhaNova#123','cliente'));
         $token=emitirRecuperacao($this->usuarios['cliente']);
         $this->pdo->exec("UPDATE recuperacao_senha SET expira_em=now()-interval '1 minute' WHERE id_usuario={$this->usuarios['cliente']}");
         $this->assertNull(consultarRecuperacao($token));

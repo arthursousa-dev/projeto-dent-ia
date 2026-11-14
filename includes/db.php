@@ -60,13 +60,16 @@ function lerJson(string $arquivo, array $filtro = []): array {
             $dentesStmt = $pdo->prepare(
                 "SELECT d.numero_dente, d.status::text AS status, d.notas,
                     COALESCE((SELECT json_agg(op.descricao ORDER BY op.registrado_em) FROM odontograma_procedimentos op
-                        WHERE op.id_dente = d.id), '[]') AS procedimentos
+                        WHERE op.id_dente = d.id), '[]') AS procedimentos,
+                    COALESCE((SELECT json_agg(json_build_array(f.face, f.status::text) ORDER BY array_position(ARRAY['mesial','distal','vestibular','lingual','palatina','oclusal','incisal'], f.face))
+                        FROM odontograma_faces f WHERE f.id_dente = d.id), '[]') AS faces
                  FROM odontograma_dentes d WHERE d.id_prontuario = :id ORDER BY d.numero_dente"
             );
             $stmt=$pdo->prepare("SELECT to_char(e.registrado_em,'DD/MM/YYYY') AS data,p.nome AS dentista,
                     proc.nome AS proc,e.observacoes AS obs,COALESCE(a.valor,proc.valor_base) AS valor,e.retorno,
-                    COALESCE((SELECT string_agg(d.numero_dente::text, ', ' ORDER BY d.numero_dente) FROM evolucao_dente ed
-                        JOIN odontograma_dentes d ON d.id=ed.id_dente WHERE ed.id_evolucao=e.id),'—') AS dentes
+                    COALESCE((SELECT string_agg(d.numero_dente::text || COALESCE(' (' || (SELECT string_agg(f.face, ', ' ORDER BY array_position(ARRAY['mesial','distal','vestibular','lingual','palatina','oclusal','incisal'], f.face))
+                            FROM evolucao_dente_face f WHERE f.id_evolucao=ed.id_evolucao AND f.id_dente=ed.id_dente) || ')', ''), ', ' ORDER BY d.numero_dente)
+                        FROM evolucao_dente ed JOIN odontograma_dentes d ON d.id=ed.id_dente WHERE ed.id_evolucao=e.id),'—') AS dentes
                     FROM evolucao_clinica e JOIN dentistas dt ON dt.id=e.id_dentista JOIN pessoa p ON p.id=dt.id_pessoa
                     JOIN procedimentos proc ON proc.id=e.id_procedimento LEFT JOIN agendamentos a ON a.id=e.id_agendamento
                     WHERE e.id_prontuario=:id ORDER BY e.registrado_em DESC,e.id DESC");
@@ -79,6 +82,8 @@ function lerJson(string $arquivo, array $filtro = []): array {
                         'status'       => $dente['status'],
                         'notas'        => $dente['notas'],
                         'procedimentos' => json_decode($dente['procedimentos'], true),
+                        // [face => situação], na ordem mesial, distal, vestibular, lingual/palatina, oclusal/incisal
+                        'faces'        => array_column(json_decode($dente['faces'], true), 1, 0),
                     ];
                 }
                 $p['odontograma'] = $odontograma;

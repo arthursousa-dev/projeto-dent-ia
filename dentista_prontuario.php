@@ -109,7 +109,11 @@ include 'includes/head.php';
             <p style="font-size:13px;color:var(--texto-secundario);">Clique em um dente para ver detalhes e registrar tratamentos</p>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <button type="button" id="btn-xray" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;"><i class="bi bi-search" aria-hidden="true"></i> Modo Raio-X</button>
+            <div class="vistas-odonto" role="group" aria-label="Como ver o odontograma">
+              <button type="button" class="btn btn-fantasma" data-vista="2d" aria-pressed="true"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i> Esquema</button>
+              <button type="button" class="btn btn-fantasma" data-vista="3d" aria-pressed="false"><i class="bi bi-box" aria-hidden="true"></i> Modelo 3D</button>
+              <button type="button" class="btn btn-fantasma" data-vista="raiox" aria-pressed="false"><i class="bi bi-radioactive" aria-hidden="true"></i> Raio-X 3D</button>
+            </div>
             <button type="button" data-acao="resetar-odontograma" class="btn btn-fantasma" style="font-size:13px;padding:7px 14px;"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Resetar</button>
           </div>
         </div>
@@ -125,12 +129,29 @@ include 'includes/head.php';
           <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
             <div style="width:16px;height:16px;border-radius:50%;background:#e53e3e;border:2px solid #9b2c2c;"></div> Precisa Tratamento
           </div>
+          <div class="legenda-3d" style="font-size:13px;color:var(--texto-secundario);">No modelo 3D: restauração em cinza-azulado, lesão em castanho. No raio-X: restauração clara (radiopaca), lesão escura (radiolúcida).</div>
           <div style="display:flex;align-items:center;gap:6px;font-size:13px;margin-left:auto;color:var(--texto-secundario);">
             Quadrante: <strong>Superior Dir.</strong> 1° | <strong>Superior Esq.</strong> 2° | <strong>Inferior Esq.</strong> 3° | <strong>Inferior Dir.</strong> 4°
           </div>
         </div>
 
         <?php include __DIR__ . '/includes/odontograma_svg.php'; ?>
+
+        <!-- Arcada em 3D (js/odontograma-3d.js): modelo anatômico gerado por medidas médias, não a boca real do paciente -->
+        <div id="odonto-3d" class="odonto-3d" data-modo="3d" hidden>
+          <canvas aria-label="Modelo 3D das arcadas com a situação de cada dente. Para navegar por teclado, use a vista Esquema."></canvas>
+          <p class="odonto-3d-erro" data-3d-erro hidden>Este navegador não conseguiu abrir a visão 3D. Use a vista Esquema.</p>
+          <div class="odonto-3d-barra">
+            <span data-3d-info aria-live="polite"></span>
+            <span class="odonto-3d-cameras" role="group" aria-label="Posição da câmera">
+              <button type="button" data-camera="frente">Frente</button>
+              <button type="button" data-camera="direita">Lado direito</button>
+              <button type="button" data-camera="esquerda">Lado esquerdo</button>
+              <button type="button" data-camera="superior">Arcada superior</button>
+              <button type="button" data-camera="inferior">Arcada inferior</button>
+            </span>
+          </div>
+        </div>
 
         <!-- Painel de detalhe do dente -->
         <div id="dente-painel" style="display:none;margin-top:20px;padding:20px;background:var(--fundo-campo);border-radius:var(--raio);border:2px solid var(--destaque);position:relative;">
@@ -153,6 +174,16 @@ include 'includes/head.php';
             <div>
               <div style="font-size:12px;font-weight:600;color:var(--texto-secundario);margin-bottom:8px;">Observações clínicas</div>
               <div id="dente-notas" style="font-size:14px;color:var(--texto-principal);line-height:1.6;"></div>
+            </div>
+          </div>
+
+          <div class="dente-faces">
+            <svg id="faces-svg" viewBox="-70 0 340 204" role="group" aria-label="Faces do dente selecionado"></svg>
+            <div class="dente-faces-lado">
+              <div style="font-size:12px;font-weight:600;color:var(--texto-secundario);margin-bottom:8px;">Faces do dente</div>
+              <div id="faces-botoes" class="faces-botoes"></div>
+              <p id="faces-resumo" class="faces-resumo" aria-live="polite"></p>
+              <button type="button" id="faces-para-evolucao" class="btn btn-escuro" style="font-size:13px;padding:7px 14px;"><i class="bi bi-pencil-square" aria-hidden="true"></i> Anotar na evolução</button>
             </div>
           </div>
 
@@ -193,6 +224,9 @@ include 'includes/head.php';
               </div>
             </div>
             <div style="font-size:13px;color:var(--texto-secundario);margin-bottom:4px;"><i class="bi bi-person-badge-fill" aria-hidden="true"></i> <?= limpar($reg['dentista']) ?></div>
+            <?php if (($reg['dentes'] ?? '—') !== '—'): ?>
+            <div style="font-size:13px;color:var(--texto-principal);margin-bottom:4px;"><strong>Dentes e faces:</strong> <?= limpar($reg['dentes']) ?></div>
+            <?php endif; ?>
             <div style="font-size:13px;color:var(--texto-principal);"><?= limpar($reg['obs']) ?></div>
           </div>
           <?php endforeach; ?>
@@ -232,8 +266,8 @@ include 'includes/head.php';
               </select>
             </div>
             <div class="grupo-campo">
-              <label>Dentes (ex: 11, 21, 36)</label>
-              <input type="text" name="dentes" value="<?= limpar((string)($_POST['dentes'] ?? '')) ?>" placeholder="Números dos dentes tratados" style="width:100%;padding:11px 14px;border:2px solid var(--borda);border-radius:var(--raio-pequeno);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);box-sizing:border-box;">
+              <label for="evolucao-dentes">Dentes e faces (ex.: 11, 26 (mesial, oclusal), 36 (MOD))</label>
+              <input type="text" id="evolucao-dentes" name="dentes" value="<?= limpar((string)($_POST['dentes'] ?? '')) ?>" placeholder="Dentes tratados; as faces vão entre parênteses" style="width:100%;padding:11px 14px;border:2px solid var(--borda);border-radius:var(--raio-pequeno);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);box-sizing:border-box;">
             </div>
           </div>
           <div class="grupo-campo" style="margin-bottom:16px;">
@@ -315,6 +349,14 @@ const dentes = {
 let statusDentes = {};
 let denteAtivo = null;
 let modoXray = false;
+
+// Ponte para js/odontograma-faces.js e js/odontograma-3d.js: os mesmos dados e a mesma seleção desta página.
+window.DentiaOdonto = {
+  dentes, dados: dadosBanco, status: statusDentes,
+  get ativo() { return denteAtivo; },
+  selecionar: (num) => selecionarDente(num),
+  aoMarcar: null,   // definido pelo módulo de faces: marca só as faces selecionadas
+};
 
 function inicializarStatus() {
   Object.keys(dentes).forEach(num => {
@@ -407,6 +449,7 @@ function renderOdontograma() {
   let html = '';
   Object.keys(dentes).forEach(num => { html += renderDente(parseInt(num)); });
   svg.innerHTML = html;
+  document.dispatchEvent(new CustomEvent('odonto:mudou'));
 }
 
 function selecionarDente(num) {
@@ -447,11 +490,18 @@ function mostrarPainel(num) {
 
   document.getElementById('dente-notas').textContent = dados.notas || 'Sem observações registradas.';
 
+  document.dispatchEvent(new CustomEvent('odonto:painel', { detail: num }));
   document.getElementById('dente-painel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function marcarStatus(novoStatus) {
   if (!denteAtivo) return;
+  // Com faces selecionadas no painel, a situação vale só para elas (o módulo de faces ajusta a situação do dente).
+  if (window.DentiaOdonto.aoMarcar && window.DentiaOdonto.aoMarcar(novoStatus)) {
+    renderOdontograma();
+    mostrarPainel(denteAtivo);
+    return;
+  }
   statusDentes[denteAtivo] = novoStatus;
   if (!dadosBanco[String(denteAtivo)]) dadosBanco[String(denteAtivo)] = {};
   dadosBanco[String(denteAtivo)].status = novoStatus;
@@ -484,8 +534,19 @@ function resetOdontograma() {
   renderOdontograma();
 }
 
+// Envia só os dentes que mudaram: o servidor valida e regrava cada dente recebido, e um dente antigo com dado fora da regra
+// não pode impedir de salvar outro. Face "saudável" e lista de faces vazia contam como a mesma coisa.
+function retratoDoDente(d) {
+  if (!d) return '';
+  const faces = d.faces && !Array.isArray(d.faces) ? Object.entries(d.faces).filter(([, situacao]) => situacao !== 'saudavel').sort() : [];
+  return JSON.stringify([d.status || 'saudavel', d.notas || '', faces]);
+}
 document.getElementById('salvar-odontograma')?.addEventListener('submit',()=> {
-  document.getElementById('odontograma-json').value=JSON.stringify(dadosBanco);
+  const alterados = {};
+  for (const num of Object.keys(dadosBanco)) {
+    if (retratoDoDente(dadosBanco[num]) !== retratoDoDente(dadosOriginais[num])) alterados[num] = dadosBanco[num];
+  }
+  document.getElementById('odontograma-json').value=JSON.stringify(alterados);
 });
 inicializarStatus();
 renderOdontograma();
@@ -509,6 +570,8 @@ document.querySelectorAll('[data-marcar-status]').forEach(function (b) {
   });
 })();
 </script>
+<script src="js/odontograma-faces.js?v=<?= filemtime(__DIR__ . '/js/odontograma-faces.js') ?>" defer></script>
+<script type="module" src="js/odontograma-3d.js?v=<?= filemtime(__DIR__ . '/js/odontograma-3d.js') ?>"></script>
 
 <style>
 /* Estilos do prontuário */

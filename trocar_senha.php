@@ -22,7 +22,7 @@ include 'includes/head.php';
   <?php if ($erro): ?>
     <div class="alerta alerta-erro" role="alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> <?= limpar($erro) ?></div>
   <?php endif; ?>
-  <form method="POST" action="trocar_senha.php" style="max-width:380px;margin:0 auto;text-align:left;">
+  <form method="POST" action="trocar_senha.php" class="form-senha">
     <?= csrfCampo() ?>
     <div class="grupo-campo">
       <label for="senha_atual">Senha atual</label>

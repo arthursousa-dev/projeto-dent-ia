@@ -106,7 +106,7 @@ DB_NAME=dentia_teste php scripts/testar_fluxos_railway.php
 DB_NAME=dentia_teste php scripts/testar_melhorias.php
 DB_NAME=dentia_teste php scripts/testar_seguranca.php
 ```
-Em 12/11/2026: PHPUnit com 81 testes (1 pulado de propósito: só o dono do schema consegue apagá-lo) e os três scripts verdes, conectando como `dentia_app`.
+Em 12/11/2026: PHPUnit com 94 testes (1 pulado de propósito: só o dono do schema consegue apagá-lo) e os três scripts verdes, conectando como `dentia_app`.
 
 **Atenção:** `testar_seguranca.php` precisa de consultas de hoje que já começaram. Na primeira hora do dia (00:00 a 01:00) ele não roda: avisa `[NÃO RODOU]` e sai com código 2. Confira sempre a linha final `TODOS OS TESTES DE SEGURANÇA E CADASTRO PASSARAM` ou o código de saída.
 O primeiro script faz agendamento, check-in, pagamento, prontuário e despesa. O segundo testa remarcação, limite diário, antecedência mínima, registro de faltas, contas novas sem senha padrão e expiração da sessão. O terceiro testa os itens da banca de revisão (dados de outra pessoa, datas e valores absurdos, pagamento repetido, dentista inativo, mensagens sem detalhe técnico, bloqueio de login) e o **Cadastre-se** do paciente. Os três rodam dentro de uma transação e desfazem tudo no final (ROLLBACK); o terceiro confere no fim que pessoas, usuários e consultas ficaram idênticos.
@@ -157,7 +157,7 @@ Segurança da tela:
 
 ## 9. Segurança e LGPD (desde 12/11/2026)
 
-**Senhas.** Quem entra com senha de demonstração (`123456`) ou fraca é levado a "Crie uma nova senha" e não abre nenhuma outra página antes de trocar. A senha nova precisa de 10 caracteres ou mais e não pode ser uma das comuns (lista em `SENHAS_PROIBIDAS`, `includes/operacoes.php`).
+**Senhas.** Quem entra com senha de demonstração (`123456`) ou fora da regra é levado a "Crie uma nova senha" e não abre nenhuma outra página antes de trocar. A regra (desde 14/11/2026): 8 caracteres ou mais, com letra maiúscula, letra minúscula, número e caractere especial, e fora da lista de senhas comuns (`SENHAS_PROIBIDAS`, `includes/operacoes.php`). A tela mostra os requisitos e marca cada um enquanto a pessoa digita, e tem o botão de mostrar a senha. Quem já tinha senha fora dessa regra é levado a trocar no próximo acesso.
 
 **Antes de cadastrar pacientes reais**, rode `php scripts\verificar_producao.php`. Ele recusa (código de saída 1) enquanto houver conta ativa com senha de demonstração, conexão como superusuário ou `APP_DEMO=true`. Em 12/11/2026 ele ainda recusa o `dentia`: as 10 contas de demonstração precisam trocar a senha ou ser desativadas.
 
@@ -200,3 +200,19 @@ Segurança da tela:
 **Autor das alterações e pool de conexões** (P2.8). O nome gravado na auditoria vale para a conexão inteira, e cada requisição abre e fecha a sua. Não ponha um pool em modo transação (PgBouncer `transaction`) na frente do banco: o nome de um usuário poderia aparecer na alteração de outro. Com pool, use modo sessão.
 
 **Script perigoso.** `database\RECONSTRUIR_RAILWAY.sql` aborta em qualquer banco que não termine em `_demo`, a menos que a mesma sessão rode antes `SET dentia.permitir_reset = 'SIM';`. No banco `dentia` ele aborta sempre.
+
+## 10. Recepção e prontuário (desde 14/11/2026)
+
+**Horários livres na recepção.** Em **Novo Agendamento**, o quadro "Horários livres" mostra todos os horários livres de cada dentista no dia escolhido (antes aparecia só o próximo horário, e só de hoje). As setas trocam o dia. Com o procedimento escolhido, o quadro usa a duração dele e avisa quem não o realiza. Clicar num horário preenche o dentista e o horário no formulário; a regra é a mesma de `horariosLivres()`.
+
+**Faces do dente** (migração 016). No prontuário, ao selecionar um dente, o painel mostra as cinco faces com o nome técnico: mesial, distal, vestibular, lingual (dentes inferiores) ou palatina (superiores), e oclusal (pré-molares e molares) ou incisal (incisivos e caninos).
+- O dentista clica nas faces em que trabalhou e usa os botões de situação: com faces selecionadas, a marcação vale só para elas; sem seleção, vale para o dente inteiro.
+- **Anotar na evolução** escreve no campo "Dentes e faces" algo como `26 (mesial, oclusal)`. O campo também aceita a sigla: `36 (MOD)`. O formato antigo (`11, 21, 36`) continua valendo.
+- As faces da evolução ficam em `evolucao_dente_face` e, como o resto da evolução, não podem ser alteradas nem apagadas. A situação atual de cada face fica em `odontograma_faces`.
+- "Salvar odontograma" envia só os dentes alterados.
+
+**Modelo 3D e raio-X.** No odontograma há três vistas: Esquema (o desenho de sempre, que também funciona por teclado), Modelo 3D e Raio-X 3D.
+- O 3D é um **modelo anatômico gerado por código**, com medidas médias de anatomia dental (altura da coroa, comprimento da raiz e larguras de cada dente). **Não é a boca do paciente** nem uma radiografia dele: mostra a situação anotada no odontograma. Restauração aparece em cinza-azulado e lesão em castanho; no raio-X, restauração clara (radiopaca) e lesão escura (radiolúcida).
+- Arrastar gira, a roda do mouse aproxima e clicar num dente o seleciona. Os botões de câmera incluem as vistas oclusais de cada arcada.
+- Usa a biblioteca three.js r170 (licença MIT), hospedada no próprio sistema por causa da CSP: `js/three-module-min.js` e `js/three-ambiente.js`. O código do modelo está em `js/odontograma-3d.js`.
+- Precisa de WebGL no navegador; sem ele, a tela avisa e a vista Esquema continua funcionando.

@@ -167,6 +167,53 @@ function validarNovaSenha(string $senha, ?string $confirmacao=null): void {
 }
 
 /** Numeração FDI: permanentes 11–48 e decíduos 51–85. */
+/** Faces do dente, na ordem em que são anotadas. Lingual só nos inferiores, palatina só nos superiores; oclusal nos posteriores, incisal nos anteriores. */
+const FACES_DENTE = ['mesial', 'distal', 'vestibular', 'lingual', 'palatina', 'oclusal', 'incisal'];
+/** Siglas da anotação clínica: "MOD" = mesial, oclusal e distal. */
+const SIGLAS_FACE = ['M' => 'mesial', 'D' => 'distal', 'V' => 'vestibular', 'L' => 'lingual', 'P' => 'palatina', 'O' => 'oclusal', 'I' => 'incisal'];
+
+/** As cinco faces de um dente (numeração FDI, permanentes e decíduos), com o nome técnico certo para ele. */
+function facesDoDente(int $numero): array {
+    $superior=in_array(intdiv($numero,10),[1,2,5,6],true);
+    $anterior=$numero%10<=3; // incisivos e canino
+    return ['mesial','distal','vestibular',$superior ? 'palatina' : 'lingual',$anterior ? 'incisal' : 'oclusal'];
+}
+
+/**
+ * Lê o campo "Dentes" da evolução clínica. Aceita "11, 21, 36" (dente inteiro) e, com faces,
+ * "26 (mesial, oclusal)" ou a sigla "36 (MOD)". Devolve [dente => [faces na ordem de FACES_DENTE]].
+ */
+function interpretarDentesEvolucao(string $texto): array {
+    $dentes=[];
+    $resto=preg_replace_callback('/(\d+)\s*(?:\(([^()]*)\))?/u',function(array $m) use(&$dentes): string {
+        $numero=$m[1];
+        if (strlen($numero)>2 || !denteValido((int)$numero)) {
+            throw new InvalidArgumentException('Dente "'.cortarTexto($numero,0,10).'" inválido. Use a numeração FDI (11 a 48; decíduos 51 a 85).');
+        }
+        $numero=(int)$numero;
+        $validas=facesDoDente($numero);
+        $lista=implode(', ',array_slice($validas,0,4)).' e '.$validas[4];
+        $faces=[];
+        foreach (preg_split('/[\s,;\/]+/',strtolower(trim($m[2] ?? '')),-1,PREG_SPLIT_NO_EMPTY) as $item) {
+            // Nome por extenso, ou siglas juntas ("mod").
+            $nomes=in_array($item,FACES_DENTE,true) ? [$item]
+                : (preg_match('/^[mdvlpoi]+$/',$item) ? array_map(fn($letra)=>SIGLAS_FACE[strtoupper($letra)],str_split($item)) : null);
+            if ($nomes===null) throw new InvalidArgumentException('Não reconheci a face "'.cortarTexto($item,0,20).'" do dente '.$numero.'. Faces do dente '.$numero.': '.$lista.'.');
+            foreach ($nomes as $face) {
+                if (!in_array($face,$validas,true)) throw new InvalidArgumentException('O dente '.$numero.' não tem face '.$face.'. Faces do dente '.$numero.': '.$lista.'.');
+                $faces[]=$face;
+            }
+        }
+        $faces=array_values(array_intersect(FACES_DENTE,array_merge($dentes[$numero] ?? [],$faces)));
+        $dentes[$numero]=$faces;
+        return '';
+    },$texto);
+    if (preg_match('/[^\s,;]/u',(string)$resto)) {
+        throw new InvalidArgumentException('Não entendi "'.cortarTexto(trim((string)$resto," ,;\t\n\r"),0,20).'" no campo Dentes. Escreva, por exemplo: 11, 26 (mesial, oclusal).');
+    }
+    return $dentes;
+}
+
 function denteValido(int $numero): bool {
     $quadrante=intdiv($numero,10); $posicao=$numero%10;
     return ($quadrante>=1 && $quadrante<=4 && $posicao>=1 && $posicao<=8)
@@ -876,13 +923,7 @@ function registrarEvolucao(array $dados): int {
     $p=localizarPaciente((string)($dados['paciente'] ?? ''));pacientePermitido((int)$p['id']);
     $obs=textoValido($dados['observacoes'] ?? $dados['obs'] ?? '','a evolução clínica',5000);
     $retorno=dataValida($dados['retorno'] ?? '','data de retorno',hoje(),emDias(730),false);
-    $dentes=[];
-    foreach (array_unique(preg_split('/[\s,;]+/',trim((string)($dados['dentes'] ?? '')),-1,PREG_SPLIT_NO_EMPTY)) as $numero) {
-        if (!ctype_digit($numero) || strlen($numero)>2 || !denteValido((int)$numero)) {
-            throw new InvalidArgumentException('Dente "'.cortarTexto($numero,0,10).'" inválido. Use a numeração FDI (11 a 48; decíduos 51 a 85).');
-        }
-        $dentes[]=(int)$numero;
-    }
+    $dentes=interpretarDentesEvolucao((string)($dados['dentes'] ?? '')); // [dente => faces trabalhadas]
     return transacaoOperacao(function(PDO $pdo) use($u,$dados,$d,$p,$obs,$retorno,$dentes) {
         if (trim((string)($dados['procedimento'] ?? ''))==='') throw new InvalidArgumentException('Selecione o procedimento realizado.');
         $stmt=$pdo->prepare('SELECT id FROM procedimentos WHERE nome=:nome');$stmt->execute(['nome'=>$dados['procedimento']]);$proc=$stmt->fetchColumn();
@@ -909,12 +950,18 @@ function registrarEvolucao(array $dados): int {
             $pdo->prepare("UPDATE agendamentos SET status='Concluída' WHERE id=:id")->execute(['id'=>$consulta]);
             registrarHistoricoStatus($pdo,(int)$consulta,$vinculo['status'],'Concluída',(int)$u['id']);
         }
-        foreach ($dentes as $numero) {
+        foreach ($dentes as $numero=>$faces) {
             $stmt=$pdo->prepare("INSERT INTO odontograma_dentes (id_prontuario,numero_dente,status,notas) VALUES (:pr,:num,'tratado',:obs)
                 ON CONFLICT (id_prontuario,numero_dente) DO UPDATE SET status=EXCLUDED.status,notas=EXCLUDED.notas RETURNING id");
             $stmt->execute(['pr'=>$pr,'num'=>$numero,'obs'=>$obs]);$dente=$stmt->fetchColumn();
             $pdo->prepare('INSERT INTO evolucao_dente VALUES (:ev,:dent)')->execute(['ev'=>$id,'dent'=>$dente]);
             $pdo->prepare('INSERT INTO odontograma_procedimentos (id_dente,descricao) VALUES (:id,:descricao)')->execute(['id'=>$dente,'descricao'=>$dados['procedimento']]);
+            // Faces trabalhadas: ficam na evolução (só acréscimo) e passam a "tratado" no odontograma.
+            foreach ($faces as $face) {
+                $pdo->prepare('INSERT INTO evolucao_dente_face (id_evolucao,id_dente,face) VALUES (:ev,:dent,:face)')->execute(['ev'=>$id,'dent'=>$dente,'face'=>$face]);
+                $pdo->prepare("INSERT INTO odontograma_faces (id_dente,face,status) VALUES (:dent,:face,'tratado')
+                    ON CONFLICT (id_dente,face) DO UPDATE SET status=EXCLUDED.status,atualizado_em=now()")->execute(['dent'=>$dente,'face'=>$face]);
+            }
         }
         return $id;
     });
@@ -927,16 +974,31 @@ function salvarOdontograma(int $paciente, mixed $dentes): void {
     foreach ($dentes as $num=>$info) {
         if (!is_array($info) || !ctype_digit((string)$num) || !denteValido((int)$num)) throw new InvalidArgumentException('Odontograma com dente inválido. Recarregue a página.');
         if (!in_array($info['status'] ?? 'saudavel',STATUS_DENTE,true)) throw new InvalidArgumentException('Situação do dente '.$num.' inválida.');
-        if (!is_string($info['notas'] ?? '') || tamanhoTexto($info['notas'] ?? '')>500) throw new InvalidArgumentException('As notas do dente '.$num.' podem ter até 500 caracteres.');
+        // Mesmo limite da evolução clínica: registrarEvolucao copia a observação para as notas do dente.
+        if (!is_string($info['notas'] ?? '') || tamanhoTexto($info['notas'] ?? '')>5000) throw new InvalidArgumentException('As notas do dente '.$num.' podem ter até 5.000 caracteres.');
+        if (!is_array($info['faces'] ?? [])) throw new InvalidArgumentException('Faces do dente '.$num.' em formato inválido. Recarregue a página.');
+        foreach ($info['faces'] ?? [] as $face=>$situacao) {
+            if (!in_array($face,facesDoDente((int)$num),true)) throw new InvalidArgumentException('O dente '.$num.' não tem a face informada.');
+            if (!in_array($situacao,['saudavel','tratado','precisaTratamento'],true)) throw new InvalidArgumentException('Situação inválida numa face do dente '.$num.'.');
+        }
     }
     transacaoOperacao(function(PDO $pdo) use($paciente,$dentes) {
         $stmt=$pdo->prepare('INSERT INTO prontuarios (id_paciente) VALUES (:id) ON CONFLICT (id_paciente) DO UPDATE SET atualizado_em=now() RETURNING id');
         $stmt->execute(['id'=>$paciente]);
         $pr=$stmt->fetchColumn();
         $stmt=$pdo->prepare('INSERT INTO odontograma_dentes (id_prontuario,numero_dente,status,notas) VALUES (:pr,:num,:status,:notas)
-            ON CONFLICT (id_prontuario,numero_dente) DO UPDATE SET status=EXCLUDED.status,notas=EXCLUDED.notas');
+            ON CONFLICT (id_prontuario,numero_dente) DO UPDATE SET status=EXCLUDED.status,notas=EXCLUDED.notas RETURNING id');
+        $gravarFace=$pdo->prepare('INSERT INTO odontograma_faces (id_dente,face,status) VALUES (:dente,:face,:status)
+            ON CONFLICT (id_dente,face) DO UPDATE SET status=EXCLUDED.status,atualizado_em=now() WHERE odontograma_faces.status<>EXCLUDED.status');
+        $limparFace=$pdo->prepare('DELETE FROM odontograma_faces WHERE id_dente=:dente AND face=:face');
         foreach ($dentes as $num=>$info) {
             $stmt->execute(['pr'=>$pr,'num'=>(int)$num,'status'=>$info['status'] ?? 'saudavel','notas'=>($info['notas'] ?? '')!=='' ? $info['notas'] : null]);
+            $idDente=$stmt->fetchColumn();
+            // Face saudável não ocupa linha: a tabela guarda só o que foi tratado ou precisa de tratamento.
+            foreach ($info['faces'] ?? [] as $face=>$situacao) {
+                if ($situacao==='saudavel') $limparFace->execute(['dente'=>$idDente,'face'=>$face]);
+                else $gravarFace->execute(['dente'=>$idDente,'face'=>$face,'status'=>$situacao]);
+            }
         }
     });
 }

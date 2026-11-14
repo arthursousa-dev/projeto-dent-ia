@@ -1195,3 +1195,39 @@ tbody td {
 .quadro-aviso { margin: 0 0 10px; font-size: 0.9rem; font-weight: 600; color: var(--destaque); min-height: 1.2em; }
 [data-quadro-horarios][aria-busy="true"] [data-quadro-lista] { opacity: 0.55; }
 @media (max-width: 640px) { .quadro-dentista { grid-template-columns: 1fr; gap: 8px; } }
+
+/* Odontograma: troca de vista, visor 3D e faces do dente. */
+.vistas-odonto { display: inline-flex; gap: 0; }
+.vistas-odonto .btn { font-size: 13px; padding: 7px 14px; border-radius: 0; margin-left: -1px; }
+.vistas-odonto .btn:first-child { border-radius: var(--raio-pequeno) 0 0 var(--raio-pequeno); margin-left: 0; }
+.vistas-odonto .btn:last-child { border-radius: 0 var(--raio-pequeno) var(--raio-pequeno) 0; }
+.vistas-odonto .btn[aria-pressed="true"] { background: var(--primario); color: #fff; border-color: var(--primario); }
+.odonto-3d { border-radius: var(--raio); overflow: hidden; background: radial-gradient(120% 100% at 50% 20%, #f4f7f9, #cfd9e0 75%); border: 1px solid var(--borda); }
+.odonto-3d[data-modo="raiox"] { background: radial-gradient(120% 100% at 50% 35%, #0f2533, #03080c 75%); border-color: #03080c; }
+.odonto-3d canvas { display: block; width: 100%; touch-action: none; cursor: grab; }
+.odonto-3d canvas:active { cursor: grabbing; }
+.odonto-3d-barra { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 10px 14px; font-size: 13px; background: rgba(255,255,255,0.72); color: #0e2a3f; }
+.odonto-3d[data-modo="raiox"] .odonto-3d-barra { background: rgba(3,8,12,0.78); color: #d6e4ee; }
+.odonto-3d-cameras { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.odonto-3d-cameras button { font: inherit; font-size: 12.5px; padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; opacity: 0.85; }
+.odonto-3d-cameras button:hover, .odonto-3d-cameras button:focus-visible { opacity: 1; }
+.odonto-3d-erro { padding: 40px 20px; text-align: center; margin: 0; }
+.dente-faces { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 20px; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--borda); }
+.dente-faces svg { width: 100%; height: auto; display: block; }
+.face-regiao:focus-visible { outline: none; stroke: #2457f5; stroke-width: 5; }
+.face-rotulo { font-family: var(--fonte); font-size: 14px; font-weight: 600; fill: var(--texto-principal); }
+.face-centro-nome { font-size: 11.5px; font-weight: 500; fill: var(--texto-secundario); }
+.face-sigla { font-family: var(--fonte); font-size: 17px; font-weight: 700; fill: #0e2a3f; pointer-events: none; }
+.faces-botoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.face-botao { font: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--borda); background: var(--fundo-cartao); color: var(--texto-principal); cursor: pointer; }
+.face-botao[aria-pressed="true"] { border-color: #2457f5; box-shadow: 0 0 0 2px rgba(36,87,245,0.25); }
+.face-ponto { width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.25); flex: none; }
+.faces-resumo { font-size: 13px; color: var(--texto-secundario); margin: 10px 0; min-height: 2.6em; line-height: 1.5; }
+@media (max-width: 720px) { .dente-faces { grid-template-columns: 1fr; } }
+
+/* Formulário da troca obrigatória de senha: uma coluna, campos e botão da mesma largura. */
+.pagina-erro .form-senha { display: block; max-width: 380px; margin: 24px auto 0; text-align: left; }
+.form-senha .grupo-campo { display: block; margin-bottom: 18px; }
+.form-senha .campo-senha { display: block; width: 100%; }
+.form-senha .campo-senha input { display: block; width: 100%; box-sizing: border-box; }
+.form-senha > .btn { display: block; width: 100%; margin-top: 6px; }

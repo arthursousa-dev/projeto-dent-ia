@@ -14,3 +14,4 @@ backups/
 .env.*
 !.env.example
 ferramentas/
+.claude/

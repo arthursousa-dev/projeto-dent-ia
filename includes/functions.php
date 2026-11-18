@@ -10,6 +10,21 @@ require_once __DIR__ . '/monitor_banco.php';
 require_once __DIR__ . '/privacidade.php';
 date_default_timezone_set(\App\Config\Database::FUSO_PADRAO); // só até a conexão: Database::getConnection() aplica o fuso da clínica
 
+/** Contorno do arco dentário superior (16 dentes), usado como desenho no painel de entrada. */
+function arcoDecorativo(): string {
+    $svg = '<svg class="arco-login" viewBox="0 0 520 215" aria-hidden="true" focusable="false">';
+    for ($i = 0; $i < 16; $i++) {
+        $graus = 188 + $i * (164 / 15);
+        $t = deg2rad($graus);
+        $x = 260 + 190 * cos($t); $y = 225 + 168 * sin($t);
+        $p = abs(7.5 - $i);   // 0,5 no centro (incisivos) até 7,5 nas pontas (terceiros molares)
+        [$w, $h] = $p >= 5 ? [29, 27] : ($p >= 3 ? [23, 25] : ($p >= 2 ? [20, 29] : [20, 26]));
+        $svg .= sprintf('<rect x="%.1f" y="%.1f" width="%d" height="%d" rx="6" fill="none" stroke="#5e7f92" stroke-width="1.3" transform="rotate(%.1f %.1f %.1f)"/>',
+            $x - $w / 2, $y - $h / 2, $w, $h, $graus + 90, $x, $y);
+    }
+    return $svg . '</svg>';
+}
+
 /** Login, painel e perfil de cada tipo de acesso: fonte única para redirecionamentos e menus. */
 const PERFIS = [
     'dono'          => ['login' => 'login_dono.php',          'painel' => 'dono_dashboard.php',          'perfil' => 'dono_perfil.php'],

@@ -65,6 +65,7 @@ if ($listaAgendamentos) {
     foreach ($stmtHist->fetchAll() as $h) $historico[(int)$h['id_agendamento']][]=$h;
 }
 $formas=$pdo->query('SELECT id,nome FROM forma_pagamento ORDER BY id')->fetchAll();
+$regua = $somentePendentes ? null : reguaDoDia($dataFiltro, $listaAgendamentos);
 include 'includes/head.php';
 ?>
 
@@ -132,6 +133,34 @@ include 'includes/head.php';
     </div>
     <?php endif; ?>
 
+    <?php if ($regua && $regua['linhas']): ?>
+    <!-- o dia numa régua de horas: uma linha por dentista; cada bloco leva à linha da consulta na lista abaixo -->
+    <div class="cartao regua" style="margin-bottom:20px;">
+      <div class="cartao-cabecalho"><h3>Linha do tempo</h3>
+        <span class="regua-legenda"><i class="r-agendado"></i>A chegar <i class="r-espera"></i>Na recepção <i class="r-atendendo"></i>Em atendimento <i class="r-feita"></i>Concluída <i class="r-falta"></i>Falta ou cancelada</span>
+      </div>
+      <div class="regua-rolagem" tabindex="0" aria-label="Linha do tempo das consultas do dia, por dentista">
+        <div class="regua-trilho" style="--horas:<?= (int)$regua['horas'] ?>">
+          <div class="regua-horas" aria-hidden="true"><span></span><?php for ($h = $regua['inicio']; $h < $regua['fim']; $h++): ?><span><?= $h ?>h</span><?php endfor; ?></div>
+          <?php foreach ($regua['linhas'] as $linha): ?>
+          <div class="regua-linha">
+            <div class="regua-quem"><strong><?= limpar($linha['dentista']) ?></strong><span><?= limpar($linha['sala']) ?></span></div>
+            <div class="regua-faixa">
+              <?php foreach ($linha['consultas'] as $c): ?>
+              <a class="regua-bloco <?= $c['classe'] ?>" href="#consulta-<?= (int)$c['id'] ?>" style="left:<?= $c['esquerda'] ?>%;width:<?= $c['largura'] ?>%"
+                 title="<?= limpar($c['hora'] . ' · ' . $c['paciente'] . ' · ' . $c['procedimento'] . ' · ' . $c['status']) ?>">
+                <strong><?= limpar($c['paciente']) ?></strong><span><?= limpar($c['hora']) ?> · <?= limpar($c['procedimento']) ?></span>
+              </a>
+              <?php endforeach; ?>
+            </div>
+          </div>
+          <?php endforeach; ?>
+          <?php if ($regua['agora'] !== null): ?><div class="regua-agora" style="--pos:<?= $regua['agora'] ?>" aria-hidden="true"><span><?= date('H:i') ?></span></div><?php endif; ?>
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- lista de consultas do dia -->
     <div class="cartao">
       <div class="cartao-cabecalho">
@@ -157,7 +186,7 @@ include 'includes/head.php';
             <?php if (!$listaAgendamentos): ?><tr><td colspan="7"><?= $somentePendentes ? 'Nenhuma consulta pendente. Todas as consultas de dias anteriores têm desfecho.' : 'Nenhuma consulta encontrada nesta data.' ?></td></tr><?php endif; ?>
             <?php foreach ($listaAgendamentos as $agendamento):
               $semDesfecho = $agendamento['data'] < $hoje && in_array($agendamento['status'],STATUS_EM_ABERTO,true); ?>
-            <tr data-consulta="<?= (int)$agendamento['id'] ?>">
+            <tr id="consulta-<?= (int)$agendamento['id'] ?>" data-consulta="<?= (int)$agendamento['id'] ?>">
               <td><strong><?= $somentePendentes ? date('d/m/Y', strtotime($agendamento['data'])).' ' : '' ?><?= limpar($agendamento['hora']) ?></strong></td>
               <td><?= limpar($agendamento['paciente']) ?></td>
               <td><?= limpar($agendamento['procedimento']) ?></td>

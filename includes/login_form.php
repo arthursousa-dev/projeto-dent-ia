@@ -49,6 +49,7 @@ $mostrarDemo = getenv('APP_DEMO') === 'true';
 <main class="login-wrap" id="conteudo-principal">
 
   <div class="login-esq" role="complementary">
+    <?= arcoDecorativo() ?>
     <div class="logo">DENT<span>IA</span></div>
     <div class="logo-sub">Gestão Odontológica Inteligente</div>
     <div class="role-badge"><i class="bi <?= $login['icone'] ?>" aria-hidden="true"></i> <?= limpar($login['titulo']) ?></div>

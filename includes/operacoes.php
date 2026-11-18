@@ -454,6 +454,48 @@ function quadroHorarios(string $data, string $procedimento='', int $paciente=0):
 }
 
 /**
+ * Régua de horas da agenda da recepção: uma linha por dentista com consulta no dia, cada consulta posicionada
+ * pela hora e pela duração do procedimento (em % da largura). A régua vai do horário de funcionamento do dia
+ * e se estende se houver consulta fora dele. 'agora' só vem preenchido quando o dia é hoje.
+ */
+function reguaDoDia(string $data, array $consultas): ?array {
+    if (!$consultas) return null;
+    $pdo=\App\Config\Database::getConnection();
+    $stmt=$pdo->prepare("SELECT a.id,p.duracao_min,d.id AS id_dentista FROM agendamentos a JOIN procedimentos p ON p.id=a.id_procedimento
+        JOIN dentistas d ON d.id=a.id_dentista WHERE a.id = ANY(CAST(:ids AS int[]))");
+    $stmt->execute(['ids'=>'{'.implode(',',array_map('intval',array_column($consultas,'id'))).'}']);
+    $extra=[]; foreach ($stmt->fetchAll() as $l) $extra[(int)$l['id']]=$l;
+    $stmt=$pdo->prepare('SELECT EXTRACT(HOUR FROM abertura)::int, CEIL(EXTRACT(EPOCH FROM fechamento)/3600)::int FROM funcionamento_clinica
+        WHERE id_clinica=1 AND id_dia_semana=EXTRACT(DOW FROM CAST(:data AS date))');
+    $stmt->execute(['data'=>$data]);
+    [$inicio,$fim]=$stmt->fetch(PDO::FETCH_NUM) ?: [8,18];
+    $minutos=fn(string $hora)=>(int)substr($hora,0,2)*60+(int)substr($hora,3,2);
+    foreach ($consultas as $c) {
+        $comeco=$minutos($c['hora']); $termino=$comeco+(int)($extra[(int)$c['id']]['duracao_min'] ?? 30);
+        $inicio=min($inicio,intdiv($comeco,60)); $fim=max($fim,(int)ceil($termino/60));
+    }
+    $total=($fim-$inicio)*60;
+    $classe=['Agendado'=>'r-agendado','Confirmado'=>'r-agendado','Aguardando'=>'r-espera','Em atendimento'=>'r-atendendo',
+        'Concluída'=>'r-feita','Faltou'=>'r-falta','Cancelado'=>'r-falta'];
+    $linhas=[];
+    foreach ($consultas as $c) {
+        $comeco=$minutos($c['hora'])-$inicio*60; $duracao=(int)($extra[(int)$c['id']]['duracao_min'] ?? 30);
+        $chave=(int)($extra[(int)$c['id']]['id_dentista'] ?? 0);
+        $linhas[$chave]??=['dentista'=>$c['dentista'],'sala'=>$c['sala'],'consultas'=>[]];
+        $linhas[$chave]['consultas'][]=['id'=>(int)$c['id'],'hora'=>$c['hora'],'paciente'=>$c['paciente'],'procedimento'=>$c['procedimento'] ?? $c['servico'] ?? '',
+            'status'=>$c['status'],'classe'=>$classe[$c['status']] ?? 'r-agendado',
+            'esquerda'=>round($comeco/$total*100,3),'largura'=>round($duracao/$total*100,3)];
+    }
+    uasort($linhas,fn($a,$b)=>strcmp($a['dentista'],$b['dentista']));
+    $agora=null;
+    if ($data===date('Y-m-d')) {
+        $m=(int)date('G')*60+(int)date('i')-$inicio*60;
+        if ($m>=0 && $m<=$total) $agora=round($m/$total*100,3);
+    }
+    return ['inicio'=>$inicio,'fim'=>$fim,'horas'=>$fim-$inicio,'agora'=>$agora,'linhas'=>array_values($linhas)];
+}
+
+/**
  * Linhas da agenda da recepção, a partir da vw_agendamentos (fonte única das colunas exibidas).
  * $condicao filtra a tabela agendamentos com o apelido "ag" (ex.: "ag.data = CAST(:data AS date)").
  */

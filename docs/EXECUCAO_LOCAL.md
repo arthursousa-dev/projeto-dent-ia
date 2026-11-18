@@ -216,3 +216,10 @@ Segurança da tela:
 - Arrastar gira, a roda do mouse aproxima e clicar num dente o seleciona. Os botões de câmera incluem as vistas oclusais de cada arcada.
 - Usa a biblioteca three.js r170 (licença MIT), hospedada no próprio sistema por causa da CSP: `js/three-module-min.js` e `js/three-ambiente.js`. O código do modelo está em `js/odontograma-3d.js`.
 - Precisa de WebGL no navegador; sem ele, a tela avisa e a vista Esquema continua funcionando.
+
+## 11. Visual (desde 18/11/2026)
+
+- Tema novo em todas as telas: cores do consultório (azul-escuro de filme de radiografia, azul de destaque) e a letra Instrument Sans, carregada do Google Fonts; sem internet, o navegador usa a letra padrão do sistema.
+- Entrada: painel escuro com o nome grande e o contorno do arco dentário.
+- Agenda do Dia (recepção): "Linha do tempo" acima da lista, uma linha por dentista; cada bloco ocupa a hora e a duração da consulta, a cor mostra a situação e a linha azul marca a hora atual (só hoje). Clicar num bloco leva à linha da consulta na lista.
+- Prontuário: a vista Esquema do odontograma fica num visor escuro, como um negatoscópio. Os rótulos de quadrante estavam trocados (1º e 2º, 3º e 4º) e foram corrigidos.

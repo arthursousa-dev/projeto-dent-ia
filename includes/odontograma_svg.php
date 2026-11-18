@@ -73,10 +73,10 @@
             <line x1="15" y1="170" x2="605" y2="170" stroke="var(--borda)" stroke-width="1" stroke-dasharray="4,4"/>
 
             <!-- Labels quadrantes -->
-            <text x="160" y="14" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="var(--texto-fraco)" font-weight="600">2° QUADRANTE</text>
-            <text x="460" y="14" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="var(--texto-fraco)" font-weight="600">1° QUADRANTE</text>
-            <text x="160" y="335" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="var(--texto-fraco)" font-weight="600">3° QUADRANTE</text>
-            <text x="460" y="335" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="var(--texto-fraco)" font-weight="600">4° QUADRANTE</text>
+            <text x="160" y="14" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="var(--texto-fraco)" font-weight="600">1° QUADRANTE (superior direito)</text>
+            <text x="460" y="14" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="var(--texto-fraco)" font-weight="600">2° QUADRANTE (superior esquerdo)</text>
+            <text x="160" y="335" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="var(--texto-fraco)" font-weight="600">4° QUADRANTE (inferior direito)</text>
+            <text x="460" y="335" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="var(--texto-fraco)" font-weight="600">3° QUADRANTE (inferior esquerdo)</text>
 
             <!-- Label superior/inferior -->
             <text x="14" y="158" font-family="DM Sans, sans-serif" font-size="9" fill="var(--texto-fraco)" transform="rotate(-90,14,158)">SUPERIOR</text>

@@ -27,7 +27,7 @@ include 'includes/head.php';
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-corpo">
         <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-          <div style="width:72px;height:72px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;flex-shrink:0;">
+          <div style="width:72px;height:72px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;color:var(--texto-sobre-destaque);font-size:24px;font-weight:700;flex-shrink:0;">
             <?=iniciais($dados['nome']??'DR')?>
           </div>
           <div style="flex:1;">

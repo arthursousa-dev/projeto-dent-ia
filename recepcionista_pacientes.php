@@ -146,7 +146,7 @@ include 'includes/head.php';
               <td>
                 <div style="display:flex;align-items:center;gap:9px;">
                   <div class="avatar avatar-pequeno"
-                       style="background:var(--informacao);"
+                       style="background:#245c99;"
                        aria-hidden="true">
                     <?= iniciais($paciente['nome']) ?>
                   </div>

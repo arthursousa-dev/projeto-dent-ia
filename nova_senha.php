@@ -60,7 +60,7 @@ include 'includes/head.php';
     <div class="caixa-login">
       <h2>Criar nova senha <i class="bi bi-lock-fill" aria-hidden="true"></i></h2>
       <p>
-        Conta: <strong style="color:var(--primario);"><?= limpar($emailRecuperacao) ?></strong>
+        Conta: <strong style="color:var(--destaque);"><?= limpar($emailRecuperacao) ?></strong>
       </p>
 
       <?= exibirFlash() ?>

@@ -72,7 +72,7 @@ $nomesPerfis = [
     'cliente'       => 'Paciente',
 ];
 
-$estiloAvatarDono = $perfilAtual === 'dono' ? 'style="background:var(--destaque2);color:#0e2a3f;"' : '';
+$estiloAvatarDono = $perfilAtual === 'dono' ? 'style="background:var(--destaque2);color:#0a1f2c;"' : '';
 ?>
 <!-- barra superior: só aparece em telas pequenas, onde o menu vira gaveta -->
 <div class="barra-movel">

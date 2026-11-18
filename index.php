@@ -31,7 +31,7 @@ if (isset(PERFIS[$_SESSION['perfil'] ?? '']['painel'])) {
       font-family: var(--fonte-titulo);
       font-size: 40px;
       font-weight: 700;
-      color: var(--primario);
+      color: var(--texto-principal);
       margin-bottom: 6px;
       letter-spacing: -1px;
     }
@@ -85,8 +85,8 @@ if (isset(PERFIS[$_SESSION['perfil'] ?? '']['painel'])) {
     /* mesmas cores de cada perfil nas telas de login */
     .portal-card-paciente { --cor-card: #2b6cb0; }
     .portal-card-recepcao { --cor-card: #a85410; }
-    .portal-card-dentista { --cor-card: #08806f; }
-    .portal-card-dono     { --cor-card: #0e2a3f; }
+    .portal-card-dentista { --cor-card: #0f8f7a; }
+    .portal-card-dono     { --cor-card: #0a1f2c; }
     [data-tema="dark"] .portal-card-dono { --cor-card: #9fb4c7; }
     .portal-footer {
       margin-top: 36px;

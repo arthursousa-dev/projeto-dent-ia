@@ -30,7 +30,7 @@ include 'includes/head.php';
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-corpo">
         <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-          <div style="width:72px;height:72px;border-radius:50%;background:#f5a623;display:flex;align-items:center;justify-content:center;color:#0b2845;font-size:24px;font-weight:900;flex-shrink:0;">
+          <div style="width:72px;height:72px;border-radius:50%;background:#f5a623;display:flex;align-items:center;justify-content:center;color:#0a1f2c;font-size:24px;font-weight:900;flex-shrink:0;">
             <?=iniciais($dados['nome']??'GE')?>
           </div>
           <div style="flex:1;">
@@ -41,7 +41,7 @@ include 'includes/head.php';
               <span><i class="bi bi-telephone-fill" aria-hidden="true"></i> <?=limpar($dados['telefone']??'—')?></span>
             </div>
           </div>
-          <span style="background:rgba(245,166,35,.15);color:#b7791f;border:1px solid #f5a623;border-radius:999px;padding:4px 14px;font-size:12px;font-weight:700;"><i class="bi bi-award-fill" aria-hidden="true"></i> Proprietário</span>
+          <span style="background:var(--aviso-fundo);color:var(--aviso);border:1px solid var(--aviso);border-radius:999px;padding:4px 14px;font-size:12px;font-weight:700;"><i class="bi bi-award-fill" aria-hidden="true"></i> Proprietário</span>
         </div>
       </div>
     </div>

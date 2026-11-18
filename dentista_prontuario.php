@@ -78,7 +78,7 @@ include 'includes/head.php';
     <div class="cartao" style="margin-bottom:20px;">
       <div class="cartao-corpo">
         <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-          <div style="width:64px;height:64px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:700;flex-shrink:0;">
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;color:var(--texto-sobre-destaque);font-size:22px;font-weight:700;flex-shrink:0;">
             <?= iniciais($dadosPaciente['nome']) ?>
           </div>
           <div style="flex:1;min-width:200px;">
@@ -158,7 +158,7 @@ include 'includes/head.php';
           <button type="button" data-acao="fechar-painel" style="position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;color:var(--texto-fraco);font-size:18px;line-height:1;" aria-label="Fechar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
 
           <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
-            <div id="dente-icone" style="width:52px;height:52px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0b2845;flex-shrink:0;"></div>
+            <div id="dente-icone" style="width:52px;height:52px;border-radius:50%;background:var(--destaque);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:var(--texto-sobre-destaque);flex-shrink:0;"></div>
             <div>
               <div style="font-size:11px;font-weight:600;color:var(--texto-secundario);margin-bottom:2px;">Dente selecionado</div>
               <div id="dente-titulo" style="font-size:18px;font-weight:700;color:var(--texto-principal);"></div>
@@ -257,8 +257,8 @@ include 'includes/head.php';
           <?= csrfCampo() ?>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
             <div class="grupo-campo">
-              <label>Procedimento</label>
-              <select name="procedimento" style="width:100%;padding:11px 14px;border:2px solid var(--borda);border-radius:var(--raio-pequeno);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);">
+              <label for="evolucao-procedimento">Procedimento</label>
+              <select id="evolucao-procedimento" name="procedimento" style="width:100%;padding:11px 14px;border:2px solid var(--borda);border-radius:var(--raio-pequeno);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);">
                 <option value="">Selecione...</option>
                 <?php foreach ($listaProcedimentos as $proc): ?>
                   <option <?= ($_POST['procedimento'] ?? '')===$proc ? 'selected' : '' ?>><?= limpar($proc) ?></option>
@@ -271,8 +271,8 @@ include 'includes/head.php';
             </div>
           </div>
           <div class="grupo-campo" style="margin-bottom:16px;">
-            <label>Observações clínicas</label>
-            <textarea name="observacoes" rows="3" placeholder="Descreva os procedimentos, intercorrências, orientações ao paciente..."
+            <label for="evolucao-observacoes">Observações clínicas</label>
+            <textarea id="evolucao-observacoes" name="observacoes" rows="3" placeholder="Descreva os procedimentos, intercorrências, orientações ao paciente..."
               style="width:100%;padding:12px 14px;border:2px solid var(--borda);border-radius:var(--raio-pequeno);font-family:var(--fonte);font-size:14px;color:var(--texto-principal);background:var(--fundo-campo);resize:vertical;box-sizing:border-box;"><?= limpar((string)($_POST['observacoes'] ?? '')) ?></textarea>
           </div>
           <div style="display:flex;gap:10px;justify-content:flex-end;">
@@ -417,7 +417,7 @@ function renderDente(num) {
   const numY = d.arco === 'superior' ? d.cy - d.ry - 5 : d.cy + d.ry + 12;
   const numCor = isAtivo ? '#f5a623' : (modoXray ? '#ccc' : 'var(--texto-secundario)');
   const numLabel = `<text x="${d.cx}" y="${numY}" text-anchor="middle"
-    font-family="DM Sans, sans-serif" font-size="9.5" font-weight="${isAtivo?'700':'500'}"
+    font-family="Instrument Sans, system-ui, sans-serif" font-size="9.5" font-weight="${isAtivo?'700':'500'}"
     fill="${numCor}" style="pointer-events:none;user-select:none;">${num}</text>`;
 
   let iconeStatus = '';

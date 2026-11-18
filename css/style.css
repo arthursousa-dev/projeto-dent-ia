@@ -26,7 +26,7 @@ h1 .bi, h2 .bi, h3 .bi { margin-right: 2px; }
   /* cores de texto */
   --texto-principal:      #0a1f2c;
   --texto-secundario:     #566772;
-  --texto-fraco:          #7d8b95;
+  --texto-fraco:          #5f6d77;
   --texto-branco:         #ffffff;
   --texto-sobre-destaque: #ffffff;
   --texto-menu:           rgba(255,255,255,0.72);
@@ -38,13 +38,13 @@ h1 .bi, h2 .bi, h3 .bi { margin-right: 2px; }
   --destaque2:            #f2b552;
   --primario:             #0a1f2c;
   --primario-claro:       #12303f;
-  --perigo:               #be3a31;
+  --perigo:               #b0342c;
   --perigo-fundo:         rgba(229,62,62,0.10);
-  --sucesso:              #0f8f7a;
+  --sucesso:              #0b7564;
   --sucesso-fundo:        rgba(56,161,105,0.10);
-  --aviso:                #a9660a;
+  --aviso:                #8a5206;
   --aviso-fundo:          rgba(221,107,32,0.10);
-  --informacao:           #2b6cb0;
+  --informacao:           #245c99;
   --informacao-fundo:     rgba(49,130,206,0.10);
 
   /* bordas e sombras */
@@ -642,7 +642,7 @@ tbody td {
 .avatar-grande   { width:60px;  height:60px;  font-size:1.2rem;  }
 .avatar-enorme   { width:88px;  height:88px;  font-size:1.8rem;  }
 .avatar.destaque { background: var(--destaque); color: var(--texto-sobre-destaque); }
-.avatar.dourado  { background: var(--destaque2); color: #0e2a3f; }
+.avatar.dourado  { background: var(--destaque2); color: #0a1f2c; }
 
 /* -----------------------------------------------------------------
    CABEÇALHO DE PERFIL DO USUÁRIO
@@ -750,7 +750,7 @@ tbody td {
    ----------------------------------------------------------------- */
 .tela-login { min-height:100vh; display:grid; grid-template-columns:1fr 1fr; }
 .login-esquerda {
-  background:var(--primario);
+  background:var(--primario); color:#fff; /* o texto do painel herdava o azul-escuro do corpo e sumia */
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   padding:56px; position:relative; overflow:hidden;
 }
@@ -1206,7 +1206,7 @@ tbody td {
 .odonto-3d[data-modo="raiox"] { background: radial-gradient(120% 100% at 50% 35%, #0f2533, #03080c 75%); border-color: #03080c; }
 .odonto-3d canvas { display: block; width: 100%; touch-action: none; cursor: grab; }
 .odonto-3d canvas:active { cursor: grabbing; }
-.odonto-3d-barra { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 10px 14px; font-size: 13px; background: rgba(255,255,255,0.72); color: #0e2a3f; }
+.odonto-3d-barra { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 10px 14px; font-size: 13px; background: rgba(255,255,255,0.72); color: #0a1f2c; }
 .odonto-3d[data-modo="raiox"] .odonto-3d-barra { background: rgba(3,8,12,0.78); color: #d6e4ee; }
 .odonto-3d-cameras { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .odonto-3d-cameras button { font: inherit; font-size: 12.5px; padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; opacity: 0.85; }
@@ -1217,7 +1217,7 @@ tbody td {
 .face-regiao:focus-visible { outline: none; stroke: #2457f5; stroke-width: 5; }
 .face-rotulo { font-family: var(--fonte); font-size: 14px; font-weight: 600; fill: var(--texto-principal); }
 .face-centro-nome { font-size: 11.5px; font-weight: 500; fill: var(--texto-secundario); }
-.face-sigla { font-family: var(--fonte); font-size: 17px; font-weight: 700; fill: #0e2a3f; pointer-events: none; }
+.face-sigla { font-family: var(--fonte); font-size: 17px; font-weight: 700; fill: #0a1f2c; pointer-events: none; }
 .faces-botoes { display: flex; flex-wrap: wrap; gap: 6px; }
 .face-botao { font: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--borda); background: var(--fundo-cartao); color: var(--texto-principal); cursor: pointer; }
 .face-botao[aria-pressed="true"] { border-color: #2457f5; box-shadow: 0 0 0 2px rgba(36,87,245,0.25); }
@@ -1285,3 +1285,17 @@ tr:target { background: rgba(36,87,245,0.08); }
 /* Odontograma (vista Esquema) num visor escuro, como um negatoscópio. */
 #odontograma-wrapper { background: radial-gradient(120% 95% at 50% 40%, #12303f, #0a1f2c 72%); border-radius: var(--raio); padding: 14px 8px; }
 #odontograma text:not([fill="#f5a623"]) { fill: #a9bbc5; }
+
+/* Contraste (18/11/2026): no modo escuro, texto de apoio e cores de situação mais claros, acima de 4,5:1 sobre os fundos do tema. */
+[data-tema="dark"] {
+  --texto-fraco: #8aa0b0;
+  --sucesso: #4cc9ae;  --sucesso-fundo: rgba(76,201,174,0.14);
+  --perigo: #f28b82;   --perigo-fundo: rgba(242,139,130,0.14);
+  --aviso: #e8b05a;    --aviso-fundo: rgba(232,176,90,0.14);
+  --informacao: #8fb8ec; --informacao-fundo: rgba(143,184,236,0.14);
+}
+[data-tema="dark"] .login-dir .login-links a, [data-tema="dark"] .link-volta:hover { color: var(--destaque); }
+/* Linha do tempo: segunda linha dos blocos coloridos legível nos dois temas. */
+.regua-bloco.r-espera span, .regua-bloco.r-falta span { color: #4a3a2a; }
+.regua-bloco.r-atendendo span { color: #fff; }
+[data-tema="dark"] .login-cadastro a { color: var(--destaque); }

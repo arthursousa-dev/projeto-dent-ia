@@ -35,7 +35,7 @@ include 'includes/head.php';
       <div class="cartao-cabecalho"><h3 style="color:var(--destaque);"><i class="bi bi-bell-fill" aria-hidden="true"></i> Próxima Consulta</h3></div>
       <div class="cartao-corpo">
         <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;">
-          <div style="background:var(--destaque);color:#0b2845;border-radius:var(--raio);padding:16px 22px;text-align:center;min-width:70px;flex-shrink:0;">
+          <div style="background:var(--destaque);color:var(--texto-sobre-destaque);border-radius:var(--raio);padding:16px 22px;text-align:center;min-width:70px;flex-shrink:0;">
             <div style="font-size:28px;font-weight:900;line-height:1;"><?= date('d', strtotime($proxima['data'])) ?></div>
             <div style="font-size:12px;font-weight:600;"><?= data_pt('M', strtotime($proxima['data'])) ?></div>
           </div>

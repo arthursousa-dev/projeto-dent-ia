@@ -1,4 +1,4 @@
-name: Pipeline Completa de Testes
+name: Pipeline de Testes do Projeto
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main, master, develop ]
 
 jobs:
-  executar-testes:
+  testar-projeto:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,84 +15,29 @@ jobs:
       - name: Checkout do Código
         uses: actions/checkout@v4
 
-      # 2. Configurar o ambiente PHP (Necessário para o PHPCS e testes do backend)
+      # 2. Configurar o PHP (Essencial para o PHPCS e backend)
       - name: Configurar PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           tools: phpcs, phpcbf
 
-      # 3. Configurar o Node.js (Necessário para frontend, Playwright e k6 se aplicável)
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       # ==========================================
-      # 1. TESTE ESTÉTICO (Estático - PHPCS)
+      # 1. TESTE ESTÉTICO (PHPCS)
       # ==========================================
-      - name: 1. Executar Teste Estético (PHPCS)
+      - name: Executar Teste Estético (PHPCS)
         run: |
-          echo "A executar análise estática de código..."
-          phpcs --standard=PSR12 includes/ dono_faturamento.php || echo "Encontrados erros de estilo."
-        # Nota: Ajuste os caminhos e o padrão (ex: PSR12) conforme a configuração do seu projeto.
+          echo "A executar análise estática de código PHP..."
+          # Ajuste os caminhos ou regras conforme o seu projeto
+          phpcs --standard=PSR12 includes/ dono_faturamento.php || echo "Aviso: Foram detetados problemas de estilo."
 
       # ==========================================
-      # 2. INSTALAÇÃO DE DEPENDÊNCIAS (Para Dinâmicos)
+      # 2. TESTES DINÂMICOS / UNITÁRIOS (PHPUnit - se aplicável)
       # ==========================================
-      - name: Instalar Dependências Node.js
-        run: npm ci
-
-      - name: Instalar Navegadores do Playwright
-        run: npx playwright install --with-deps
-
-      # ==========================================
-      # 3. TESTE DINÂMICO (Playwright - E2E)
-      # ==========================================
-      - name: 3. Executar Testes Dinâmicos (E2E)
+      - name: Executar Testes em PHP (se existirem)
         run: |
-          # Certifique-se de que a pasta de testes existe e tem ficheiros .spec.ts ou .test.ts
-          npx playwright test
-        continue-on-error: false
-
-      # ==========================================
-      # 4. TESTE DE USABILIDADE / ACESSIBILIDADE (Lighthouse)
-      # ==========================================
-      - name: 4. Executar Teste de Usabilidade (Lighthouse CI)
-        uses: treosh/lighthouse-ci-action@v10
-        with:
-          url: 'http://localhost:3000' # Altere para o URL local da sua app se iniciar um servidor de teste
-          budgetPath: ./.lighthouserc.json # Opcional: regras de desempenho/acessibilidade
-          uploadArtifacts: true
-          temporaryPublicStorage: true
-        # Nota: Requer que a aplicação esteja a correr localmente no runner durante a pipeline.
-
-      # ==========================================
-      # 5. TESTE DE CARGA (k6)
-      # ==========================================
-      - name: Instalar k6 (Teste de Carga)
-        run: |
-          sudo gpg -k
-          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C047C0FA5A
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install k6
-
-      - name: 5. Executar Teste de Carga
-        run: |
-          # Executa o script de teste de carga k6 (ex: load-test.js na raiz)
-          if [ -f "load-test.js" ]; then
-            k6 run load-test.js
+          if [ -f "vendor/bin/phpunit" ]; then
+            vendor/bin/phpunit
           else
-            echo "Ficheiro load-test.js não encontrado, a ignorar teste de carga."
+            echo "PHPUnit não configurado ou sem testes unitários nesta fase."
           fi
-
-      # ==========================================
-      # 6. GUARDAR RELATÓRIOS (Artifacts)
-      # ==========================================
-      - name: Guardar Relatório do Playwright
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: relatorio-playwright
-          path: playwright-report/

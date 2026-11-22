@@ -1,100 +1,98 @@
-name: Pipeline QA Completo - Dent IA
+name: Pipeline Completa de Testes
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, develop ]
   pull_request:
-    branches: [ main, master ]
-
-permissions:
-  contents: read
+    branches: [ main, master, develop ]
 
 jobs:
-  qualidade-e-seguranca:
+  executar-testes:
     runs-on: ubuntu-latest
 
-    # Sobe o banco PostgreSQL (PLpgSQL) na nuvem para o sistema funcionar
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_DB: dent_ia_test
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: secretpassword
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
-      - name: Baixar código do repositório
+      # 1. Obter o código do repositório
+      - name: Checkout do Código
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js (JavaScript e Playwright)
+      # 2. Configurar o ambiente PHP (Necessário para o PHPCS e testes do backend)
+      - name: Configurar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: phpcs, phpcbf
+
+      # 3. Configurar o Node.js (Necessário para frontend, Playwright e k6 se aplicável)
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Configurar PHP e Ferramentas (PHPCS)
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          tools: phpcs
-
-      # Instalação segura verificando se os arquivos existem para não dar erro
-      - name: Instalar Dependências do Projeto
+      # ==========================================
+      # 1. TESTE ESTÉTICO (Estático - PHPCS)
+      # ==========================================
+      - name: 1. Executar Teste Estético (PHPCS)
         run: |
-          if [ -f package.json ]; then
-            if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          echo "A executar análise estática de código..."
+          phpcs --standard=PSR12 includes/ dono_faturamento.php || echo "Encontrados erros de estilo."
+        # Nota: Ajuste os caminhos e o padrão (ex: PSR12) conforme a configuração do seu projeto.
+
+      # ==========================================
+      # 2. INSTALAÇÃO DE DEPENDÊNCIAS (Para Dinâmicos)
+      # ==========================================
+      - name: Instalar Dependências Node.js
+        run: npm ci
+
+      - name: Instalar Navegadores do Playwright
+        run: npx playwright install --with-deps
+
+      # ==========================================
+      # 3. TESTE DINÂMICO (Playwright - E2E)
+      # ==========================================
+      - name: 3. Executar Testes Dinâmicos (E2E)
+        run: |
+          # Certifique-se de que a pasta de testes existe e tem ficheiros .spec.ts ou .test.ts
+          npx playwright test
+        continue-on-error: false
+
+      # ==========================================
+      # 4. TESTE DE USABILIDADE / ACESSIBILIDADE (Lighthouse)
+      # ==========================================
+      - name: 4. Executar Teste de Usabilidade (Lighthouse CI)
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          url: 'http://localhost:3000' # Altere para o URL local da sua app se iniciar um servidor de teste
+          budgetPath: ./.lighthouserc.json # Opcional: regras de desempenho/acessibilidade
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        # Nota: Requer que a aplicação esteja a correr localmente no runner durante a pipeline.
+
+      # ==========================================
+      # 5. TESTE DE CARGA (k6)
+      # ==========================================
+      - name: Instalar k6 (Teste de Carga)
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C047C0FA5A
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: 5. Executar Teste de Carga
+        run: |
+          # Executa o script de teste de carga k6 (ex: load-test.js na raiz)
+          if [ -f "load-test.js" ]; then
+            k6 run load-test.js
+          else
+            echo "Ficheiro load-test.js não encontrado, a ignorar teste de carga."
           fi
-          npm install eslint stylelint stylelint-config-standard axe-playwright --save-dev
-          npx playwright install --with-deps chromium
 
-      - name: Criar pasta para os relatórios
-        run: mkdir -p relatorios-finais
-
-      # 1. Teste Estático (PHPCS e ESLint)
-      - name: Teste Estático (PHP e JavaScript)
-        run: |
-          echo "=== RELATÓRIO DE ANÁLISE ESTÁTICA ===" > relatorios-finais/relatorio-codigo.txt
-          echo "--- PHP (PHPCS) ---" >> relatorios-finais/relatorio-codigo.txt
-          phpcs . --extensions=php --standard=PSR12 | tee -a relatorios-finais/relatorio-codigo.txt || true
-          echo "--- JavaScript (ESLint) ---" >> relatorios-finais/relatorio-codigo.txt
-          npx eslint . --ext .js | tee -a relatorios-finais/relatorio-codigo.txt || true
-
-      # 2. Iniciar Servidor PHP com conexão ao PostgreSQL
-      - name: Iniciar Servidor PHP
-        run: |
-          php -S 127.0.0.1:8000 &
-          sleep 4
-        env:
-          DB_HOST: '127.0.0.1'
-          DB_PORT: '5432'
-          DB_NAME: 'dent_ia_test'
-          DB_USER: 'postgres'
-          DB_PASS: 'secretpassword'
-
-      # 3. Executar Testes Dinâmicos (Playwright)
-      - name: Executar Testes Dinâmicos e Gerar Relatório HTML
-        run: npx playwright test --reporter=html
-        env:
-          BASE_URL: 'http://127.0.0.1:8000'
-          PLAYWRIGHT_HTML_REPORT: 'relatorios-finais/playwright-html'
-
-      # 4. Guardar Pacote de Relatórios (Artifacts)
-      - name: Guardar Pacote de Relatórios (Artifacts)
+      # ==========================================
+      # 6. GUARDAR RELATÓRIOS (Artifacts)
+      # ==========================================
+      - name: Guardar Relatório do Playwright
+        if: always()
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: Relatorio-QA-Dent-IA
-          path: relatorios-finais/
-          retention-days: 30
-
-      - name: Exibir Resumo na Tela do GitHub
-        if: always()
-        run: |
-          echo "# Resumo de Qualidade - Dent IA" >> $GITHUB_STEP_SUMMARY
-          echo "Pipeline executado com suporte a PHP, PostgreSQL e JavaScript!" >> $GITHUB_STEP_SUMMARY
+          name: relatorio-playwright
+          path: playwright-report/

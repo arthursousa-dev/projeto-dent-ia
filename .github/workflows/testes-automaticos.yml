@@ -1,0 +1,113 @@
+name: Pipeline QA Completo - Dent IA
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  qualidade-e-seguranca:
+    runs-on: ubuntu-latest
+
+    # Sobe o banco NoSQL (MongoDB) na nuvem para o sistema funcionar nos testes
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js (JS, CSS, Playwright)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configurar PHP e Ferramentas
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: phpcs
+
+      - name: Instalar Dependências e Ferramentas de Teste
+        run: |
+          npm ci || npm install
+          npm install eslint stylelint stylelint-config-standard axe-playwright --save-dev
+          npx playwright install --with-deps chromium
+          python -m pip install --upgrade pip
+          pip install flake8 bandit
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Criar pasta para os relatórios
+        run: mkdir -p relatorios-finais
+
+      # 1. Auditoria de Segurança (AppSec)
+      - name: AppSec - Verificar Vulnerabilidades
+        run: |
+          echo "=== RELATÓRIO DE SEGURANÇA ===" > relatorios-finais/relatorio-seguranca.txt
+          bandit -r . -ll >> relatorios-finais/relatorio-seguranca.txt 2>&1 || true
+
+      # 2. Análise Estática (Gera log e bloqueia se houver erro crítico de sintaxe)
+      - name: Teste Estático (Python, PHP, JS, CSS)
+        run: |
+          echo "=== RELATÓRIO DE ANÁLISE ESTÁTICA ===" > relatorios-finais/relatorio-codigo.txt
+          echo "--- Python (Flake8) ---" >> relatorios-finais/relatorio-codigo.txt
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics | tee -a relatorios-finais/relatorio-codigo.txt
+          echo "--- PHP (PHPCS) ---" >> relatorios-finais/relatorio-codigo.txt
+          phpcs . --extensions=php --standard=PSR12 | tee -a relatorios-finais/relatorio-codigo.txt
+          echo "--- JavaScript (ESLint) ---" >> relatorios-finais/relatorio-codigo.txt
+          npx eslint . --ext .js | tee -a relatorios-finais/relatorio-codigo.txt
+
+      # 3. Liga o sistema na nuvem
+      - name: Iniciar Servidor da Aplicação
+        run: |
+          if [ -f app.py ]; then python app.py & fi
+          php -S 127.0.0.1:8000 &
+          sleep 4
+        env:
+          MONGO_URI: 'mongodb://localhost:27017/dent_ia_test'
+
+      # 4. Testes Dinâmicos e Usabilidade (Playwright + Axe)
+      - name: Executar Testes Dinâmicos e Gerar Relatório HTML
+        run: npx playwright test --reporter=html
+        env:
+          BASE_URL: 'http://127.0.0.1:8000'
+          PLAYWRIGHT_HTML_REPORT: 'relatorios-finais/playwright-html'
+
+      # 5. Teste de Carga (k6)
+      - name: Instalar e Executar Teste de Carga (k6)
+        run: |
+          if [ -f tests/carga.js ]; then
+            sudo gpg -k
+            sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+            echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+            sudo apt-get update && sudo apt-get install k6
+            k6 run tests/carga.js --summary-export=relatorios-finais/relatorio-carga.json
+          fi
+
+      # 6. Empacota tudo em um ZIP para download na aba Actions
+      - name: Guardar Pacote de Relatórios (Artifacts)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Relatorio-QA-Dent-IA
+          path: relatorios-finais/
+          retention-days: 30
+
+      # 7. Exibe um resumo direto na tela do GitHub
+      - name: Exibir Resumo na Tela do GitHub
+        if: always()
+        run: |
+          echo "# 📋 Resumo de Qualidade - Dent IA" >> $GITHUB_STEP_SUMMARY
+          echo "Baixe o arquivo **Relatorio-QA-Dent-IA.zip** na seção **Artifacts** abaixo para ver o relatório visual em HTML e os vídeos dos testes." >> $GITHUB_STEP_SUMMARY
